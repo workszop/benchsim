@@ -559,6 +559,40 @@ const T = {
     ragasDisclaimer: "Pełny RAGAS może używać modelu jako evaluatora. Ta demonstracja stosuje prostą i jawną heurystykę dopasowania słów, aby pokazać logikę metryk bez kosztu API.",
     ariaRagasPresetApplied: "Wczytano przykład: {preset}",
     ariaRagasHallucinationAdded: "Dodano twierdzenie bez pokrycia w kontekście",
+
+    // ── ARES panel ──
+    aresParamsHeading: "Parametry eksperymentu",
+    aresNLabel: "Liczba automatycznie ocenionych przykładów (N)",
+    aresNSmallLabel: "Liczba human labels (n)",
+    aresBiasLabel: "Bias judge'a",
+    aresErrLabel: "Losowy błąd judge'a",
+    aresDimensionLabel: "Wymiar",
+    aresDimContext: "Context Relevance",
+    aresDimFaithfulness: "Answer Faithfulness",
+    aresDimRelevance: "Answer Relevance",
+    aresRunButton: "Generuj eksperyment",
+    aresResetButton: "Resetuj",
+    aresStage1Title: "1. Dane syntetyczne",
+    aresStage2Title: "2. Judge",
+    aresStage3Title: "3. Human labels + PPI",
+    aresStage1Desc: "Wygenerowano {total} syntetycznych przykładów: {pos} pozytywnych i {neg} negatywnych. Ukryty wskaźnik prawdy w populacji: {trueRate}.",
+    aresStage2Desc: "Judge sklasyfikował całą pulę {total} przykładów. Surowa średnia ocen judge'a: {raw}.",
+    aresStage3Desc: "Na losowym podzbiorze {n} przykładów porównano etykiety ludzkie z ocenami judge'a i wyliczono korektę. PPI: {ppi}, SE: {se}pp.",
+    aresStageEmpty: "Uruchom eksperyment, aby zobaczyć wynik tego etapu.",
+    aresResultHeading: "Wynik eksperymentu",
+    aresTrueRateLabel: "Ukryty wynik rzeczywisty",
+    aresRawLabel: "Surowa średnia judge'a",
+    aresPpiLabel: "Wynik po korekcie PPI",
+    aresCiLabel: "95% przedział ufności",
+    aresChartTruth: "Prawda",
+    aresChartJudge: "Judge",
+    aresChartPpi: "PPI",
+    aresFormulaToggleShow: "Pokaż obliczenia",
+    aresFormulaToggleHide: "Ukryj obliczenia",
+    aresFormulaText: "PPI = średnia(judge) + średnia(human - judge) = {raw} + {meanDiff} = {ppi}\nSE = sqrt(var(judge)/N + var(human - judge)/n) = sqrt({varJudge}/{N} + {varDiffs}/{n}) = {se}\n95% CI = PPI ± 1.96 × SE = {ppi} ± 1.96 × {se} = [{ciLo}, {ciHi}]",
+    aresLowNNote: "W publikacji ARES poniżej ok. 100-150 etykiet metoda traci zdolność rozróżniania podobnych konfiguracji.",
+    aresDisclaimer: "To edukacyjna ilustracja korekty PPI. Pełny ARES obejmuje generację danych syntetycznych, trening trzech osobnych judge'ów (w publikacji DeBERTa-v3-Large) i formalne wnioskowanie statystyczne.",
+    ariaAresReset: "Parametry ARES przywrócone do wartości domyślnych",
   },
   en: {
     eyebrow: "Evaluation simulator",
@@ -613,6 +647,40 @@ const T = {
     ragasDisclaimer: "Full RAGAS can use a model as the evaluator. This demonstration applies a simple, transparent word-matching heuristic to show the metric logic without API cost.",
     ariaRagasPresetApplied: "Loaded example: {preset}",
     ariaRagasHallucinationAdded: "Added a claim with no coverage in the context",
+
+    // ── ARES panel ──
+    aresParamsHeading: "Experiment parameters",
+    aresNLabel: "Number of auto-judged examples (N)",
+    aresNSmallLabel: "Number of human labels (n)",
+    aresBiasLabel: "Judge bias",
+    aresErrLabel: "Judge random error",
+    aresDimensionLabel: "Dimension",
+    aresDimContext: "Context Relevance",
+    aresDimFaithfulness: "Answer Faithfulness",
+    aresDimRelevance: "Answer Relevance",
+    aresRunButton: "Run experiment",
+    aresResetButton: "Reset",
+    aresStage1Title: "1. Synthetic data",
+    aresStage2Title: "2. Judge",
+    aresStage3Title: "3. Human labels + PPI",
+    aresStage1Desc: "Generated {total} synthetic examples: {pos} positive and {neg} negative. Hidden population true rate: {trueRate}.",
+    aresStage2Desc: "The judge classified the whole pool of {total} examples. Raw judge mean: {raw}.",
+    aresStage3Desc: "On a random subset of {n} examples, human labels were compared to the judge's labels to compute the correction. PPI: {ppi}, SE: {se}pp.",
+    aresStageEmpty: "Run the experiment to see this stage's result.",
+    aresResultHeading: "Experiment result",
+    aresTrueRateLabel: "Hidden true rate",
+    aresRawLabel: "Raw judge mean",
+    aresPpiLabel: "PPI-corrected score",
+    aresCiLabel: "95% confidence interval",
+    aresChartTruth: "Truth",
+    aresChartJudge: "Judge",
+    aresChartPpi: "PPI",
+    aresFormulaToggleShow: "Show calculations",
+    aresFormulaToggleHide: "Hide calculations",
+    aresFormulaText: "PPI = mean(judge) + mean(human - judge) = {raw} + {meanDiff} = {ppi}\nSE = sqrt(var(judge)/N + var(human - judge)/n) = sqrt({varJudge}/{N} + {varDiffs}/{n}) = {se}\n95% CI = PPI ± 1.96 × SE = {ppi} ± 1.96 × {se} = [{ciLo}, {ciHi}]",
+    aresLowNNote: "In the ARES paper, below roughly 100-150 labels the method loses the ability to distinguish similar configurations.",
+    aresDisclaimer: "This is an educational illustration of PPI correction. Full ARES includes synthetic data generation, training three separate judges (DeBERTa-v3-Large in the paper), and formal statistical inference.",
+    ariaAresReset: "ARES parameters reset to defaults",
   },
 };
 
@@ -732,6 +800,9 @@ const state = {
   runState: "idle",        // idle | running | complete | error
   inputs: {},              // per bench, bieżące wartości pól
   results: {},             // per bench, ostatnie wyniki
+  ui: {                    // drobny stan czysto widokowy (nie wynikowy)
+    aresShowFormula: false,
+  },
   ai: {                    // tryb AI (sekcja 5)
     settings: null,        // znormalizowane eduapp_ai (provider, model, keys)
     state: "idle",         // idle | loading | complete | error (per aktywna operacja)
@@ -946,6 +1017,48 @@ function variance(xs) {
 function clamp01(x) {
   if (Number.isNaN(x)) return 0;
   return Math.max(0, Math.min(1, x));
+}
+
+/**
+ * ARES judge simulation for one example with hidden true label `t` (0 or 1):
+ * a random-error pass, then a systematic push toward 1 for a positive
+ * `biasPp` (judge overrates) or toward 0 for a negative one.
+ * Reference implementation, see phase2-brief.md section "ARES".
+ * @param {0|1} t hidden true label
+ * @param {number} biasPp bias in percentage points; positive = judge overrates
+ * @param {number} errPct random error percentage (0-100)
+ * @param {() => number} rnd generator returning [0, 1)
+ * @returns {0|1} judge's label
+ */
+function judgePrediction(t, biasPp, errPct, rnd) {
+  let p1 = t === 1 ? 1 - errPct / 100 : errPct / 100; // losowy błąd
+  p1 = clamp01(p1 + biasPp / 100);                    // dodatni bias pcha w stronę 1
+  return rnd() < p1 ? 1 : 0;
+}
+
+/**
+ * Deterministic ARES experiment: generates a synthetic population against
+ * the hidden true rate for `dimension`, runs the simulated judge over all N
+ * examples, draws an unbiased Fisher-Yates subset of n "human labels", and
+ * computes the Prediction-Powered Inference correction (PPI), its standard
+ * error and 95% confidence interval. Same `seed` + params -> identical
+ * result. Reference implementation, see phase2-brief.md section "ARES".
+ * @param {{N: number, n: number, biasPp: number, errPct: number, dimension: string, seed: number}} params
+ * @returns {{trueRate: number, truth: number[], judge: number[], idx: number[],
+ *   raw: number, ppi: number, se: number, ci: {lo: number, hi: number}, diffs: number[]}}
+ */
+function aresExperiment({ N, n, biasPp, errPct, dimension, seed }) {
+  const rnd = mulberry32(seed);
+  const trueRate = MODEL.ares.trueRates[dimension];
+  const truth = Array.from({ length: N }, () => (rnd() < trueRate ? 1 : 0));
+  const judge = truth.map(t => judgePrediction(t, biasPp, errPct, rnd));
+  const idx = fisherYates([...Array(N).keys()], rnd).slice(0, n);
+  const raw = mean(judge);
+  const diffs = idx.map(i => truth[i] - judge[i]);
+  const ppi = clamp01(raw + mean(diffs));
+  const se = Math.sqrt(variance(judge) / N + variance(diffs) / n);
+  const ci = { lo: clamp01(ppi - 1.96 * se), hi: clamp01(ppi + 1.96 * se) };
+  return { trueRate, truth, judge, idx, raw, ppi, se, ci, diffs };
 }
 
 function loadLangFromStorage() {
