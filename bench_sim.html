@@ -435,6 +435,319 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
     <button type="button" class="btn btn-ghost" id="qaButton">Uruchom testy QA</button>
   </footer>
 
-  <script>/* zadanie 0.3+ */</script>
+  <script>
+// ─── Constants ───
+
+const STORAGE_KEY_LANG = "benchsim.lang";
+
+const BENCHES = [
+  { id: "ragas",     shortcut: "1" },
+  { id: "ares",      shortcut: "2" },
+  { id: "ifeval",    shortcut: "3" },
+  { id: "questeval", shortcut: "4" },
+];
+
+const PHASES = ["input", "process", "result", "interpretation"];
+
+const RUN_STATES = ["idle", "running", "complete", "error"];
+
+// Polish stopword list used by normalize() to strip function words before
+// phrase-overlap comparisons (RAGAS / QuestEval matching in later phases).
+const STOPWORDS_PL = new Set([
+  "i", "w", "z", "ze", "na", "do", "od", "o", "u", "a", "ale", "czy", "co",
+  "to", "jest", "są", "być", "był", "była", "było", "były", "się", "nie",
+  "tak", "jak", "dla", "po", "przez", "za", "pod", "nad", "przy", "bez",
+  "oraz", "lub", "że", "żeby", "który", "która", "które", "których", "tym",
+  "ten", "ta", "te", "tego", "tej", "tych", "jego", "jej", "ich", "im",
+  "go", "ją", "je", "mu", "ją", "będzie", "być", "gdy", "gdzie",
+]);
+
+const STOPWORDS_EN = new Set([
+  "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+  "and", "or", "but", "if", "then", "than", "so", "to", "of", "in", "on",
+  "at", "by", "for", "with", "about", "as", "into", "like", "through",
+  "after", "over", "between", "out", "against", "during", "without",
+  "before", "under", "around", "among", "this", "that", "these", "those",
+  "it", "its", "not", "do", "does", "did",
+]);
+
+// ─── Translations ───
+
+const T = {
+  pl: {
+    eyebrow: "Symulator ewaluacji",
+    appTitle: "Bench Sim",
+    lead: "Deterministyczna, wizualna demonstracja czterech metod ewaluacji RAG.",
+    langGroupLabel: "Język",
+    langPl: "PL",
+    langEn: "EN",
+    footerCredit: "Bench Sim - demo edukacyjne edulab",
+    qaButton: "Uruchom testy QA",
+    benchName_ragas: "RAGAS",
+    benchName_ares: "ARES",
+    benchName_ifeval: "IFEval",
+    benchName_questeval: "QuestEval",
+    phase_input: "Dane wejściowe",
+    phase_process: "Proces",
+    phase_result: "Wynik",
+    phase_interpretation: "Interpretacja",
+    stubPanel: "Panel {bench} - w budowie. Treść pojawi się w kolejnej fazie.",
+    resetHint: "Reset",
+    runHint: "Uruchom ocenę",
+    langHint: "Język",
+    ariaTabChanged: "Zakładka zmieniona na {bench}",
+    ariaLangChanged: "Język zmieniony na {lang}",
+    ariaResultUpdated: "Wynik zaktualizowany",
+  },
+  en: {
+    eyebrow: "Evaluation simulator",
+    appTitle: "Bench Sim",
+    lead: "A deterministic, visual demonstration of four RAG evaluation methods.",
+    langGroupLabel: "Language",
+    langPl: "PL",
+    langEn: "EN",
+    footerCredit: "Bench Sim - an edulab educational demo",
+    qaButton: "Run QA tests",
+    benchName_ragas: "RAGAS",
+    benchName_ares: "ARES",
+    benchName_ifeval: "IFEval",
+    benchName_questeval: "QuestEval",
+    phase_input: "Input",
+    phase_process: "Process",
+    phase_result: "Result",
+    phase_interpretation: "Interpretation",
+    stubPanel: "{bench} panel - under construction. Content lands in the next phase.",
+    resetHint: "Reset",
+    runHint: "Run evaluation",
+    langHint: "Language",
+    ariaTabChanged: "Tab changed to {bench}",
+    ariaLangChanged: "Language changed to {lang}",
+    ariaResultUpdated: "Result updated",
+  },
+};
+
+function t(key, vars) {
+  const dict = T[state.lang] || T.pl;
+  let str = dict[key] !== undefined ? dict[key] : (T.pl[key] !== undefined ? T.pl[key] : key);
+  if (vars) {
+    for (const k in vars) {
+      str = str.replace(new RegExp("\\{" + k + "\\}", "g"), vars[k]);
+    }
+  }
+  return str;
+}
+
+// ─── State ───
+
+const MODEL = {
+  ragas:     { fixtures: { pl: [], en: [] } },
+  ares:      { defaults: { N: 800, n: 60, biasPp: 15, errPct: 10, dimension: "context", seed: 1337 },
+               trueRates: { context: 0.72, faithfulness: 0.85, relevance: 0.64 } },
+  ifeval:    { constraints: [], fixtures: { pl: [], en: [] } },
+  questeval: { fixtures: { pl: [], en: [] } },
+};
+
+const state = {
+  lang: "pl",              // persisted w localStorage
+  activeBench: "ragas",
+  runState: "idle",        // idle | running | complete | error
+  inputs: {},              // per bench, bieżące wartości pól
+  results: {},              // per bench, ostatnie wyniki
+  ai: {                    // tryb AI (sekcja 5)
+    settings: null,        // znormalizowane eduapp_ai (provider, model, keys)
+    state: "idle",         // idle | loading | complete | error (per aktywna operacja)
+    results: {},           // ragas: wynik LLM-judge; error: ostatni komunikat
+  },
+};
+
+// ─── DOM refs ───
+
+const appEl = document.getElementById("app");
+const langBtnPlEl = document.getElementById("langBtnPl");
+const langBtnEnEl = document.getElementById("langBtnEn");
+const langSwitchEl = document.getElementById("langSwitch");
+const progressTrackEl = document.getElementById("progressTrack");
+const benchTabsEl = document.getElementById("benchTabs");
+const pageEyebrowEl = document.getElementById("pageEyebrow");
+const pageTitleEl = document.getElementById("pageTitle");
+const pageLeadEl = document.getElementById("pageLead");
+const ariaLiveEl = document.getElementById("ariaLive");
+const qaButtonEl = document.getElementById("qaButton");
+const footerCreditEl = document.querySelector(".edu-footer .edu-caption");
+
+// ─── Helpers ───
+
+/**
+ * Lowercase, strip punctuation and stopwords, return the remaining content
+ * words. Used as a crude (non-lemmatized) basis for phrase-overlap checks.
+ * @param {string} text
+ * @param {"pl"|"en"} lang
+ * @returns {string[]}
+ */
+function normalize(text, lang) {
+  if (!text) return [];
+  const stopwords = lang === "en" ? STOPWORDS_EN : STOPWORDS_PL;
+  const raw = text
+    .toLowerCase()
+    .replace(/[.,!?;:()"„”«»\[\]{}\-–—/\\]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  return raw.filter((w) => !stopwords.has(w));
+}
+
+/**
+ * Split text into trimmed, non-empty sentences on ., !, ? boundaries.
+ * @param {string} text
+ * @returns {string[]}
+ */
+function sentences(text) {
+  if (!text) return [];
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Fraction of normalized words in `a` that also appear in `b` (0 when `a`
+ * is empty - guards the division-by-zero pitfall).
+ * @param {string[]} a
+ * @param {string[]} b
+ * @returns {number}
+ */
+function overlap(a, b) {
+  if (!a || a.length === 0) return 0;
+  const bSet = new Set(b || []);
+  let hits = 0;
+  for (const w of a) if (bSet.has(w)) hits++;
+  return hits / a.length;
+}
+
+/**
+ * Tokenize a response string into lowercase words (no stopword removal) -
+ * used for word-count style checks (e.g. IFEval length constraints).
+ * @param {string} r
+ * @returns {string[]}
+ */
+function words(r) {
+  if (!r) return [];
+  return r.trim().split(/\s+/).filter(Boolean);
+}
+
+/**
+ * mulberry32 deterministic PRNG. Same seed -> same sequence.
+ * @param {number} seed
+ * @returns {() => number} generator producing floats in [0, 1)
+ */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Unbiased Fisher-Yates shuffle (never `sort(() => rnd() - 0.5)`, which is
+ * biased). Mutates and returns `arr`.
+ * @param {Array} arr
+ * @param {() => number} rnd generator returning [0, 1)
+ * @returns {Array}
+ */
+function fisherYates(arr, rnd) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** @param {number[]} xs @returns {number} */
+function mean(xs) {
+  if (!xs || xs.length === 0) return 0;
+  return xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+
+/** @param {number[]} xs @returns {number} population variance */
+function variance(xs) {
+  if (!xs || xs.length === 0) return 0;
+  const m = mean(xs);
+  return mean(xs.map((x) => (x - m) * (x - m)));
+}
+
+/** Clamp a number into [0, 1]. @param {number} x @returns {number} */
+function clamp01(x) {
+  if (Number.isNaN(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function loadLangFromStorage() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_LANG);
+    if (stored === "pl" || stored === "en") return stored;
+  } catch (e) {
+    // localStorage unavailable (privacy mode, file://) - fall back silently
+  }
+  return "pl";
+}
+
+function saveLangToStorage(lang) {
+  try {
+    localStorage.setItem(STORAGE_KEY_LANG, lang);
+  } catch (e) {
+    // ignore - persistence is a convenience, not a requirement
+  }
+}
+
+/**
+ * Single writer for the app-level DOM contract: state.activeBench/lang/runState
+ * -> data-* attributes on <main id="app">, plus <html lang>.
+ */
+function syncDomContract() {
+  appEl.setAttribute("data-active-bench", state.activeBench);
+  appEl.setAttribute("data-lang", state.lang);
+  appEl.setAttribute("data-run-state", state.runState);
+  document.documentElement.setAttribute("lang", state.lang);
+}
+
+// ─── Render ───
+
+function renderChrome() {
+  pageEyebrowEl.textContent = t("eyebrow");
+  pageTitleEl.textContent = t("appTitle");
+  pageLeadEl.textContent = t("lead");
+  qaButtonEl.textContent = t("qaButton");
+  footerCreditEl.textContent = t("footerCredit");
+  langSwitchEl.setAttribute("aria-label", t("langGroupLabel"));
+  langBtnPlEl.textContent = t("langPl");
+  langBtnEnEl.textContent = t("langEn");
+  langBtnPlEl.setAttribute("aria-pressed", String(state.lang === "pl"));
+  langBtnEnEl.setAttribute("aria-pressed", String(state.lang === "en"));
+}
+
+function render() {
+  renderChrome();
+  syncDomContract();
+}
+
+// ─── Listeners ───
+
+function setLang(lang) {
+  if (state.lang === lang) return;
+  state.lang = lang;
+  saveLangToStorage(lang);
+  render();
+}
+
+langBtnPlEl.addEventListener("click", () => setLang("pl"));
+langBtnEnEl.addEventListener("click", () => setLang("en"));
+
+// ─── Init ───
+
+state.lang = loadLangFromStorage();
+render();
+  </script>
 </body>
 </html>
