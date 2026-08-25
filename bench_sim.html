@@ -642,6 +642,7 @@ const T = {
     langGroupLabel: "Język",
     langPl: "PL",
     langEn: "EN",
+    benchTabsGroupLabel: "Wybór benchmarku",
     footerCredit: "Bench Sim - demo edukacyjne edulab",
     qaButton: "Uruchom testy QA",
     qaPanelEyebrow: "Panel QA",
@@ -724,7 +725,10 @@ const T = {
     ifevalConstraintText_requiredWord: "użyj wymaganego słowa „{word}”",
     ifevalConstraintText_forbiddenWord: "nie używaj zakazanego słowa „{word}”",
     ifevalConstraintText_maxWords: "odpowiedz w maksymalnie {max} słowach",
-    ifevalConstraintText_exactItems: "podaj dokładnie {n} punkty listy (linie zaczynające się od „-” lub „*”)",
+    ifevalConstraintText_exactItems: "podaj dokładnie {n} {noun} listy (linie zaczynające się od „-” lub „*”)",
+    ifevalItemNounOne: "punkt",
+    ifevalItemNounFew: "punkty",
+    ifevalItemNounMany: "punktów",
     ifevalConstraintText_noComma: "nie używaj przecinków",
     ifevalConstraintText_validJson: "zwróć odpowiedź jako poprawny JSON",
     ifevalConstraintText_exactEnding: "zakończ odpowiedź dokładnie frazą „{phrase}”",
@@ -823,6 +827,7 @@ const T = {
     langGroupLabel: "Language",
     langPl: "PL",
     langEn: "EN",
+    benchTabsGroupLabel: "Benchmark selection",
     footerCredit: "Bench Sim - an edulab educational demo",
     qaButton: "Run QA tests",
     qaPanelEyebrow: "QA panel",
@@ -905,7 +910,9 @@ const T = {
     ifevalConstraintText_requiredWord: "use the required word “{word}”",
     ifevalConstraintText_forbiddenWord: "don't use the forbidden word “{word}”",
     ifevalConstraintText_maxWords: "answer in at most {max} words",
-    ifevalConstraintText_exactItems: "give exactly {n} list items (lines starting with “-” or “*”)",
+    ifevalConstraintText_exactItems: "give exactly {n} {noun} (lines starting with “-” or “*”)",
+    ifevalItemNounOne: "list item",
+    ifevalItemNounOther: "list items",
     ifevalConstraintText_noComma: "don't use any commas",
     ifevalConstraintText_validJson: "return the answer as valid JSON",
     ifevalConstraintText_exactEnding: "end the answer with the exact phrase “{phrase}”",
@@ -1683,11 +1690,38 @@ function ifevalParamLabelKey(paramKey) {
   return "";
 }
 
+/**
+ * Polish plural category for a count ("one" | "few" | "many"), per the
+ * standard singular/paucal/plural split (e.g. 1 punkt, 2-4 punkty, 5+/12-14
+ * punktów). English only ever needs "one" vs "other".
+ * @param {number} n
+ * @returns {"one"|"few"|"many"}
+ */
+function pluralFormPl(n) {
+  const abs = Math.abs(n);
+  if (abs === 1) return "one";
+  const mod10 = abs % 10, mod100 = abs % 100;
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return "few";
+  return "many";
+}
+
+/** Localized noun for a list-item count, in the current language's grammatical number. @param {number} n @returns {string} */
+function ifevalItemNoun(n) {
+  if (state.lang === "en") {
+    return t(Math.abs(n) === 1 ? "ifevalItemNounOne" : "ifevalItemNounOther");
+  }
+  const form = pluralFormPl(n);
+  return t(form === "one" ? "ifevalItemNounOne" : form === "few" ? "ifevalItemNounFew" : "ifevalItemNounMany");
+}
+
 /** Readable composed prompt for the currently active IFEval constraints. @param {{constraints: Object}} inputs @returns {string} */
 function buildIfevalPromptText(inputs) {
   const active = activeIfevalConstraints(inputs);
   if (active.length === 0) return t("ifevalPromptEmpty");
-  const parts = active.map((c) => t("ifevalConstraintText_" + c.id, c.params));
+  const parts = active.map((c) => {
+    const vars = c.id === "exactItems" ? { ...c.params, noun: ifevalItemNoun(Number(c.params.n) || 0) } : c.params;
+    return t("ifevalConstraintText_" + c.id, vars);
+  });
   return t("ifevalPromptIntro") + " " + parts.join("; ") + ".";
 }
 
@@ -2213,6 +2247,7 @@ function renderShortcutHints() {
 }
 
 function renderBenchTabs() {
+  benchTabsEl.setAttribute("aria-label", t("benchTabsGroupLabel"));
   benchTabsEl.innerHTML = "";
   BENCHES.forEach((bench) => {
     const btn = document.createElement("button");
