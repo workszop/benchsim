@@ -376,6 +376,35 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
   font-family: var(--font-mono); font-size: 12px; display: flex; align-items: center; justify-content: center;
 }
 
+/* ── ARES panel: parameter sliders, pipeline cards, bar chart ── */
+.ares-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-5); }
+.slider-row { margin-bottom: 0; }
+.slider-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.slider-row-head .field-label { margin-bottom: 0; }
+.slider-value { font-family: var(--font-mono); font-size: 13px; color: var(--ink); flex-shrink: 0; }
+.ares-actions { margin-top: var(--sp-6); }
+
+.pipeline-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-6); margin-top: var(--sp-6); }
+
+.ares-chart-wrap { margin-top: var(--sp-5); }
+.ares-chart { display: flex; align-items: flex-end; justify-content: center; gap: var(--sp-10); height: 200px; padding: var(--sp-4) 0 0; }
+.ares-bar-col { display: flex; flex-direction: column; align-items: center; height: 100%; width: 72px; }
+.ares-bar-track { position: relative; width: 40px; flex: 1; background: var(--paper-3); border-radius: var(--r-sm); display: flex; align-items: flex-end; }
+.ares-bar { width: 100%; border-radius: var(--r-sm); transition: height .5s cubic-bezier(.32,.72,.32,1); }
+.ares-bar-truth { background: var(--teal); }
+.ares-bar-judge { background: var(--coral); }
+.ares-bar-ppi { background: var(--marigold); }
+.ares-bar-label { margin-top: var(--sp-2); font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.ares-bar-value { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+.ares-whisker { position: absolute; left: 50%; transform: translateX(-50%); width: 2px; background: var(--ink); }
+.ares-whisker-cap { position: absolute; left: 50%; transform: translateX(-50%); width: 14px; height: 2px; background: var(--ink); }
+
+.formula-block {
+  background: var(--paper-2); border-radius: var(--r-md); padding: 14px 18px;
+  margin-top: var(--sp-4); font-family: var(--font-mono); font-size: 12.5px;
+  color: var(--ink-2); line-height: 1.8; white-space: pre-wrap; overflow-x: auto;
+}
+
 /* ── interpretation note / caveat ── */
 .note {
   background: var(--marigold-soft); color: var(--marigold-ink); border-radius: var(--r-md);
@@ -415,6 +444,8 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
    ============================================================ */
 @media (max-width: 768px) {
   .sim-panel { grid-template-columns: 1fr; }
+  .pipeline-grid { grid-template-columns: 1fr; }
+  .ares-chart { gap: var(--sp-6); }
   kbd { display: none; }
   .shortcut-hints { display: none; }
   .shell { padding: 24px 16px 50px; }
@@ -1061,6 +1092,45 @@ function aresExperiment({ N, n, biasPp, errPct, dimension, seed }) {
   return { trueRate, truth, judge, idx, raw, ppi, se, ci, diffs };
 }
 
+/** @returns {{N: number, n: number, biasPp: number, errPct: number, dimension: string}} a fresh copy of MODEL.ares.defaults */
+function defaultAresInputs() {
+  const d = MODEL.ares.defaults;
+  return { N: d.N, n: d.n, biasPp: d.biasPp, errPct: d.errPct, dimension: d.dimension };
+}
+
+/** Format a 0-1 fraction as a "NN.N%" string for display. @param {number} x @returns {string} */
+function fmtPct(x) {
+  return (Math.round(x * 1000) / 10).toFixed(1) + "%";
+}
+
+/**
+ * Status token for an ARES result row, based on how close a value sits to
+ * the hidden trueRate (informational closeness, not a strict pass/fail).
+ * @param {number} value @param {number} trueRate @returns {"pass"|"warn"|"fail"}
+ */
+function aresMetricStatus(value, trueRate) {
+  const diff = Math.abs(value - trueRate);
+  if (diff <= 0.03) return "pass";
+  if (diff <= 0.08) return "warn";
+  return "fail";
+}
+
+/** Recompute state.results.ares from state.inputs.ares with the fixed MODEL seed. */
+function computeAresResult() {
+  const inputs = state.inputs.ares;
+  state.results.ares = aresExperiment({
+    N: inputs.N, n: inputs.n, biasPp: inputs.biasPp, errPct: inputs.errPct,
+    dimension: inputs.dimension, seed: MODEL.ares.defaults.seed,
+  });
+}
+
+/** Restore ARES inputs/UI to defaults and recompute the result to match. */
+function resetAresInputs() {
+  state.inputs.ares = defaultAresInputs();
+  state.ui.aresShowFormula = false;
+  computeAresResult();
+}
+
 function loadLangFromStorage() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_LANG);
@@ -1180,6 +1250,9 @@ function renderSimPanels() {
     if (bench.id === "ragas") {
       section.className = "sim-panel-full fade-in";
       renderRagasPanel(section);
+    } else if (bench.id === "ares") {
+      section.className = "sim-panel-full fade-in";
+      renderAresPanel(section);
     } else {
       section.className = "card sim-panel-full fade-in";
       const h2 = document.createElement("h2");
@@ -1452,6 +1525,362 @@ function buildRagasScoreBars(result, inputs) {
 }
 
 /**
+ * ARES panel: parameter sliders (full width), a three-card pipeline strip,
+ * and a result card (score rows + bar chart + formula reveal). Unlike
+ * RAGAS, results are NOT a live function of the sliders - moving a slider
+ * only updates state.inputs.ares and its live-value label; the experiment
+ * itself is only (re)computed by "Generuj eksperyment", Enter, or Resetuj
+ * (see computeAresResult / runAresExperiment / resetAresInputs). Writes the
+ * panel's data-primary-score / data-ci-lo / data-ci-hi / data-true-rate /
+ * data-raw-score contract attributes (single writer: render only).
+ * @param {HTMLElement} section the panel's <section data-sim-id="ares">
+ */
+function renderAresPanel(section) {
+  const inputs = state.inputs.ares;
+  const result = state.results.ares;
+
+  if (result) {
+    section.setAttribute("data-primary-score", String(Math.round(result.ppi * 100)));
+    section.setAttribute("data-ci-lo", String(Math.round(result.ci.lo * 1000) / 10));
+    section.setAttribute("data-ci-hi", String(Math.round(result.ci.hi * 1000) / 10));
+    section.setAttribute("data-true-rate", String(Math.round(result.trueRate * 1000) / 10));
+    section.setAttribute("data-raw-score", String(Math.round(result.raw * 1000) / 10));
+  }
+
+  section.appendChild(buildAresParamsCard(inputs));
+  section.appendChild(buildAresPipeline(inputs, result));
+  if (result) section.appendChild(buildAresResultCard(inputs, result));
+
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "caveat";
+  disclaimer.textContent = t("aresDisclaimer");
+  section.appendChild(disclaimer);
+}
+
+function buildAresParamsCard(inputs) {
+  const card = document.createElement("div");
+  card.className = "card";
+  const heading = document.createElement("h3");
+  heading.className = "edu-h3";
+  heading.textContent = t("aresParamsHeading");
+  card.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "ares-controls";
+  grid.appendChild(buildAresSlider("N", 100, 2000, 10, inputs.N, "aresNLabel", (v) => String(v)));
+  grid.appendChild(buildAresSlider("n", 30, 300, 5, inputs.n, "aresNSmallLabel", (v) => String(v)));
+  grid.appendChild(buildAresSlider("biasPp", -25, 25, 1, inputs.biasPp, "aresBiasLabel", (v) => (v > 0 ? "+" + v : String(v)) + " pp"));
+  grid.appendChild(buildAresSlider("errPct", 0, 30, 1, inputs.errPct, "aresErrLabel", (v) => v + "%"));
+  grid.appendChild(buildAresDimensionSelect(inputs));
+  card.appendChild(grid);
+
+  const row = document.createElement("div");
+  row.className = "btn-row ares-actions";
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = t("aresRunButton");
+  runBtn.addEventListener("click", runAresExperiment);
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "btn btn-ghost";
+  resetBtn.textContent = t("aresResetButton");
+  resetBtn.addEventListener("click", resetAresPanel);
+  row.appendChild(runBtn);
+  row.appendChild(resetBtn);
+  card.appendChild(row);
+  return card;
+}
+
+/**
+ * One labelled range input with a live value readout. Field changes update
+ * state immediately (input event, matching the RAGAS text-field pattern) so
+ * the label and the n<100 note track the slider live - the experiment
+ * itself is only recomputed on "Generuj eksperyment" / Enter / Resetuj.
+ * @param {string} field key into state.inputs.ares
+ * @param {number} min @param {number} max @param {number} step
+ * @param {number} value current value
+ * @param {string} labelKey T() key for the field label
+ * @param {(v: number) => string} formatFn formats the live value readout
+ */
+function buildAresSlider(field, min, max, step, value, labelKey, formatFn) {
+  const wrap = document.createElement("div");
+  wrap.className = "slider-row";
+  const head = document.createElement("div");
+  head.className = "slider-row-head";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "aresField" + field);
+  label.textContent = t(labelKey);
+  const valueSpan = document.createElement("span");
+  valueSpan.className = "slider-value";
+  valueSpan.textContent = formatFn(value);
+  head.appendChild(label);
+  head.appendChild(valueSpan);
+
+  const input = document.createElement("input");
+  input.type = "range";
+  input.id = "aresField" + field;
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(value);
+  input.addEventListener("input", () => updateAresField(field, Number(input.value)));
+
+  wrap.appendChild(head);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+function buildAresDimensionSelect(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "slider-row";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "aresDimensionField");
+  label.textContent = t("aresDimensionLabel");
+  const select = document.createElement("select");
+  select.id = "aresDimensionField";
+  [
+    ["context", "aresDimContext"],
+    ["faithfulness", "aresDimFaithfulness"],
+    ["relevance", "aresDimRelevance"],
+  ].forEach(([value, key]) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = t(key);
+    if (value === inputs.dimension) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.addEventListener("change", () => updateAresField("dimension", select.value));
+  wrap.appendChild(label);
+  wrap.appendChild(select);
+  return wrap;
+}
+
+/**
+ * Three pipeline-stage cards. Before the first experiment run there is no
+ * result yet, so each card shows a neutral placeholder instead of numbers.
+ * @param {{N:number,n:number,biasPp:number,errPct:number,dimension:string}} inputs
+ * @param {ReturnType<typeof aresExperiment>|null} result
+ */
+function buildAresPipeline(inputs, result) {
+  const grid = document.createElement("div");
+  grid.className = "pipeline-grid";
+
+  const stage1 = document.createElement("div");
+  stage1.className = "card";
+  const h1 = document.createElement("h4");
+  h1.className = "edu-h4";
+  h1.textContent = t("aresStage1Title");
+  const p1 = document.createElement("p");
+  p1.className = "edu-small";
+  if (result) {
+    const pos = result.truth.filter((x) => x === 1).length;
+    p1.textContent = t("aresStage1Desc", { total: result.truth.length, pos, neg: result.truth.length - pos, trueRate: fmtPct(result.trueRate) });
+  } else {
+    p1.textContent = t("aresStageEmpty");
+  }
+  stage1.appendChild(h1);
+  stage1.appendChild(p1);
+
+  const stage2 = document.createElement("div");
+  stage2.className = "card";
+  const h2 = document.createElement("h4");
+  h2.className = "edu-h4";
+  h2.textContent = t("aresStage2Title");
+  const p2 = document.createElement("p");
+  p2.className = "edu-small";
+  if (result) {
+    p2.textContent = t("aresStage2Desc", { total: result.judge.length, raw: fmtPct(result.raw) });
+  } else {
+    p2.textContent = t("aresStageEmpty");
+  }
+  stage2.appendChild(h2);
+  stage2.appendChild(p2);
+
+  const stage3 = document.createElement("div");
+  stage3.className = "card";
+  const h3 = document.createElement("h4");
+  h3.className = "edu-h4";
+  h3.textContent = t("aresStage3Title");
+  const p3 = document.createElement("p");
+  p3.className = "edu-small";
+  if (result) {
+    p3.textContent = t("aresStage3Desc", { n: inputs.n, ppi: fmtPct(result.ppi), se: (result.se * 100).toFixed(1) });
+  } else {
+    p3.textContent = t("aresStageEmpty");
+  }
+  stage3.appendChild(h3);
+  stage3.appendChild(p3);
+
+  grid.appendChild(stage1);
+  grid.appendChild(stage2);
+  grid.appendChild(stage3);
+  return grid;
+}
+
+function buildAresResultCard(inputs, result) {
+  const card = document.createElement("div");
+  card.className = "card";
+  const heading = document.createElement("h3");
+  heading.className = "edu-h3";
+  heading.textContent = t("aresResultHeading");
+  card.appendChild(heading);
+
+  const metricsWrap = document.createElement("div");
+  metricsWrap.className = "field-group";
+  [
+    { key: "true-rate", labelKey: "aresTrueRateLabel", value: result.trueRate, status: "pass" },
+    { key: "raw-score", labelKey: "aresRawLabel", value: result.raw, status: aresMetricStatus(result.raw, result.trueRate) },
+    { key: "ppi-score", labelKey: "aresPpiLabel", value: result.ppi, status: aresMetricStatus(result.ppi, result.trueRate) },
+  ].forEach((m) => {
+    const pct = Math.round(m.value * 100);
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.setAttribute("data-metric", m.key);
+    row.setAttribute("data-value", String(pct));
+    row.setAttribute("data-status", m.status);
+
+    const label = document.createElement("span");
+    label.className = "score-label";
+    label.textContent = t(m.labelKey);
+    const track = document.createElement("div");
+    track.className = "score-track";
+    const fill = document.createElement("div");
+    fill.className = "score-fill";
+    fill.setAttribute("data-status", m.status);
+    fill.style.width = pct + "%";
+    track.appendChild(fill);
+    const value = document.createElement("span");
+    value.className = "score-value";
+    value.textContent = pct + "%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    metricsWrap.appendChild(row);
+  });
+  card.appendChild(metricsWrap);
+
+  const ciP = document.createElement("p");
+  ciP.className = "edu-body edu-mono";
+  ciP.textContent = t("aresCiLabel") + ": " + fmtPct(result.ci.lo) + " – " + fmtPct(result.ci.hi);
+  card.appendChild(ciP);
+
+  card.appendChild(buildAresChart(result));
+  card.appendChild(buildAresFormulaSection(inputs, result));
+
+  if (inputs.n < 100) {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = t("aresLowNNote");
+    card.appendChild(note);
+  }
+
+  return card;
+}
+
+/**
+ * 0-100% bar chart: truth / judge (raw) / PPI, with 95% CI whiskers drawn
+ * on the PPI bar. Built from plain divs styled with tokens (no external
+ * chart lib), per the brief.
+ * @param {ReturnType<typeof aresExperiment>} result
+ */
+function buildAresChart(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "ares-chart-wrap";
+  const chart = document.createElement("div");
+  chart.className = "ares-chart";
+
+  [
+    { key: "truth", cls: "ares-bar-truth", labelKey: "aresChartTruth", value: result.trueRate },
+    { key: "judge", cls: "ares-bar-judge", labelKey: "aresChartJudge", value: result.raw },
+    { key: "ppi", cls: "ares-bar-ppi", labelKey: "aresChartPpi", value: result.ppi },
+  ].forEach((b) => {
+    const col = document.createElement("div");
+    col.className = "ares-bar-col";
+    const track = document.createElement("div");
+    track.className = "ares-bar-track";
+    const bar = document.createElement("div");
+    bar.className = "ares-bar " + b.cls;
+    bar.style.height = clamp01(b.value) * 100 + "%";
+    track.appendChild(bar);
+
+    if (b.key === "ppi") {
+      const loPct = clamp01(result.ci.lo) * 100;
+      const hiPct = clamp01(result.ci.hi) * 100;
+      const whisker = document.createElement("div");
+      whisker.className = "ares-whisker";
+      whisker.style.bottom = loPct + "%";
+      whisker.style.height = Math.max(0, hiPct - loPct) + "%";
+      track.appendChild(whisker);
+      [loPct, hiPct].forEach((pct) => {
+        const cap = document.createElement("div");
+        cap.className = "ares-whisker-cap";
+        cap.style.bottom = pct + "%";
+        track.appendChild(cap);
+      });
+    }
+
+    const label = document.createElement("span");
+    label.className = "ares-bar-label";
+    label.textContent = t(b.labelKey);
+    const value = document.createElement("span");
+    value.className = "ares-bar-value";
+    value.textContent = fmtPct(b.value);
+
+    col.appendChild(track);
+    col.appendChild(label);
+    col.appendChild(value);
+    chart.appendChild(col);
+  });
+
+  wrap.appendChild(chart);
+  return wrap;
+}
+
+/**
+ * "Pokaż obliczenia" toggle button plus, when expanded, the PPI/SE/CI
+ * formulas with the current experiment's actual numbers substituted in.
+ * @param {{N:number,n:number}} inputs
+ * @param {ReturnType<typeof aresExperiment>} result
+ */
+function buildAresFormulaSection(inputs, result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-ghost";
+  btn.setAttribute("aria-expanded", String(state.ui.aresShowFormula));
+  btn.textContent = state.ui.aresShowFormula ? t("aresFormulaToggleHide") : t("aresFormulaToggleShow");
+  btn.addEventListener("click", toggleAresFormula);
+  wrap.appendChild(btn);
+
+  if (state.ui.aresShowFormula) {
+    const meanDiff = mean(result.diffs);
+    const varJudge = variance(result.judge);
+    const varDiffs = variance(result.diffs);
+    const block = document.createElement("pre");
+    block.className = "formula-block";
+    block.textContent = t("aresFormulaText", {
+      raw: result.raw.toFixed(4),
+      meanDiff: meanDiff.toFixed(4),
+      ppi: result.ppi.toFixed(4),
+      varJudge: varJudge.toFixed(4),
+      N: inputs.N,
+      varDiffs: varDiffs.toFixed(4),
+      n: inputs.n,
+      se: result.se.toFixed(4),
+      ciLo: result.ci.lo.toFixed(4),
+      ciHi: result.ci.hi.toFixed(4),
+    });
+    wrap.appendChild(block);
+  }
+  return wrap;
+}
+
+/**
  * Push a message into the aria-live region. Clears first so the same
  * message announced twice in a row is still read by screen readers.
  */
@@ -1564,6 +1993,45 @@ function resetRagasInputs() {
   state.inputs.ragas = cloneRagasInputs(findRagasFixture("ragas-good", state.lang));
 }
 
+// ── ARES field editing ──
+// Same full-render + refocus pattern as RAGAS, minus caret/selection
+// handling (sliders and <select> don't have a text caret to restore).
+function rerenderAresPreservingFocus() {
+  const active = document.activeElement;
+  const activeId = active && active.id;
+  render();
+  if (!activeId) return;
+  const el = document.getElementById(activeId);
+  if (el && typeof el.focus === "function") el.focus();
+}
+
+// Moving a slider/select only updates state.inputs.ares and re-renders (live
+// value labels, n<100 note) - it does NOT recompute the experiment. That
+// only happens via runAresExperiment (button / Enter) or resetAresPanel.
+function updateAresField(field, value) {
+  state.inputs.ares[field] = value;
+  rerenderAresPreservingFocus();
+}
+
+function toggleAresFormula() {
+  state.ui.aresShowFormula = !state.ui.aresShowFormula;
+  rerenderAresPreservingFocus();
+}
+
+function runAresExperiment() {
+  computeAresResult();
+  state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function resetAresPanel() {
+  resetAresInputs();
+  state.runState = "idle";
+  render();
+  announce(t("ariaAresReset"));
+}
+
 function isTypingTarget(el) {
   if (!el) return false;
   const tag = el.tagName;
@@ -1601,6 +2069,10 @@ function runCurrentBench() {
     runRagasEval();
     return;
   }
+  if (state.activeBench === "ares") {
+    runAresExperiment();
+    return;
+  }
   // Phase 0 stub for the other benches: no evaluation logic yet (added
   // per-bench in later phases).
   state.runState = "complete";
@@ -1613,6 +2085,10 @@ function resetCurrentBench() {
     resetRagasInputs();
     state.runState = "idle";
     render();
+    return;
+  }
+  if (state.activeBench === "ares") {
+    resetAresPanel();
     return;
   }
   // Phase 0 stub for the other benches: no fixtures/inputs yet to reset.
@@ -1628,6 +2104,7 @@ langBtnEnEl.addEventListener("click", () => setLang("en"));
 
 state.lang = loadLangFromStorage();
 resetRagasInputs();
+resetAresInputs();
 render();
   </script>
 </body>
