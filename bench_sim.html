@@ -191,6 +191,15 @@ body.edu { min-height: 100vh; }
   background: var(--teal-soft); padding: 4px 9px; border-radius: var(--r-pill);
 }
 .edu-header-spacer { flex: 1; }
+
+/* ── global shortcut hint strip (chrome) ── */
+.shortcut-hints {
+  display: flex; align-items: center; gap: var(--sp-4);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+}
+.shortcut-hints .hint-item { display: flex; align-items: center; gap: 4px; }
+
+.lang-switch-wrap { display: flex; align-items: center; gap: 6px; }
 .lang-switch { display: flex; gap: 4px; border: 1px solid var(--line-2); border-radius: var(--r-pill); padding: 3px; background: var(--surface); }
 .lang-switch button {
   font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .04em;
@@ -199,6 +208,7 @@ body.edu { min-height: 100vh; }
 }
 .lang-switch button[aria-pressed="true"] { background: var(--marigold); color: var(--on-primary); }
 .lang-switch button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.lang-kbd-hint { margin: 0; }
 
 /* ── shell ── */
 .shell { max-width: 1100px; margin: 0 auto; padding: 34px 30px 70px; }
@@ -389,6 +399,7 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 @media (max-width: 768px) {
   .sim-panel { grid-template-columns: 1fr; }
   kbd { display: none; }
+  .shortcut-hints { display: none; }
   .shell { padding: 24px 16px 50px; }
   .edu-header-inner { padding: 12px 16px; }
   html, body { overflow-x: hidden; }
@@ -399,17 +410,17 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 <body class="edu">
   <header class="edu-header">
     <div class="edu-header-inner">
-      <svg class="edu-logo" viewBox="0 0 32 32" role="img" aria-label="edulab">
-        <rect width="32" height="32" rx="8" fill="var(--paper)"/>
-        <circle cx="16" cy="16" r="10" fill="none" stroke="var(--teal)" stroke-width="3"/>
-        <circle cx="16" cy="16" r="3" fill="var(--teal)"/>
-      </svg>
+<img class="edu-logo" alt="edulab" src="data:image/png;base64,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">
       <span class="edu-wordmark">edulab</span>
       <span class="edu-tag">demo lab</span>
       <span class="edu-header-spacer"></span>
-      <div class="lang-switch" id="langSwitch" role="group" aria-label="Język / Language">
-        <button type="button" id="langBtnPl" aria-pressed="true">PL</button>
-        <button type="button" id="langBtnEn" aria-pressed="false">EN</button>
+      <div class="shortcut-hints" id="shortcutHints" aria-hidden="true"></div>
+      <div class="lang-switch-wrap">
+        <div class="lang-switch" id="langSwitch" role="group" aria-label="Język / Language">
+          <button type="button" id="langBtnPl" aria-pressed="true">PL</button>
+          <button type="button" id="langBtnEn" aria-pressed="false">EN</button>
+        </div>
+        <kbd class="lang-kbd-hint">L</kbd>
       </div>
     </div>
   </header>
@@ -448,8 +459,6 @@ const BENCHES = [
 ];
 
 const PHASES = ["input", "process", "result", "interpretation"];
-
-const RUN_STATES = ["idle", "running", "complete", "error"];
 
 // Polish stopword list used by normalize() to strip function words before
 // phrase-overlap comparisons (RAGAS / QuestEval matching in later phases).
@@ -492,9 +501,11 @@ const T = {
     phase_result: "Wynik",
     phase_interpretation: "Interpretacja",
     stubPanel: "Panel {bench} - w budowie. Treść pojawi się w kolejnej fazie.",
-    resetHint: "Reset",
-    runHint: "Uruchom ocenę",
-    langHint: "Język",
+    tabsHint: "zakładki",
+    resetHint: "reset",
+    runHint: "ocena",
+    langHint: "język",
+    shortcutsGroupLabel: "Skróty klawiaturowe",
     ariaTabChanged: "Zakładka zmieniona na {bench}",
     ariaLangChanged: "Język zmieniony na {lang}",
     ariaResultUpdated: "Wynik zaktualizowany",
@@ -517,9 +528,11 @@ const T = {
     phase_result: "Result",
     phase_interpretation: "Interpretation",
     stubPanel: "{bench} panel - under construction. Content lands in the next phase.",
-    resetHint: "Reset",
-    runHint: "Run evaluation",
-    langHint: "Language",
+    tabsHint: "tabs",
+    resetHint: "reset",
+    runHint: "run",
+    langHint: "language",
+    shortcutsGroupLabel: "Keyboard shortcuts",
     ariaTabChanged: "Tab changed to {bench}",
     ariaLangChanged: "Language changed to {lang}",
     ariaResultUpdated: "Result updated",
@@ -552,7 +565,7 @@ const state = {
   activeBench: "ragas",
   runState: "idle",        // idle | running | complete | error
   inputs: {},              // per bench, bieżące wartości pól
-  results: {},              // per bench, ostatnie wyniki
+  results: {},             // per bench, ostatnie wyniki
   ai: {                    // tryb AI (sekcja 5)
     settings: null,        // znormalizowane eduapp_ai (provider, model, keys)
     state: "idle",         // idle | loading | complete | error (per aktywna operacja)
@@ -566,6 +579,7 @@ const appEl = document.getElementById("app");
 const langBtnPlEl = document.getElementById("langBtnPl");
 const langBtnEnEl = document.getElementById("langBtnEn");
 const langSwitchEl = document.getElementById("langSwitch");
+const shortcutHintsEl = document.getElementById("shortcutHints");
 const progressTrackEl = document.getElementById("progressTrack");
 const benchTabsEl = document.getElementById("benchTabs");
 const pageEyebrowEl = document.getElementById("pageEyebrow");
@@ -725,6 +739,31 @@ function renderChrome() {
   langBtnEnEl.textContent = t("langEn");
   langBtnPlEl.setAttribute("aria-pressed", String(state.lang === "pl"));
   langBtnEnEl.setAttribute("aria-pressed", String(state.lang === "en"));
+  renderShortcutHints();
+}
+
+// Compact mono strip of the four global shortcuts, shown in the chrome
+// header and hidden below 768px alongside the other <kbd> hints.
+function renderShortcutHints() {
+  shortcutHintsEl.setAttribute("aria-label", t("shortcutsGroupLabel"));
+  shortcutHintsEl.innerHTML = "";
+  const items = [
+    { key: "1-4", labelKey: "tabsHint" },
+    { key: "Enter", labelKey: "runHint" },
+    { key: "R", labelKey: "resetHint" },
+    { key: "L", labelKey: "langHint" },
+  ];
+  items.forEach((item) => {
+    const wrap = document.createElement("span");
+    wrap.className = "hint-item";
+    const kbd = document.createElement("kbd");
+    kbd.textContent = item.key;
+    wrap.appendChild(kbd);
+    const label = document.createElement("span");
+    label.textContent = t(item.labelKey);
+    wrap.appendChild(label);
+    shortcutHintsEl.appendChild(wrap);
+  });
 }
 
 function renderBenchTabs() {
