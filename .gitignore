@@ -1,0 +1,12 @@
+mockups/
+plans/
+superpowers/
+.superpowers/
+progress.md
+review*.md
+*.plan.md
+*.draft.*
+scratch/
+bench_sim.md
+implementation_plan.md
+check*.png
