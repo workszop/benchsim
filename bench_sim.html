@@ -336,6 +336,23 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 .score-fill[data-status="warn"] { background: var(--warning); }
 .score-value { font-family: var(--font-mono); font-size: 13px; color: var(--ink); width: 3.4rem; text-align: right; flex-shrink: 0; }
 
+/* ── RAGAS panel: field groups & editable context cards ── */
+.field-group { margin-bottom: var(--sp-5); }
+.field-group:last-child { margin-bottom: 0; }
+.context-card {
+  border: 1px solid var(--line-2); border-radius: var(--r-md);
+  padding: 12px 14px; margin-bottom: var(--sp-3);
+  background: var(--paper); transition: border-color .2s ease, background .2s ease;
+}
+.context-card[data-useful="true"] { border-color: var(--teal); background: var(--teal-soft); }
+.context-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.context-card-head .field-label { margin-bottom: 0; }
+.context-badge {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); flex-shrink: 0;
+}
+.context-card[data-useful="true"] .context-badge { color: var(--teal-ink); }
+
 /* ── pass/fail rows ── */
 .status-row { display: flex; align-items: center; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--line); }
 .status-row:last-child { border-bottom: 0; }
@@ -826,6 +843,52 @@ function scoreStatus(valuePct) {
 }
 
 /**
+ * Look up a RAGAS fixture by id for a given language, falling back to the
+ * pl list's first entry if the id is unknown (should not happen in practice).
+ * @param {string} id
+ * @param {"pl"|"en"} lang
+ */
+function findRagasFixture(id, lang) {
+  const list = MODEL.ragas.fixtures[lang] || MODEL.ragas.fixtures.pl;
+  return list.find((f) => f.id === id) || list[0];
+}
+
+/** @param {string} id fixture id @returns {string|null} matching T key for its preset button label */
+function ragasFixtureLabelKey(id) {
+  if (id === "ragas-good") return "ragasPresetGood";
+  if (id === "ragas-noise") return "ragasPresetNoise";
+  if (id === "ragas-hallucination") return "ragasPresetHallucination";
+  return null;
+}
+
+/** Deep-enough copy of a fixture into the shape stored at state.inputs.ragas. */
+function cloneRagasInputs(fixture) {
+  return { question: fixture.question, context: fixture.context.slice(), answer: fixture.answer, fixtureId: fixture.id };
+}
+
+/**
+ * Whether the current inputs still exactly match one of the known presets
+ * (a "custom" edit, per the DOM contract, is anything that no longer does).
+ * @param {{question: string, context: string[], answer: string}} inputs
+ * @param {"pl"|"en"} lang
+ * @returns {string} a RAGAS_FIXTURE_IDS entry, or "custom"
+ */
+function computeRagasFixtureId(inputs, lang) {
+  for (const id of RAGAS_FIXTURE_IDS) {
+    const fx = findRagasFixture(id, lang);
+    if (
+      fx.question === inputs.question &&
+      fx.answer === inputs.answer &&
+      fx.context.length === inputs.context.length &&
+      fx.context.every((c, i) => c === inputs.context[i])
+    ) {
+      return id;
+    }
+  }
+  return "custom";
+}
+
+/**
  * Tokenize a response string into lowercase words (no stopword removal) -
  * used for word-count style checks (e.g. IFEval length constraints).
  * @param {string} r
@@ -996,22 +1059,283 @@ function renderSimPanels() {
   appEl.innerHTML = "";
   BENCHES.forEach((bench) => {
     const section = document.createElement("section");
-    section.className = "card sim-panel-full fade-in";
     section.setAttribute("data-sim-id", bench.id);
     section.setAttribute("data-sim-state", state.runState);
     section.setAttribute("data-primary-score", "0");
     section.setAttribute("data-fixture-id", "custom");
     section.hidden = state.activeBench !== bench.id;
-    const h2 = document.createElement("h2");
-    h2.className = "edu-h2";
-    h2.textContent = t("benchName_" + bench.id);
-    section.appendChild(h2);
-    const p = document.createElement("p");
-    p.className = "edu-body card-placeholder";
-    p.textContent = t("stubPanel", { bench: t("benchName_" + bench.id) });
-    section.appendChild(p);
+    if (bench.id === "ragas") {
+      section.className = "sim-panel-full fade-in";
+      renderRagasPanel(section);
+    } else {
+      section.className = "card sim-panel-full fade-in";
+      const h2 = document.createElement("h2");
+      h2.className = "edu-h2";
+      h2.textContent = t("benchName_" + bench.id);
+      section.appendChild(h2);
+      const p = document.createElement("p");
+      p.className = "edu-body card-placeholder";
+      p.textContent = t("stubPanel", { bench: t("benchName_" + bench.id) });
+      section.appendChild(p);
+    }
     appEl.appendChild(section);
   });
+}
+
+/**
+ * RAGAS panel: two-column card layout (edit fields + presets on the left,
+ * detected claims and score bars on the right). Recomputes ragasEval from
+ * the current state.inputs.ragas on every call, so results are always in
+ * sync with whatever the user has typed - there is no separate "stale
+ * results until you press Oceń" state. Writes the panel's data-primary-score
+ * / data-fixture-id contract attributes (single writer: render only).
+ * @param {HTMLElement} section the panel's <section data-sim-id="ragas">
+ */
+function renderRagasPanel(section) {
+  const inputs = state.inputs.ragas;
+  const result = ragasEval({ question: inputs.question, context: inputs.context, answer: inputs.answer }, state.lang);
+  state.results.ragas = result;
+
+  const faithfulnessPct = Math.round(result.faithfulness * 100);
+  section.setAttribute("data-primary-score", String(faithfulnessPct));
+  section.setAttribute("data-fixture-id", inputs.fixtureId);
+
+  const grid = document.createElement("div");
+  grid.className = "sim-panel";
+
+  const left = document.createElement("div");
+  left.className = "card";
+  const leftHeading = document.createElement("h3");
+  leftHeading.className = "edu-h3";
+  leftHeading.textContent = t("ragasInputHeading");
+  left.appendChild(leftHeading);
+  left.appendChild(buildRagasQuestionField(inputs));
+  inputs.context.forEach((_, i) => left.appendChild(buildRagasContextField(inputs, i, result)));
+  left.appendChild(buildRagasAnswerField(inputs));
+  left.appendChild(buildRagasButtonRow());
+
+  const right = document.createElement("div");
+  right.className = "card";
+  const rightHeading = document.createElement("h3");
+  rightHeading.className = "edu-h3";
+  rightHeading.textContent = t("ragasResultHeading");
+  right.appendChild(rightHeading);
+  right.appendChild(buildRagasClaimsList(result));
+  right.appendChild(buildRagasScoreBars(result, inputs));
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "caveat";
+  disclaimer.textContent = t("ragasDisclaimer");
+  right.appendChild(disclaimer);
+
+  grid.appendChild(left);
+  grid.appendChild(right);
+  section.appendChild(grid);
+}
+
+function buildRagasQuestionField(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "ragasQuestionField");
+  label.textContent = t("ragasQuestionLabel");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "ragasQuestionField";
+  input.value = inputs.question;
+  input.addEventListener("input", () => updateRagasField("question", input.value));
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+function buildRagasContextField(inputs, i, result) {
+  const card = document.createElement("div");
+  card.className = "context-card";
+  const useful = result.usefulContext[i];
+  card.setAttribute("data-useful", String(useful));
+  const head = document.createElement("div");
+  head.className = "context-card-head";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "ragasContextField" + i);
+  label.textContent = t("ragasContextLabel", { n: i + 1 });
+  const badge = document.createElement("span");
+  badge.className = "context-badge";
+  badge.textContent = useful ? t("ragasContextUsed") : t("ragasContextSkipped");
+  head.appendChild(label);
+  head.appendChild(badge);
+  const textarea = document.createElement("textarea");
+  textarea.id = "ragasContextField" + i;
+  textarea.rows = 2;
+  textarea.value = inputs.context[i];
+  textarea.addEventListener("input", () => updateRagasContextField(i, textarea.value));
+  card.appendChild(head);
+  card.appendChild(textarea);
+  return card;
+}
+
+function buildRagasAnswerField(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "ragasAnswerField");
+  label.textContent = t("ragasAnswerLabel");
+  const textarea = document.createElement("textarea");
+  textarea.id = "ragasAnswerField";
+  textarea.rows = 4;
+  textarea.value = inputs.answer;
+  textarea.addEventListener("input", () => updateRagasField("answer", textarea.value));
+  wrap.appendChild(label);
+  wrap.appendChild(textarea);
+  return wrap;
+}
+
+function buildRagasButtonRow() {
+  const row = document.createElement("div");
+  row.className = "btn-row";
+
+  const presetGood = document.createElement("button");
+  presetGood.type = "button";
+  presetGood.className = "btn btn-secondary";
+  presetGood.textContent = t("ragasPresetGood");
+  presetGood.addEventListener("click", () => applyRagasPreset("ragas-good"));
+
+  const presetNoise = document.createElement("button");
+  presetNoise.type = "button";
+  presetNoise.className = "btn btn-secondary";
+  presetNoise.textContent = t("ragasPresetNoise");
+  presetNoise.addEventListener("click", () => applyRagasPreset("ragas-noise"));
+
+  const addHallucination = document.createElement("button");
+  addHallucination.type = "button";
+  addHallucination.className = "btn btn-secondary";
+  addHallucination.textContent = t("ragasPresetHallucination");
+  addHallucination.addEventListener("click", () => appendRagasHallucination());
+
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = t("ragasRunButton");
+  runBtn.addEventListener("click", () => runRagasEval());
+
+  row.appendChild(presetGood);
+  row.appendChild(presetNoise);
+  row.appendChild(addHallucination);
+  row.appendChild(runBtn);
+  return row;
+}
+
+function buildRagasClaimsList(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("ragasClaimsTitle");
+  wrap.appendChild(heading);
+
+  if (result.claims.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "edu-small";
+    empty.textContent = t("ragasClaimsEmpty");
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  result.claims.forEach((claim, i) => {
+    const row = document.createElement("div");
+    row.className = "status-row";
+    const text = document.createElement("span");
+    text.className = "edu-small";
+    text.textContent = claim;
+    const supported = result.supported[i];
+    const pill = document.createElement("span");
+    pill.className = "status-pill";
+    pill.setAttribute("data-status", supported ? "pass" : "fail");
+    pill.textContent = supported ? t("ragasClaimSupported") : t("ragasClaimUnsupported");
+    row.appendChild(text);
+    row.appendChild(pill);
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function buildRagasScoreBars(result, inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+
+  const qWords = normalize(inputs.question, state.lang);
+  const aWords = new Set(normalize(inputs.answer, state.lang));
+  const matched = qWords.filter((w) => aWords.has(w)).length;
+  const useful = result.usefulContext.filter(Boolean).length;
+
+  const noQuestion = !String(inputs.question || "").trim();
+  const noAnswer = !String(inputs.answer || "").trim();
+  const noContext = inputs.context.every((c) => !String(c || "").trim());
+
+  const metrics = [
+    {
+      key: "context-relevance",
+      labelKey: "ragasMetricContext",
+      value: result.contextRelevance,
+      explain: t("ragasExplainContext", { useful, total: inputs.context.length }),
+      noData: noQuestion || noContext,
+    },
+    {
+      key: "faithfulness",
+      labelKey: "ragasMetricFaithfulness",
+      value: result.faithfulness,
+      explain: t("ragasExplainFaithfulness", { supported: result.supported.filter(Boolean).length, total: result.claims.length }),
+      noData: noAnswer,
+    },
+    {
+      key: "answer-relevance",
+      labelKey: "ragasMetricAnswer",
+      value: result.answerRelevance,
+      explain: t("ragasExplainAnswer", { matched, total: qWords.length }),
+      noData: noQuestion || noAnswer,
+    },
+  ];
+
+  metrics.forEach((m) => {
+    const pct = Math.round(m.value * 100);
+    const status = scoreStatus(pct);
+
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.setAttribute("data-metric", m.key);
+    row.setAttribute("data-value", String(pct));
+    row.setAttribute("data-status", status);
+
+    const label = document.createElement("span");
+    label.className = "score-label";
+    label.textContent = t(m.labelKey);
+
+    const track = document.createElement("div");
+    track.className = "score-track";
+    const fill = document.createElement("div");
+    fill.className = "score-fill";
+    fill.setAttribute("data-status", status);
+    fill.style.width = pct + "%";
+    track.appendChild(fill);
+
+    const value = document.createElement("span");
+    value.className = "score-value";
+    value.textContent = pct + "%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    wrap.appendChild(row);
+
+    const explain = document.createElement("p");
+    explain.className = "edu-caption";
+    explain.textContent = m.noData ? m.explain + " " + t("ragasNoDataNote") : m.explain;
+    wrap.appendChild(explain);
+  });
+
+  return wrap;
 }
 
 /**
@@ -1045,8 +1369,86 @@ function setLang(lang) {
   if (state.lang === lang) return;
   state.lang = lang;
   saveLangToStorage(lang);
+  relocalizeRagasFixture();
   render();
   announce(t("ariaLangChanged", { lang: lang === "pl" ? t("langPl") : t("langEn") }));
+}
+
+// If the current RAGAS inputs still match one of the known presets, reload
+// that same preset in the new language so the demo stays coherent; a
+// "custom" edit is left untranslated (there is no source text to translate).
+function relocalizeRagasFixture() {
+  const inputs = state.inputs.ragas;
+  if (inputs && RAGAS_FIXTURE_IDS.includes(inputs.fixtureId)) {
+    state.inputs.ragas = cloneRagasInputs(findRagasFixture(inputs.fixtureId, state.lang));
+  }
+}
+
+// ── RAGAS field editing ──
+// Editing any field re-renders immediately (results are a live function of
+// inputs - see renderRagasPanel), so the DOM contract (data-fixture-id,
+// score bars) always reflects exactly what's currently typed. A full
+// render() rebuilds the panel's DOM, so we restore focus/caret afterward.
+function rerenderRagasPreservingFocus() {
+  const active = document.activeElement;
+  const activeId = active && active.id;
+  const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+  const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+  render();
+  if (!activeId) return;
+  const el = document.getElementById(activeId);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+    if (selStart !== null && typeof el.setSelectionRange === "function") {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* not a text field - ignore */ }
+    }
+  }
+}
+
+function updateRagasField(field, value) {
+  const inputs = state.inputs.ragas;
+  inputs[field] = value;
+  inputs.fixtureId = computeRagasFixtureId(inputs, state.lang);
+  rerenderRagasPreservingFocus();
+}
+
+function updateRagasContextField(index, value) {
+  const inputs = state.inputs.ragas;
+  inputs.context[index] = value;
+  inputs.fixtureId = computeRagasFixtureId(inputs, state.lang);
+  rerenderRagasPreservingFocus();
+}
+
+function applyRagasPreset(id) {
+  state.inputs.ragas = cloneRagasInputs(findRagasFixture(id, state.lang));
+  state.runState = "complete";
+  render();
+  const labelKey = ragasFixtureLabelKey(id);
+  announce(t("ariaRagasPresetApplied", { preset: labelKey ? t(labelKey) : id }));
+}
+
+// "Dodaj halucynację": appends one unsupported claim to whatever answer text
+// is currently loaded (preset or user-typed) - not tied to a specific preset.
+function appendRagasHallucination() {
+  const inputs = state.inputs.ragas;
+  const sentence = MODEL.ragas.hallucinationSentence[state.lang];
+  let answer = (inputs.answer || "").trim();
+  if (answer && !/[.!?]$/.test(answer)) answer += ".";
+  inputs.answer = answer ? answer + " " + sentence : sentence;
+  inputs.fixtureId = computeRagasFixtureId(inputs, state.lang);
+  state.runState = "complete";
+  render();
+  announce(t("ariaRagasHallucinationAdded"));
+}
+
+function runRagasEval() {
+  state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function resetRagasInputs() {
+  state.inputs.ragas = cloneRagasInputs(findRagasFixture("ragas-good", state.lang));
 }
 
 function isTypingTarget(el) {
@@ -1082,14 +1484,25 @@ function handleKeydown(e) {
 }
 
 function runCurrentBench() {
-  // Phase 0 stub: no evaluation logic yet (added per-bench in later phases).
+  if (state.activeBench === "ragas") {
+    runRagasEval();
+    return;
+  }
+  // Phase 0 stub for the other benches: no evaluation logic yet (added
+  // per-bench in later phases).
   state.runState = "complete";
   render();
   announce(t("ariaResultUpdated"));
 }
 
 function resetCurrentBench() {
-  // Phase 0 stub: no fixtures/inputs yet to reset.
+  if (state.activeBench === "ragas") {
+    resetRagasInputs();
+    state.runState = "idle";
+    render();
+    return;
+  }
+  // Phase 0 stub for the other benches: no fixtures/inputs yet to reset.
   state.runState = "idle";
   render();
 }
@@ -1101,6 +1514,7 @@ langBtnEnEl.addEventListener("click", () => setLang("en"));
 // ─── Init ───
 
 state.lang = loadLangFromStorage();
+resetRagasInputs();
 render();
   </script>
 </body>
