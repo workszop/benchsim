@@ -281,7 +281,6 @@ kbd {
 }
 .card + .card { margin-top: var(--sp-6); }
 .card h3 { margin-top: 0; }
-.card-placeholder { text-align: center; color: var(--ink-3); }
 
 /* ── buttons ── */
 .btn {
@@ -421,6 +420,22 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 .constraint-result-pills { display: flex; gap: 6px; flex-shrink: 0; }
 .diff-removed { color: var(--ink-3); text-decoration: line-through; }
 
+/* ── QuestEval panel: source/target text pair, arrow, fact toggles, Q/A cards ── */
+.qe-text-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--sp-6); align-items: stretch; margin-bottom: var(--sp-6); }
+.qe-arrow-col { display: flex; align-items: center; justify-content: center; }
+.qe-arrow-icon { font-family: var(--font-mono); font-size: 28px; color: var(--teal); }
+.qe-source-text { white-space: pre-wrap; }
+.qe-qa-card {
+  border: 1px solid var(--line-2); border-radius: var(--r-md);
+  padding: 12px 14px; margin-bottom: var(--sp-3); background: var(--paper);
+}
+.qe-qa-card:last-child { margin-bottom: 0; }
+.qe-qa-question { font-family: var(--font-sans); font-weight: 600; font-size: 14px; color: var(--ink); margin: 0 0 8px; }
+.qe-qa-row { display: flex; justify-content: space-between; gap: var(--sp-3); font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+.qe-qa-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); flex-shrink: 0; }
+.qe-qa-value { text-align: right; }
+.qe-qa-status { margin-top: 8px; text-align: right; }
+
 /* ── interpretation note / caveat ── */
 .note {
   background: var(--marigold-soft); color: var(--marigold-ink); border-radius: var(--r-md);
@@ -468,6 +483,9 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
   .edu-header-inner { padding: 12px 16px; }
   html, body { overflow-x: hidden; }
   .score-label { width: 7.5rem; }
+  .qe-text-grid { grid-template-columns: 1fr; }
+  .qe-arrow-col { padding: var(--sp-2) 0; }
+  .qe-arrow-icon { display: inline-block; transform: rotate(90deg); }
 }
   </style>
 </head>
@@ -589,7 +607,6 @@ const T = {
     phase_process: "Proces",
     phase_result: "Wynik",
     phase_interpretation: "Interpretacja",
-    stubPanel: "Panel {bench} - w budowie. Treść pojawi się w kolejnej fazie.",
     tabsHint: "zakładki",
     resetHint: "reset",
     runHint: "ocena",
@@ -756,7 +773,6 @@ const T = {
     phase_process: "Process",
     phase_result: "Result",
     phase_interpretation: "Interpretation",
-    stubPanel: "{bench} panel - under construction. Content lands in the next phase.",
     tabsHint: "tabs",
     resetHint: "reset",
     runHint: "run",
@@ -2053,16 +2069,9 @@ function renderSimPanels() {
     } else if (bench.id === "ifeval") {
       section.className = "sim-panel-full fade-in";
       renderIfevalPanel(section);
-    } else {
-      section.className = "card sim-panel-full fade-in";
-      const h2 = document.createElement("h2");
-      h2.className = "edu-h2";
-      h2.textContent = t("benchName_" + bench.id);
-      section.appendChild(h2);
-      const p = document.createElement("p");
-      p.className = "edu-body card-placeholder";
-      p.textContent = t("stubPanel", { bench: t("benchName_" + bench.id) });
-      section.appendChild(p);
+    } else if (bench.id === "questeval") {
+      section.className = "sim-panel-full fade-in";
+      renderQuestevalPanel(section);
     }
     appEl.appendChild(section);
   });
@@ -3036,6 +3045,315 @@ function buildIfevalDiffContent(raw, variant) {
 }
 
 /**
+ * QuestEval panel: source/target text pair with a bidirectional arrow, fact
+ * toggles + hallucination/preset/run controls, two Q/A-card tracks
+ * (forward = completeness, backward = faithfulness) and a combined score.
+ * Recomputes questevalEval from state.inputs.questeval.targetText on every
+ * call (live function of the current text, same pattern as RAGAS/IFEval),
+ * and writes the panel's data-primary-score / data-fixture-id contract
+ * attributes (single writer: render only).
+ * @param {HTMLElement} section the panel's <section data-sim-id="questeval">
+ */
+function renderQuestevalPanel(section) {
+  const inputs = state.inputs.questeval;
+  const fixture = MODEL.questeval.fixtures[state.lang];
+  const sourceText = questevalSourceText(fixture);
+  const result = questevalEval(fixture.facts, sourceText, inputs.targetText);
+  state.results.questeval = result;
+
+  section.setAttribute("data-primary-score", String(Math.round(result.combined * 100)));
+  section.setAttribute("data-fixture-id", inputs.fixtureId);
+
+  section.appendChild(buildQuestevalTextGrid(inputs, fixture, sourceText, result));
+
+  const tracks = document.createElement("div");
+  tracks.className = "sim-panel";
+  tracks.appendChild(buildQuestevalTrackCard("forward", result));
+  tracks.appendChild(buildQuestevalTrackCard("backward", result));
+  section.appendChild(tracks);
+
+  const scoreCard = document.createElement("div");
+  scoreCard.className = "card";
+  scoreCard.appendChild(buildQuestevalScoreBars(result));
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "caveat";
+  disclaimer.textContent = t("questevalDisclaimer");
+  scoreCard.appendChild(disclaimer);
+  section.appendChild(scoreCard);
+}
+
+function buildQuestevalTextGrid(inputs, fixture, sourceText, result) {
+  const grid = document.createElement("div");
+  grid.className = "qe-text-grid";
+
+  const sourceCard = document.createElement("div");
+  sourceCard.className = "card";
+  const sourceHeading = document.createElement("h3");
+  sourceHeading.className = "edu-h3";
+  sourceHeading.textContent = t("questevalSourceHeading");
+  const sourcePara = document.createElement("p");
+  sourcePara.className = "edu-body qe-source-text";
+  sourcePara.textContent = sourceText;
+  sourceCard.appendChild(sourceHeading);
+  sourceCard.appendChild(sourcePara);
+
+  const arrowCol = document.createElement("div");
+  arrowCol.className = "qe-arrow-col";
+  const arrowIcon = document.createElement("span");
+  arrowIcon.className = "qe-arrow-icon";
+  arrowIcon.setAttribute("aria-hidden", "true");
+  arrowIcon.textContent = "⇄";
+  const arrowSr = document.createElement("span");
+  arrowSr.className = "sr-only";
+  arrowSr.textContent = t("questevalArrowSrLabel");
+  arrowCol.appendChild(arrowIcon);
+  arrowCol.appendChild(arrowSr);
+
+  const targetCard = document.createElement("div");
+  targetCard.className = "card";
+  const targetHeading = document.createElement("h3");
+  targetHeading.className = "edu-h3";
+  targetHeading.textContent = t("questevalTargetHeading");
+  targetCard.appendChild(targetHeading);
+  targetCard.appendChild(buildQuestevalToggles(inputs, fixture, result));
+  targetCard.appendChild(buildQuestevalTargetField(inputs));
+  targetCard.appendChild(buildQuestevalButtonRow());
+
+  grid.appendChild(sourceCard);
+  grid.appendChild(arrowCol);
+  grid.appendChild(targetCard);
+  return grid;
+}
+
+/**
+ * Fact toggles for the 5 source-origin facts. Clicking one always rebuilds
+ * the target text from the current toggle vector (discarding any manual
+ * edit) - a deliberate simplification (documented in phase4-report.md) so
+ * "what the toggles say" and "what the text contains" never silently
+ * diverge. While the text IS a manual/custom edit (inputs.isCustom), the
+ * checkboxes are disabled and instead reflect live detection state (is this
+ * fact's phrase currently found in the target text?), per the brief's
+ * "toggles reflect detection state or gray out" allowance.
+ */
+function buildQuestevalToggles(inputs, fixture, result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("questevalTogglesHeading");
+  wrap.appendChild(heading);
+
+  const sourceFacts = fixture.facts.filter((f) => f.origin === "source");
+  sourceFacts.forEach((f) => {
+    const detected = result.forward.find((r) => r.id === f.id).match;
+    const checked = inputs.isCustom ? detected : !!inputs.toggles[f.id];
+
+    const row = document.createElement("div");
+    row.className = "constraint-row";
+    row.setAttribute("data-active", String(checked));
+    row.setAttribute("data-fact-id", f.id);
+
+    const head = document.createElement("div");
+    head.className = "constraint-row-head";
+    const checkboxId = "questevalToggle_" + f.id;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = checkboxId;
+    checkbox.checked = checked;
+    checkbox.disabled = inputs.isCustom;
+    checkbox.addEventListener("change", () => updateQuestevalToggle(f.id, checkbox.checked));
+    const label = document.createElement("label");
+    label.setAttribute("for", checkboxId);
+    label.textContent = t("questevalToggle_" + f.id);
+    head.appendChild(checkbox);
+    head.appendChild(label);
+    row.appendChild(head);
+    wrap.appendChild(row);
+  });
+
+  if (inputs.isCustom) {
+    const note = document.createElement("p");
+    note.className = "edu-caption";
+    note.textContent = t("questevalTogglesCustomNote");
+    wrap.appendChild(note);
+  }
+
+  return wrap;
+}
+
+function buildQuestevalTargetField(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "questevalTargetField");
+  label.textContent = t("questevalTargetFieldLabel");
+  const textarea = document.createElement("textarea");
+  textarea.id = "questevalTargetField";
+  textarea.rows = 6;
+  textarea.value = inputs.targetText;
+  textarea.addEventListener("input", () => updateQuestevalTargetText(textarea.value));
+  wrap.appendChild(label);
+  wrap.appendChild(textarea);
+  return wrap;
+}
+
+function buildQuestevalButtonRow() {
+  const row = document.createElement("div");
+  row.className = "btn-row";
+
+  const presetFull = document.createElement("button");
+  presetFull.type = "button";
+  presetFull.className = "btn btn-secondary";
+  presetFull.textContent = t("questevalPresetFull");
+  presetFull.addEventListener("click", () => applyQuestevalPreset("questeval-full"));
+
+  const presetMissing = document.createElement("button");
+  presetMissing.type = "button";
+  presetMissing.className = "btn btn-secondary";
+  presetMissing.textContent = t("questevalPresetMissing");
+  presetMissing.addEventListener("click", () => applyQuestevalPreset("questeval-missing"));
+
+  const addHallucination = document.createElement("button");
+  addHallucination.type = "button";
+  addHallucination.className = "btn btn-secondary";
+  addHallucination.textContent = t("questevalAddHallucinationButton");
+  addHallucination.addEventListener("click", () => appendQuestevalHallucination());
+
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = t("questevalRunButton");
+  runBtn.addEventListener("click", () => runQuestevalEval());
+
+  row.appendChild(presetFull);
+  row.appendChild(presetMissing);
+  row.appendChild(addHallucination);
+  row.appendChild(runBtn);
+  return row;
+}
+
+/**
+ * One Q/A-card track: "forward" (completeness, always 5 source-fact
+ * questions) or "backward" (faithfulness, only facts currently detected in
+ * the target text - shows the "brak twierdzeń do oceny" empty state per the
+ * brief when nothing is detected at all).
+ * @param {"forward"|"backward"} direction
+ * @param {ReturnType<typeof questevalEval>} result
+ */
+function buildQuestevalTrackCard(direction, result) {
+  const card = document.createElement("div");
+  card.className = "card";
+  const heading = document.createElement("h3");
+  heading.className = "edu-h3";
+  heading.textContent = t(direction === "forward" ? "questevalForwardHeading" : "questevalBackwardHeading");
+  card.appendChild(heading);
+
+  const items = direction === "forward" ? result.forward : result.backward;
+
+  if (direction === "backward" && result.backwardEmpty) {
+    const empty = document.createElement("p");
+    empty.className = "edu-small";
+    empty.textContent = t("questevalNoBackwardClaims");
+    card.appendChild(empty);
+    return card;
+  }
+
+  items.forEach((item) => {
+    const qa = document.createElement("div");
+    qa.className = "qe-qa-card";
+    qa.setAttribute("data-fact-id", item.id);
+    qa.setAttribute("data-match", item.match ? "pass" : "fail");
+
+    const question = document.createElement("p");
+    question.className = "qe-qa-question";
+    question.textContent = item.question;
+    qa.appendChild(question);
+
+    const goldRow = document.createElement("div");
+    goldRow.className = "qe-qa-row";
+    const goldLabel = document.createElement("span");
+    goldLabel.className = "qe-qa-label";
+    goldLabel.textContent = t("questevalGoldLabel");
+    const goldValue = document.createElement("span");
+    goldValue.className = "qe-qa-value";
+    goldValue.textContent = item.goldAnswer;
+    goldRow.appendChild(goldLabel);
+    goldRow.appendChild(goldValue);
+    qa.appendChild(goldRow);
+
+    const foundRow = document.createElement("div");
+    foundRow.className = "qe-qa-row";
+    const foundLabel = document.createElement("span");
+    foundLabel.className = "qe-qa-label";
+    foundLabel.textContent = t("questevalFoundLabel");
+    const foundValue = document.createElement("span");
+    foundValue.className = "qe-qa-value";
+    foundValue.textContent = item.matchedVariant || t("questevalNotFound");
+    foundRow.appendChild(foundLabel);
+    foundRow.appendChild(foundValue);
+    qa.appendChild(foundRow);
+
+    const statusWrap = document.createElement("div");
+    statusWrap.className = "qe-qa-status";
+    const pill = document.createElement("span");
+    pill.className = "status-pill";
+    pill.setAttribute("data-status", item.match ? "pass" : "fail");
+    pill.textContent = item.match ? t("questevalMatchPass") : t("questevalMatchFail");
+    statusWrap.appendChild(pill);
+    qa.appendChild(statusWrap);
+
+    card.appendChild(qa);
+  });
+
+  return card;
+}
+
+function buildQuestevalScoreBars(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const metrics = [
+    { key: "completeness", labelKey: "questevalMetricCompleteness", value: result.completeness },
+    { key: "faithfulness", labelKey: "questevalMetricFaithfulness", value: result.faithfulness },
+    { key: "combined", labelKey: "questevalMetricCombined", value: result.combined },
+  ];
+
+  metrics.forEach((m) => {
+    const pct = Math.round(m.value * 100);
+    const status = scoreStatus(pct);
+
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.setAttribute("data-metric", m.key);
+    row.setAttribute("data-value", String(pct));
+    row.setAttribute("data-status", status);
+
+    const label = document.createElement("span");
+    label.className = "score-label";
+    label.textContent = t(m.labelKey);
+
+    const track = document.createElement("div");
+    track.className = "score-track";
+    const fill = document.createElement("div");
+    fill.className = "score-fill";
+    fill.setAttribute("data-status", status);
+    fill.style.width = pct + "%";
+    track.appendChild(fill);
+
+    const value = document.createElement("span");
+    value.className = "score-value";
+    value.textContent = pct + "%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    wrap.appendChild(row);
+  });
+
+  return wrap;
+}
+
+/**
  * Push a message into the aria-live region. Clears first so the same
  * message announced twice in a row is still read by screen readers.
  */
@@ -3068,6 +3386,7 @@ function setLang(lang) {
   saveLangToStorage(lang);
   relocalizeRagasFixture();
   relocalizeIfevalFixture();
+  relocalizeQuestevalFixture();
   render();
   announce(t("ariaLangChanged", { lang: lang === "pl" ? t("langPl") : t("langEn") }));
 }
@@ -3254,6 +3573,102 @@ function resetIfevalInputs() {
   state.inputs.ifeval = cloneIfevalInputs(findIfevalFixture("ifeval-all", state.lang));
 }
 
+// If the current QuestEval inputs are still toggle-composed (not a manual
+// edit) and match a known preset, reload that same preset in the new
+// language so the demo stays coherent; a "custom" edit is left as-is (there
+// is no source text to translate a free-typed edit from).
+function relocalizeQuestevalFixture() {
+  const inputs = state.inputs.questeval;
+  if (inputs && !inputs.isCustom && QUESTEVAL_FIXTURE_IDS.includes(inputs.fixtureId)) {
+    state.inputs.questeval = buildQuestevalInputsFromPreset(inputs.fixtureId, state.lang);
+  }
+}
+
+// ── QuestEval field editing ──
+// Same full-render + refocus + caret-preservation pattern as RAGAS/IFEval:
+// results are a live function of state.inputs.questeval.targetText (see
+// renderQuestevalPanel), so every toggle, hallucination click, or textarea
+// keystroke immediately updates the DOM contract.
+function rerenderQuestevalPreservingFocus() {
+  const active = document.activeElement;
+  const activeId = active && active.id;
+  const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+  const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+  render();
+  if (!activeId) return;
+  const el = document.getElementById(activeId);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+    if (selStart !== null && typeof el.setSelectionRange === "function") {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* not a text field - ignore */ }
+    }
+  }
+}
+
+// Toggling a fact always rebuilds the target text from the full toggle
+// vector - including when the text was previously a manual/custom edit,
+// which this click intentionally discards (see buildQuestevalToggles doc).
+function updateQuestevalToggle(factId, checked) {
+  const inputs = state.inputs.questeval;
+  inputs.toggles[factId] = checked;
+  inputs.isCustom = false;
+  const fixture = MODEL.questeval.fixtures[state.lang];
+  inputs.targetText = composeQuestevalTargetText(fixture, inputs.toggles, inputs.hallucinationAdded);
+  inputs.fixtureId = computeQuestevalFixtureId(inputs.toggles, inputs.hallucinationAdded, state.lang);
+  rerenderQuestevalPreservingFocus();
+}
+
+// "Dodaj halucynację": in toggle mode, adds the hallucination fact to the
+// toggle-composed text (same rebuild path as a toggle click). In custom
+// mode, appends the hallucination sentence to whatever free text is
+// currently there (mirrors RAGAS's appendRagasHallucination), leaving
+// fixtureId "custom" since the result is no longer purely toggle-composed.
+function appendQuestevalHallucination() {
+  const inputs = state.inputs.questeval;
+  const fixture = MODEL.questeval.fixtures[state.lang];
+  const hallFact = fixture.facts.find((f) => f.origin === "hallucination");
+  if (!inputs.isCustom) {
+    inputs.hallucinationAdded = true;
+    inputs.targetText = composeQuestevalTargetText(fixture, inputs.toggles, true);
+    inputs.fixtureId = computeQuestevalFixtureId(inputs.toggles, true, state.lang);
+  } else {
+    let text = (inputs.targetText || "").trim();
+    if (text && !/[.!?]$/.test(text)) text += ".";
+    inputs.targetText = text ? text + " " + hallFact.targetSentence : hallFact.targetSentence;
+    inputs.hallucinationAdded = true;
+    inputs.fixtureId = "custom";
+  }
+  state.runState = "complete";
+  render();
+  announce(t("ariaQuestevalHallucinationAdded"));
+}
+
+function updateQuestevalTargetText(value) {
+  const inputs = state.inputs.questeval;
+  inputs.targetText = value;
+  inputs.isCustom = true;
+  inputs.fixtureId = "custom";
+  rerenderQuestevalPreservingFocus();
+}
+
+function applyQuestevalPreset(id) {
+  state.inputs.questeval = buildQuestevalInputsFromPreset(id, state.lang);
+  state.runState = "complete";
+  render();
+  const labelKey = questevalFixtureLabelKey(id);
+  announce(t("ariaQuestevalPresetApplied", { preset: labelKey ? t(labelKey) : id }));
+}
+
+function runQuestevalEval() {
+  state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function resetQuestevalInputs() {
+  state.inputs.questeval = buildQuestevalInputsFromPreset("questeval-full", state.lang);
+}
+
 function isTypingTarget(el) {
   if (!el) return false;
   const tag = el.tagName;
@@ -3299,11 +3714,10 @@ function runCurrentBench() {
     runIfevalEval();
     return;
   }
-  // Phase 0 stub for the other benches: no evaluation logic yet (added
-  // per-bench in later phases).
-  state.runState = "complete";
-  render();
-  announce(t("ariaResultUpdated"));
+  if (state.activeBench === "questeval") {
+    runQuestevalEval();
+    return;
+  }
 }
 
 function resetCurrentBench() {
@@ -3323,9 +3737,12 @@ function resetCurrentBench() {
     render();
     return;
   }
-  // Phase 0 stub for the other benches: no fixtures/inputs yet to reset.
-  state.runState = "idle";
-  render();
+  if (state.activeBench === "questeval") {
+    resetQuestevalInputs();
+    state.runState = "idle";
+    render();
+    return;
+  }
 }
 
 document.addEventListener("keydown", handleKeydown);
@@ -3338,6 +3755,7 @@ state.lang = loadLangFromStorage();
 resetRagasInputs();
 resetAresInputs();
 resetIfevalInputs();
+resetQuestevalInputs();
 render();
   </script>
 </body>
