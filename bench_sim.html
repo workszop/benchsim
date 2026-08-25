@@ -470,6 +470,37 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── QA test panel (footer button / ?qa=1) ── */
+.qa-overlay {
+  position: fixed; inset: 0; background: rgba(33, 30, 26, .48);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--sp-6); z-index: 200;
+  animation: benchFadeIn .3s cubic-bezier(.32,.72,.32,1);
+}
+.qa-overlay[hidden] { display: none; }
+.qa-panel-card {
+  width: 100%; max-width: 620px; max-height: 84vh; overflow-y: auto;
+}
+.qa-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.qa-panel-head h3 { margin: 0 0 4px; }
+.qa-summary {
+  font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); margin: 0 0 var(--sp-5);
+}
+.qa-summary[data-qa-status="pass"] { color: var(--success-ink); }
+.qa-summary[data-qa-status="fail"] { color: var(--danger-ink); }
+.qa-row {
+  display: flex; align-items: center; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--line);
+}
+.qa-row:last-child { border-bottom: 0; }
+.qa-row-label { flex: 1; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+.qa-close-btn {
+  background: transparent; border: 0; cursor: pointer; color: var(--ink-3);
+  font-family: var(--font-mono); font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: var(--r-xs);
+  flex-shrink: 0;
+}
+.qa-close-btn:hover { background: var(--paper-2); color: var(--ink); }
+.qa-close-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */
@@ -527,6 +558,20 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
     <span class="edu-caption">Bench Sim - demo edukacyjne edulab</span>
     <button type="button" class="btn btn-ghost" id="qaButton">Uruchom testy QA</button>
   </footer>
+
+  <div class="qa-overlay" id="qaOverlay" hidden>
+    <div class="card qa-panel-card" id="qaPanel" role="dialog" aria-modal="true" aria-labelledby="qaPanelTitle">
+      <div class="qa-panel-head">
+        <div>
+          <p class="edu-overline" id="qaPanelEyebrow">Panel QA</p>
+          <h3 id="qaPanelTitle">Testy QA</h3>
+        </div>
+        <button type="button" class="qa-close-btn" id="qaCloseButton" aria-label="Zamknij">&times;</button>
+      </div>
+      <p class="qa-summary" id="qaSummary"></p>
+      <div id="qaResultsList"></div>
+    </div>
+  </div>
 
   <script>
 // ─── Constants ───
@@ -599,6 +644,21 @@ const T = {
     langEn: "EN",
     footerCredit: "Bench Sim - demo edukacyjne edulab",
     qaButton: "Uruchom testy QA",
+    qaPanelEyebrow: "Panel QA",
+    qaPanelTitle: "Testy QA",
+    qaCloseLabel: "Zamknij",
+    qaSummaryPass: "{passed} z {total} testów PASS",
+    qaSummaryFail: "{passed} z {total} testów PASS - są niepowodzenia",
+    qaResultPass: "PASS",
+    qaResultFail: "FAIL",
+    qaTest1: "RAGAS: dodanie niewspieranego twierdzenia obniża faithfulness i nie obniża answer relevance",
+    qaTest2: "RAGAS: preset „Szum w kontekście” obniża context relevance względem „Dobry przykład”",
+    qaTest3: "ARES: zwiększenie n z 60 do 300 zwęża przedział ufności",
+    qaTest4: "ARES: przy biasie +15 pp |PPI - prawda| < |surowy judge - prawda|",
+    qaTest5: "IFEval: naruszenie jednego z wielu warunków ustawia strict prompt-level na 0%",
+    qaTest6: "IFEval: wstęp przed poprawnym JSON-em daje strict JSON = FAIL i loose JSON = PASS",
+    qaTest7: "QuestEval: usunięcie faktu obniża completeness i nie zmienia faithfulness",
+    qaTest8: "QuestEval: dodanie halucynacji obniża faithfulness i nie zmienia completeness",
     benchName_ragas: "RAGAS",
     benchName_ares: "ARES",
     benchName_ifeval: "IFEval",
@@ -765,6 +825,21 @@ const T = {
     langEn: "EN",
     footerCredit: "Bench Sim - an edulab educational demo",
     qaButton: "Run QA tests",
+    qaPanelEyebrow: "QA panel",
+    qaPanelTitle: "QA tests",
+    qaCloseLabel: "Close",
+    qaSummaryPass: "{passed} of {total} tests PASS",
+    qaSummaryFail: "{passed} of {total} tests PASS - there are failures",
+    qaResultPass: "PASS",
+    qaResultFail: "FAIL",
+    qaTest1: "RAGAS: adding an unsupported claim lowers faithfulness and does not lower answer relevance",
+    qaTest2: "RAGAS: the \"Noise in context\" preset lowers context relevance relative to \"Good example\"",
+    qaTest3: "ARES: increasing n from 60 to 300 narrows the confidence interval",
+    qaTest4: "ARES: with a +15 pp bias, |PPI - truth| < |raw judge - truth|",
+    qaTest5: "IFEval: violating one of several constraints sets strict prompt-level to 0%",
+    qaTest6: "IFEval: a preamble before valid JSON gives strict JSON = FAIL and loose JSON = PASS",
+    qaTest7: "QuestEval: removing a fact lowers completeness and does not change faithfulness",
+    qaTest8: "QuestEval: adding a hallucination lowers faithfulness and does not change completeness",
     benchName_ragas: "RAGAS",
     benchName_ares: "ARES",
     benchName_ifeval: "IFEval",
@@ -1289,6 +1364,10 @@ const state = {
   ui: {                    // drobny stan czysto widokowy (nie wynikowy)
     aresShowFormula: false,
   },
+  qa: {                     // panel testów QA (?qa=1 lub przycisk w stopce)
+    open: false,
+    results: null,          // null dopóki testy się nie uruchomiły choć raz
+  },
   ai: {                    // tryb AI (sekcja 5)
     settings: null,        // znormalizowane eduapp_ai (provider, model, keys)
     state: "idle",         // idle | loading | complete | error (per aktywna operacja)
@@ -1311,6 +1390,12 @@ const pageLeadEl = document.getElementById("pageLead");
 const ariaLiveEl = document.getElementById("ariaLive");
 const qaButtonEl = document.getElementById("qaButton");
 const footerCreditEl = document.querySelector(".edu-footer .edu-caption");
+const qaOverlayEl = document.getElementById("qaOverlay");
+const qaPanelEyebrowEl = document.getElementById("qaPanelEyebrow");
+const qaPanelTitleEl = document.getElementById("qaPanelTitle");
+const qaCloseButtonEl = document.getElementById("qaCloseButton");
+const qaSummaryEl = document.getElementById("qaSummary");
+const qaResultsListEl = document.getElementById("qaResultsList");
 
 // ─── Helpers ───
 
@@ -1942,6 +2027,120 @@ function questevalFixtureLabelKey(id) {
   if (id === "questeval-missing") return "questevalPresetMissing";
   if (id === "questeval-hallucination") return "questevalPresetHallucination";
   return null;
+}
+
+// ── QA test panel: deterministic tests on pure functions + fixtures ──
+// Every qaTestN() takes no arguments, touches no DOM/network, and returns a
+// boolean (true = PASS). All fixtures are read from MODEL.<bench>.fixtures.pl
+// per the phase5 brief. Test 9 (AI sanitizer, phase 6) is appended to the
+// TESTS list below without touching this shape.
+
+function qaTest1() {
+  // RAGAS: adding an unsupported claim (ragas-hallucination vs ragas-good)
+  // must lower faithfulness and must not lower answer relevance.
+  const good = ragasEval(findRagasFixture("ragas-good", "pl"), "pl");
+  const hallucination = ragasEval(findRagasFixture("ragas-hallucination", "pl"), "pl");
+  return hallucination.faithfulness < good.faithfulness && hallucination.answerRelevance >= good.answerRelevance;
+}
+
+function qaTest2() {
+  // RAGAS: the "noise in context" preset must score lower context relevance
+  // than the "good example" preset.
+  const good = ragasEval(findRagasFixture("ragas-good", "pl"), "pl");
+  const noise = ragasEval(findRagasFixture("ragas-noise", "pl"), "pl");
+  return noise.contextRelevance < good.contextRelevance;
+}
+
+function qaTest3() {
+  // ARES: same params except n; n=300 must narrow the CI vs n=60.
+  const base = { N: 800, biasPp: 15, errPct: 10, dimension: "context", seed: MODEL.ares.defaults.seed };
+  const small = aresExperiment({ ...base, n: 60 });
+  const large = aresExperiment({ ...base, n: 300 });
+  const widthSmall = small.ci.hi - small.ci.lo;
+  const widthLarge = large.ci.hi - large.ci.lo;
+  return widthLarge < widthSmall;
+}
+
+function qaTest4() {
+  // ARES: with a +15pp bias, the PPI correction must land closer to the
+  // hidden true rate than the raw judge score does.
+  const result = aresExperiment({ ...MODEL.ares.defaults });
+  const errPpi = Math.abs(result.ppi - result.trueRate);
+  const errRaw = Math.abs(result.raw - result.trueRate);
+  return errPpi < errRaw;
+}
+
+function qaTest5() {
+  // IFEval: the "skip one" fixture violates exactly one of several active
+  // constraints, so strict prompt-level accuracy must be 0.
+  const fixture = findIfevalFixture("ifeval-skip-one", "pl");
+  const constraints = activeIfevalConstraints({ constraints: fixture.constraints });
+  const result = ifevalEval(constraints, fixture.answer);
+  return constraints.length >= 2 && result.strictPrompt === 0;
+}
+
+function qaTest6() {
+  // IFEval: a preamble before a valid JSON body fails strict validJson but
+  // passes loose validJson (drop-first-line variant).
+  const fixture = findIfevalFixture("ifeval-json-preamble", "pl");
+  const constraints = activeIfevalConstraints({ constraints: fixture.constraints });
+  const result = ifevalEval(constraints, fixture.answer);
+  const jsonResult = result.constraints.find((c) => c.id === "validJson");
+  return !!jsonResult && jsonResult.strictPass === false && jsonResult.loosePass === true;
+}
+
+function qaTest7() {
+  // QuestEval: dropping a source fact (questeval-missing vs questeval-full)
+  // must lower completeness and must not change faithfulness.
+  const fixture = MODEL.questeval.fixtures.pl;
+  const sourceText = questevalSourceText(fixture);
+  const full = buildQuestevalInputsFromPreset("questeval-full", "pl");
+  const missing = buildQuestevalInputsFromPreset("questeval-missing", "pl");
+  const resultFull = questevalEval(fixture.facts, sourceText, full.targetText);
+  const resultMissing = questevalEval(fixture.facts, sourceText, missing.targetText);
+  return resultMissing.completeness < resultFull.completeness && resultMissing.faithfulness === resultFull.faithfulness;
+}
+
+function qaTest8() {
+  // QuestEval: adding the hallucination fact (questeval-hallucination vs
+  // questeval-full) must lower faithfulness and must not change completeness.
+  const fixture = MODEL.questeval.fixtures.pl;
+  const sourceText = questevalSourceText(fixture);
+  const full = buildQuestevalInputsFromPreset("questeval-full", "pl");
+  const hallucination = buildQuestevalInputsFromPreset("questeval-hallucination", "pl");
+  const resultFull = questevalEval(fixture.facts, sourceText, full.targetText);
+  const resultHallucination = questevalEval(fixture.facts, sourceText, hallucination.targetText);
+  return resultHallucination.faithfulness < resultFull.faithfulness && resultHallucination.completeness === resultFull.completeness;
+}
+
+// Ordered test list. Append future tests (e.g. test 9, phase 6) here without
+// touching runQaTests() itself.
+const QA_TESTS = [
+  { id: "qa-1", labelKey: "qaTest1", fn: qaTest1 },
+  { id: "qa-2", labelKey: "qaTest2", fn: qaTest2 },
+  { id: "qa-3", labelKey: "qaTest3", fn: qaTest3 },
+  { id: "qa-4", labelKey: "qaTest4", fn: qaTest4 },
+  { id: "qa-5", labelKey: "qaTest5", fn: qaTest5 },
+  { id: "qa-6", labelKey: "qaTest6", fn: qaTest6 },
+  { id: "qa-7", labelKey: "qaTest7", fn: qaTest7 },
+  { id: "qa-8", labelKey: "qaTest8", fn: qaTest8 },
+];
+
+/**
+ * Runs every registered QA test (pure functions + fixtures, no DOM/network)
+ * and returns one row per test plus the overall pass/fail.
+ * @returns {{id: string, label: string, pass: boolean}[]}
+ */
+function runQaTests() {
+  return QA_TESTS.map((test) => {
+    let pass;
+    try {
+      pass = !!test.fn();
+    } catch (e) {
+      pass = false;
+    }
+    return { id: test.id, label: t(test.labelKey), pass };
+  });
 }
 
 function loadLangFromStorage() {
@@ -3362,11 +3561,62 @@ function announce(message) {
   window.setTimeout(() => { ariaLiveEl.textContent = message; }, 30);
 }
 
+/**
+ * Single writer for the QA panel: state.qa -> panel DOM + data-qa-status on
+ * <main id="app"> (part of the DOM contract, published once tests have run
+ * at least once; absent before that).
+ */
+function renderQaPanel() {
+  qaOverlayEl.hidden = !state.qa.open;
+  qaPanelEyebrowEl.textContent = t("qaPanelEyebrow");
+  qaPanelTitleEl.textContent = t("qaPanelTitle");
+  qaCloseButtonEl.setAttribute("aria-label", t("qaCloseLabel"));
+
+  const results = state.qa.results;
+  if (!results) {
+    appEl.removeAttribute("data-qa-status");
+    qaSummaryEl.textContent = "";
+    qaSummaryEl.removeAttribute("data-qa-status");
+    qaResultsListEl.innerHTML = "";
+    return;
+  }
+
+  const total = results.length;
+  const passed = results.filter((r) => r.pass).length;
+  const overallStatus = passed === total ? "pass" : "fail";
+  appEl.setAttribute("data-qa-status", overallStatus);
+
+  qaSummaryEl.textContent = t(overallStatus === "pass" ? "qaSummaryPass" : "qaSummaryFail", { passed, total });
+  qaSummaryEl.setAttribute("data-qa-status", overallStatus);
+
+  qaResultsListEl.innerHTML = "";
+  results.forEach((result) => {
+    const row = document.createElement("div");
+    row.className = "qa-row";
+    row.setAttribute("data-qa-test-id", result.id);
+    row.setAttribute("data-qa-result", result.pass ? "pass" : "fail");
+
+    const label = document.createElement("span");
+    label.className = "qa-row-label";
+    label.textContent = result.label;
+    row.appendChild(label);
+
+    const pill = document.createElement("span");
+    pill.className = "status-pill";
+    pill.setAttribute("data-status", result.pass ? "pass" : "fail");
+    pill.textContent = t(result.pass ? "qaResultPass" : "qaResultFail");
+    row.appendChild(pill);
+
+    qaResultsListEl.appendChild(row);
+  });
+}
+
 function render() {
   renderChrome();
   renderBenchTabs();
   renderProgress();
   renderSimPanels();
+  renderQaPanel();
   syncDomContract();
 }
 
@@ -3378,6 +3628,17 @@ function setActiveBench(benchId) {
   state.runState = "idle";
   render();
   announce(t("ariaTabChanged", { bench: t("benchName_" + benchId) }));
+}
+
+function openQaPanel() {
+  state.qa.results = runQaTests();
+  state.qa.open = true;
+  render();
+}
+
+function closeQaPanel() {
+  state.qa.open = false;
+  render();
 }
 
 function setLang(lang) {
@@ -3687,6 +3948,10 @@ function handleKeydown(e) {
     runCurrentBench();
     return;
   }
+  if (e.key === "Escape" && state.qa.open) {
+    closeQaPanel();
+    return;
+  }
   if (typing) return;
 
   if (e.key >= "1" && e.key <= "4") {
@@ -3748,6 +4013,11 @@ function resetCurrentBench() {
 document.addEventListener("keydown", handleKeydown);
 langBtnPlEl.addEventListener("click", () => setLang("pl"));
 langBtnEnEl.addEventListener("click", () => setLang("en"));
+qaButtonEl.addEventListener("click", openQaPanel);
+qaCloseButtonEl.addEventListener("click", closeQaPanel);
+qaOverlayEl.addEventListener("click", (e) => {
+  if (e.target === qaOverlayEl) closeQaPanel();
+});
 
 // ─── Init ───
 
@@ -3757,6 +4027,12 @@ resetAresInputs();
 resetIfevalInputs();
 resetQuestevalInputs();
 render();
+
+// ?qa=1 auto-opens the QA panel and runs the suite - used by the acceptance
+// sweep and by anyone sharing a direct QA link. Never touches the network.
+if (new URLSearchParams(window.location.search).get("qa") === "1") {
+  openQaPanel();
+}
   </script>
 </body>
 </html>
