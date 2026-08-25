@@ -540,6 +540,9 @@ const VALIDATORS = {
 // IFEval: preset fixture ids (also used as data-fixture-id values).
 const IFEVAL_FIXTURE_IDS = ["ifeval-all", "ifeval-skip-one", "ifeval-json-preamble"];
 
+// QuestEval: preset fixture ids (also used as data-fixture-id values).
+const QUESTEVAL_FIXTURE_IDS = ["questeval-full", "questeval-missing", "questeval-hallucination"];
+
 // RAGAS: preset fixture ids (also used as data-fixture-id values) and the
 // score-bar pass/warn/fail thresholds (percentage points, 0-100 scale).
 const RAGAS_FIXTURE_IDS = ["ragas-good", "ragas-noise", "ragas-hallucination"];
@@ -703,6 +706,38 @@ const T = {
     aresLowNNote: "W publikacji ARES poniżej ok. 100-150 etykiet metoda traci zdolność rozróżniania podobnych konfiguracji.",
     aresDisclaimer: "To edukacyjna ilustracja korekty PPI. Pełny ARES obejmuje generację danych syntetycznych, trening trzech osobnych judge'ów (w publikacji DeBERTa-v3-Large) i formalne wnioskowanie statystyczne.",
     ariaAresReset: "Parametry ARES przywrócone do wartości domyślnych",
+
+    // ── QuestEval panel ──
+    questevalSourceHeading: "Tekst źródłowy",
+    questevalTargetHeading: "Tekst uproszczony lub wygenerowany",
+    questevalArrowSrLabel: "Dwukierunkowe porównanie tekstów",
+    questevalTogglesHeading: "Fakty w tekście docelowym",
+    "questevalToggle_qe-fact-1": "Moc silnika (250 W)",
+    "questevalToggle_qe-fact-2": "Zasięg na jednym ładowaniu (80 km)",
+    "questevalToggle_qe-fact-3": "Czas ładowania (ok. 4h)",
+    "questevalToggle_qe-fact-4": "Prędkość wspomagania (25 km/h)",
+    "questevalToggle_qe-fact-5": "Masa roweru (22 kg)",
+    questevalTogglesCustomNote: "Tekst edytowany ręcznie - przełączniki tylko pokazują, które fakty są aktualnie wykryte.",
+    questevalTargetFieldLabel: "Edytuj tekst docelowy",
+    questevalPresetFull: "Pełne pokrycie",
+    questevalPresetMissing: "Pominięty fakt",
+    questevalPresetHallucination: "Dodana halucynacja",
+    questevalAddHallucinationButton: "Dodaj halucynację",
+    questevalRunButton: "Oceń",
+    questevalForwardHeading: "Źródło → tekst docelowy: kompletność",
+    questevalBackwardHeading: "Tekst docelowy → źródło: faithfulness",
+    questevalGoldLabel: "Oczekiwana odpowiedź",
+    questevalFoundLabel: "Znaleziona odpowiedź",
+    questevalNotFound: "brak",
+    questevalMatchPass: "zgodne",
+    questevalMatchFail: "niezgodne",
+    questevalNoBackwardClaims: "Brak twierdzeń do oceny - tekst docelowy nie zawiera żadnego wykrytego faktu.",
+    questevalMetricCompleteness: "Completeness",
+    questevalMetricFaithfulness: "Faithfulness",
+    questevalMetricCombined: "Wynik łączny",
+    questevalDisclaimer: "Pełny QuestEval generuje pytania i korzysta z modeli QA. Ta demonstracja używa przygotowanych par pytanie-odpowiedź i jawnego dopasowania fraz. Dla języka polskiego produkcyjna implementacja wymaga lematyzacji lub semantycznego porównania odpowiedzi.",
+    ariaQuestevalPresetApplied: "Wczytano przykład: {preset}",
+    ariaQuestevalHallucinationAdded: "Dodano fakt bez pokrycia w źródle",
   },
   en: {
     eyebrow: "Evaluation simulator",
@@ -838,6 +873,38 @@ const T = {
     aresLowNNote: "In the ARES paper, below roughly 100-150 labels the method loses the ability to distinguish similar configurations.",
     aresDisclaimer: "This is an educational illustration of PPI correction. Full ARES includes synthetic data generation, training three separate judges (DeBERTa-v3-Large in the paper), and formal statistical inference.",
     ariaAresReset: "ARES parameters reset to defaults",
+
+    // ── QuestEval panel ──
+    questevalSourceHeading: "Source text",
+    questevalTargetHeading: "Simplified or generated text",
+    questevalArrowSrLabel: "Bidirectional text comparison",
+    questevalTogglesHeading: "Facts in the target text",
+    "questevalToggle_qe-fact-1": "Motor power (250 W)",
+    "questevalToggle_qe-fact-2": "Range per charge (80 km)",
+    "questevalToggle_qe-fact-3": "Charging time (about 4h)",
+    "questevalToggle_qe-fact-4": "Assist speed limit (25 km/h)",
+    "questevalToggle_qe-fact-5": "Bike weight (22 kg)",
+    questevalTogglesCustomNote: "Text edited by hand - the toggles now only show which facts are currently detected.",
+    questevalTargetFieldLabel: "Edit the target text",
+    questevalPresetFull: "Full coverage",
+    questevalPresetMissing: "Missing fact",
+    questevalPresetHallucination: "Added hallucination",
+    questevalAddHallucinationButton: "Add hallucination",
+    questevalRunButton: "Evaluate",
+    questevalForwardHeading: "Source → target text: completeness",
+    questevalBackwardHeading: "Target text → source: faithfulness",
+    questevalGoldLabel: "Gold answer",
+    questevalFoundLabel: "Found answer",
+    questevalNotFound: "none",
+    questevalMatchPass: "match",
+    questevalMatchFail: "mismatch",
+    questevalNoBackwardClaims: "No claims to evaluate - the target text contains no detected facts.",
+    questevalMetricCompleteness: "Completeness",
+    questevalMetricFaithfulness: "Faithfulness",
+    questevalMetricCombined: "Combined score",
+    questevalDisclaimer: "Full QuestEval generates questions and uses QA models. This demonstration uses prepared question-answer pairs and explicit phrase matching. For Polish, a production implementation needs lemmatization or semantic answer comparison.",
+    ariaQuestevalPresetApplied: "Loaded example: {preset}",
+    ariaQuestevalHallucinationAdded: "Added a fact with no coverage in the source",
   },
 };
 
@@ -1050,7 +1117,151 @@ const MODEL = {
       ],
     },
   },
-  questeval: { fixtures: { pl: [], en: [] } },
+  questeval: {
+    // Presets: which of the 5 source-origin facts' toggles are on, and
+    // whether the hallucination fact has been appended. computeQuestevalFixtureId
+    // matches the current inputs against these to decide data-fixture-id.
+    presets: [
+      {
+        id: "questeval-full",
+        toggles: { "qe-fact-1": true, "qe-fact-2": true, "qe-fact-3": true, "qe-fact-4": true, "qe-fact-5": true },
+        hallucinationAdded: false,
+      },
+      {
+        id: "questeval-missing",
+        toggles: { "qe-fact-1": true, "qe-fact-2": true, "qe-fact-3": true, "qe-fact-4": true, "qe-fact-5": false },
+        hallucinationAdded: false,
+      },
+      {
+        id: "questeval-hallucination",
+        toggles: { "qe-fact-1": true, "qe-fact-2": true, "qe-fact-3": true, "qe-fact-4": true, "qe-fact-5": true },
+        hallucinationAdded: true,
+      },
+    ],
+    // Fact fixtures per "Model danych fixture'a": 5 origin:"source" facts plus
+    // one origin:"hallucination" fact, pl and en. Each accepted[] variant is
+    // hand-verified (phase4-report.md) to appear, after normalizePhrase(), as
+    // a substring of BOTH that fact's own sourceSentence and targetSentence
+    // (source facts) so toggling a fact reliably matches on both sides; the
+    // hallucination fact's variants are verified to appear in NEITHER of the
+    // other facts' sourceSentences, so it reliably fails the backward check.
+    fixtures: {
+      pl: {
+        facts: [
+          {
+            id: "qe-fact-1",
+            origin: "source",
+            sourceSentence: "Rower elektryczny jest wyposażony w silnik elektryczny o mocy do 250 watów, który wspomaga pedałowanie.",
+            targetSentence: "Rower elektryczny ma silnik o mocy do 250 watów.",
+            question: "Jaką maksymalną moc ma silnik roweru elektrycznego?",
+            goldAnswer: "250 watów",
+            accepted: ["250 watów", "mocy do 250 watów", "silnik o mocy 250 watów"],
+          },
+          {
+            id: "qe-fact-2",
+            origin: "source",
+            sourceSentence: "Bateria roweru elektrycznego pozwala przejechać do 80 kilometrów na jednym ładowaniu.",
+            targetSentence: "Na jednym ładowaniu baterii rower elektryczny przejeżdża do 80 kilometrów.",
+            question: "Ile kilometrów można przejechać na jednym ładowaniu baterii?",
+            goldAnswer: "80 kilometrów",
+            accepted: ["80 kilometrów", "do 80 kilometrów", "zasięg 80 kilometrów"],
+          },
+          {
+            id: "qe-fact-3",
+            origin: "source",
+            sourceSentence: "Pełne naładowanie baterii roweru elektrycznego trwa około czterech godzin.",
+            targetSentence: "Naładowanie baterii trwa około czterech godzin.",
+            question: "Ile trwa pełne naładowanie baterii?",
+            goldAnswer: "około czterech godzin",
+            accepted: ["cztery godziny", "około czterech godzin", "trwa około czterech godzin"],
+          },
+          {
+            id: "qe-fact-4",
+            origin: "source",
+            sourceSentence: "Maksymalna prędkość wspomagania elektrycznego wynosi 25 kilometrów na godzinę zgodnie z przepisami Unii Europejskiej.",
+            targetSentence: "Wspomaganie elektryczne działa do prędkości 25 kilometrów na godzinę.",
+            question: "Jaka jest maksymalna prędkość wspomagania elektrycznego?",
+            goldAnswer: "25 kilometrów na godzinę",
+            accepted: ["25 kilometrów na godzinę", "25 km/h", "prędkości 25 kilometrów na godzinę"],
+          },
+          {
+            id: "qe-fact-5",
+            origin: "source",
+            sourceSentence: "Rower elektryczny waży średnio 22 kilogramy, co jest więcej niż rower tradycyjny.",
+            targetSentence: "Rower elektryczny waży średnio 22 kilogramy.",
+            question: "Ile waży średnio rower elektryczny?",
+            goldAnswer: "22 kilogramy",
+            accepted: ["22 kilogramy", "waży średnio 22 kilogramy", "masa 22 kilogramy"],
+          },
+          {
+            id: "qe-fact-h1",
+            origin: "hallucination",
+            targetSentence: "Rower elektryczny automatycznie rozpoznaje polecenia głosowe użytkownika i steruje nawigacją.",
+            question: "Jaką funkcję sterowania ma rower elektryczny?",
+            goldAnswer: "rozpoznawanie poleceń głosowych",
+            accepted: ["rozpoznaje polecenia głosowe", "rozpoznawanie poleceń głosowych", "sterowanie głosem"],
+          },
+        ],
+      },
+      en: {
+        facts: [
+          {
+            id: "qe-fact-1",
+            origin: "source",
+            sourceSentence: "The e-bike is equipped with an electric motor with power up to 250 watts that assists pedaling.",
+            targetSentence: "The e-bike has a motor with power up to 250 watts.",
+            question: "What is the e-bike motor's maximum power?",
+            goldAnswer: "250 watts",
+            accepted: ["250 watts", "power up to 250 watts", "motor rated at 250 watts"],
+          },
+          {
+            id: "qe-fact-2",
+            origin: "source",
+            sourceSentence: "The e-bike's battery allows riding up to 80 kilometers on a single charge.",
+            targetSentence: "On a single charge, the e-bike can ride up to 80 kilometers.",
+            question: "How many kilometers can it ride on a single charge?",
+            goldAnswer: "80 kilometers",
+            accepted: ["80 kilometers", "up to 80 kilometers", "range of 80 kilometers"],
+          },
+          {
+            id: "qe-fact-3",
+            origin: "source",
+            sourceSentence: "A full battery charge takes about four hours.",
+            targetSentence: "Charging the battery takes about four hours.",
+            question: "How long does a full battery charge take?",
+            goldAnswer: "about four hours",
+            accepted: ["four hours", "about four hours", "takes about four hours"],
+          },
+          {
+            id: "qe-fact-4",
+            origin: "source",
+            sourceSentence: "The maximum assisted speed is 25 kilometers per hour under European Union regulations.",
+            targetSentence: "Electric assistance works up to a speed of 25 kilometers per hour.",
+            question: "What is the maximum assisted speed?",
+            goldAnswer: "25 kilometers per hour",
+            accepted: ["25 kilometers per hour", "25 km/h", "speed of 25 kilometers per hour"],
+          },
+          {
+            id: "qe-fact-5",
+            origin: "source",
+            sourceSentence: "The e-bike weighs 22 kilograms on average, more than a traditional bicycle.",
+            targetSentence: "The e-bike weighs 22 kilograms on average.",
+            question: "What is the e-bike's average weight?",
+            goldAnswer: "22 kilograms",
+            accepted: ["22 kilograms", "weighs 22 kilograms on average", "weight of 22 kilograms"],
+          },
+          {
+            id: "qe-fact-h1",
+            origin: "hallucination",
+            targetSentence: "The e-bike automatically recognizes voice commands and controls navigation.",
+            question: "What control feature does the e-bike have?",
+            goldAnswer: "voice command recognition",
+            accepted: ["recognizes voice commands", "voice command recognition", "voice control"],
+          },
+        ],
+      },
+    },
+  },
 };
 
 const state = {
@@ -1572,6 +1783,149 @@ function resetAresInputs() {
   state.inputs.ares = defaultAresInputs();
   state.ui.aresShowFormula = false;
   computeAresResult();
+}
+
+/**
+ * Lowercase + strip the same punctuation set as normalize(), collapsing
+ * whitespace, but WITHOUT stopword removal or word-splitting - it keeps the
+ * text as one string so phrase substrings survive intact. This is the basis
+ * for QuestEval's phrase matcher (normalize() is word-array-oriented and
+ * would break multi-word phrases like "25 kilometrów na godzinę").
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizePhrase(text) {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .replace(/[.,!?;:()"„”«»\[\]{}\-–—/\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * QuestEval phrase matcher: the first entry of `accepted` that occurs as a
+ * normalized substring of `text`, or null if none match. Per phase4-brief.md
+ * "Reguły oceny" - a fact "matches" a text when any of its accepted variants
+ * appears as a phrase in that text after normalization.
+ * @param {string[]} accepted
+ * @param {string} text
+ * @returns {string|null}
+ */
+function questevalFindMatch(accepted, text) {
+  const norm = normalizePhrase(text);
+  if (!norm) return null;
+  for (const variant of accepted) {
+    const nv = normalizePhrase(variant);
+    if (nv && norm.includes(nv)) return variant;
+  }
+  return null;
+}
+
+/** Join a fixture's source-origin facts' sourceSentence into the full source text. @param {{facts: Object[]}} fixture @returns {string} */
+function questevalSourceText(fixture) {
+  return fixture.facts.filter((f) => f.origin === "source").map((f) => f.sourceSentence).join(" ");
+}
+
+/**
+ * Pure bidirectional QuestEval scorer (no DOM access - the QA phase calls
+ * this directly). Forward (completeness) always asks all 5 source-origin
+ * facts' questions against `targetText` - toggle state never enters this
+ * function, only the text's current content matters, which is what makes a
+ * manual edit behave exactly like a toggle. Backward (faithfulness) is built
+ * only from facts (source or hallucination) whose phrase is currently
+ * detected in `targetText`, then checks each of those against `sourceText`.
+ * Reference: phase4-brief.md "Reguły oceny" / "Uproszczone obliczenia".
+ * @param {Object[]} facts fixture.facts (source + hallucination origins)
+ * @param {string} sourceText
+ * @param {string} targetText
+ * @returns {{
+ *   forward: {id: string, question: string, goldAnswer: string, matchedVariant: string|null, match: boolean}[],
+ *   backward: {id: string, question: string, goldAnswer: string, matchedVariant: string|null, match: boolean}[],
+ *   completeness: number, faithfulness: number, combined: number, backwardEmpty: boolean,
+ * }}
+ */
+function questevalEval(facts, sourceText, targetText) {
+  const sourceFacts = facts.filter((f) => f.origin === "source");
+
+  const forward = sourceFacts.map((f) => {
+    const matchedVariant = questevalFindMatch(f.accepted, targetText);
+    return { id: f.id, question: f.question, goldAnswer: f.goldAnswer, matchedVariant, match: matchedVariant !== null };
+  });
+  const completeness = sourceFacts.length ? forward.filter((r) => r.match).length / sourceFacts.length : 0;
+
+  const detected = facts.filter((f) => questevalFindMatch(f.accepted, targetText) !== null);
+  const backward = detected.map((f) => {
+    const matchedVariant = questevalFindMatch(f.accepted, sourceText);
+    return { id: f.id, question: f.question, goldAnswer: f.goldAnswer, matchedVariant, match: matchedVariant !== null };
+  });
+  const backwardEmpty = detected.length === 0;
+  const faithfulness = backwardEmpty ? 0 : backward.filter((r) => r.match).length / detected.length;
+
+  const combined = completeness + faithfulness > 0 ? (2 * completeness * faithfulness) / (completeness + faithfulness) : 0;
+
+  return { forward, backward, completeness, faithfulness, combined, backwardEmpty };
+}
+
+/**
+ * Build the target text from currently-toggled source facts (fixture.facts
+ * order) plus, if added, the hallucination fact's sentence.
+ * @param {{facts: Object[]}} fixture
+ * @param {Object} toggles fact-id -> boolean (source facts only)
+ * @param {boolean} hallucinationAdded
+ * @returns {string}
+ */
+function composeQuestevalTargetText(fixture, toggles, hallucinationAdded) {
+  const parts = fixture.facts.filter((f) => f.origin === "source" && toggles[f.id]).map((f) => f.targetSentence);
+  if (hallucinationAdded) {
+    const hall = fixture.facts.find((f) => f.origin === "hallucination");
+    if (hall) parts.push(hall.targetSentence);
+  }
+  return parts.join(" ");
+}
+
+/** Whether toggle vectors `a` and `b` agree on every source-fact id in `fixture`. */
+function questevalTogglesEqual(a, b, fixture) {
+  return fixture.facts.filter((f) => f.origin === "source").every((f) => !!a[f.id] === !!b[f.id]);
+}
+
+/**
+ * Whether the current toggles/hallucinationAdded still exactly match one of
+ * the known presets (a "custom" edit, per the DOM contract, is anything that
+ * no longer does - including any manual textarea edit, handled separately).
+ * @param {Object} toggles @param {boolean} hallucinationAdded @param {"pl"|"en"} lang
+ * @returns {string} a QUESTEVAL_FIXTURE_IDS entry, or "custom"
+ */
+function computeQuestevalFixtureId(toggles, hallucinationAdded, lang) {
+  const fixture = MODEL.questeval.fixtures[lang];
+  for (const preset of MODEL.questeval.presets) {
+    if (preset.hallucinationAdded === hallucinationAdded && questevalTogglesEqual(preset.toggles, toggles, fixture)) {
+      return preset.id;
+    }
+  }
+  return "custom";
+}
+
+/** @param {string} id @returns {Object} the matching MODEL.questeval.presets entry, or the first as a fallback. */
+function findQuestevalPreset(id) {
+  return MODEL.questeval.presets.find((p) => p.id === id) || MODEL.questeval.presets[0];
+}
+
+/** Build a fresh state.inputs.questeval from a preset id + language (toggle-composed, not custom). */
+function buildQuestevalInputsFromPreset(id, lang) {
+  const preset = findQuestevalPreset(id);
+  const fixture = MODEL.questeval.fixtures[lang];
+  const toggles = { ...preset.toggles };
+  const targetText = composeQuestevalTargetText(fixture, toggles, preset.hallucinationAdded);
+  return { toggles, hallucinationAdded: preset.hallucinationAdded, isCustom: false, targetText, fixtureId: preset.id };
+}
+
+/** @param {string} id fixture id @returns {string|null} matching T key for its preset button label */
+function questevalFixtureLabelKey(id) {
+  if (id === "questeval-full") return "questevalPresetFull";
+  if (id === "questeval-missing") return "questevalPresetMissing";
+  if (id === "questeval-hallucination") return "questevalPresetHallucination";
+  return null;
 }
 
 function loadLangFromStorage() {
