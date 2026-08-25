@@ -460,6 +460,12 @@ const BENCHES = [
 
 const PHASES = ["input", "process", "result", "interpretation"];
 
+// RAGAS: preset fixture ids (also used as data-fixture-id values) and the
+// score-bar pass/warn/fail thresholds (percentage points, 0-100 scale).
+const RAGAS_FIXTURE_IDS = ["ragas-good", "ragas-noise", "ragas-hallucination"];
+const SCORE_PASS_THRESHOLD = 70;
+const SCORE_WARN_THRESHOLD = 40;
+
 // Polish stopword list used by normalize() to strip function words before
 // phrase-overlap comparisons (RAGAS / QuestEval matching in later phases).
 const STOPWORDS_PL = new Set([
@@ -509,6 +515,33 @@ const T = {
     ariaTabChanged: "Zakładka zmieniona na {bench}",
     ariaLangChanged: "Język zmieniony na {lang}",
     ariaResultUpdated: "Wynik zaktualizowany",
+
+    // ── RAGAS panel ──
+    ragasInputHeading: "Wejście",
+    ragasResultHeading: "Wynik oceny",
+    ragasQuestionLabel: "Pytanie użytkownika",
+    ragasContextLabel: "Pobrany fragment kontekstu {n}",
+    ragasAnswerLabel: "Odpowiedź systemu RAG",
+    ragasPresetGood: "Dobry przykład",
+    ragasPresetNoise: "Szum w kontekście",
+    ragasPresetHallucination: "Dodaj halucynację",
+    ragasRunButton: "Oceń",
+    ragasClaimsTitle: "Wykryte twierdzenia",
+    ragasClaimsEmpty: "Brak twierdzeń - odpowiedź jest pusta.",
+    ragasClaimSupported: "wspierane",
+    ragasClaimUnsupported: "niewspierane",
+    ragasMetricContext: "Context relevance",
+    ragasMetricFaithfulness: "Faithfulness",
+    ragasMetricAnswer: "Answer relevance",
+    ragasExplainContext: "{useful} z {total} fragmentów kontekstu dzieli przynajmniej jedno słowo treściowe z pytaniem.",
+    ragasExplainFaithfulness: "{supported} z {total} twierdzeń ma oparcie w kontekście (próg: co najmniej 60% wspólnych słów treściowych).",
+    ragasExplainAnswer: "{matched} z {total} słów treściowych pytania pojawia się w odpowiedzi.",
+    ragasNoDataNote: "Brak danych do oceny.",
+    ragasContextUsed: "wykorzystany w ocenie",
+    ragasContextSkipped: "pominięty",
+    ragasDisclaimer: "Pełny RAGAS może używać modelu jako evaluatora. Ta demonstracja stosuje prostą i jawną heurystykę dopasowania słów, aby pokazać logikę metryk bez kosztu API.",
+    ariaRagasPresetApplied: "Wczytano przykład: {preset}",
+    ariaRagasHallucinationAdded: "Dodano twierdzenie bez pokrycia w kontekście",
   },
   en: {
     eyebrow: "Evaluation simulator",
@@ -536,6 +569,33 @@ const T = {
     ariaTabChanged: "Tab changed to {bench}",
     ariaLangChanged: "Language changed to {lang}",
     ariaResultUpdated: "Result updated",
+
+    // ── RAGAS panel ──
+    ragasInputHeading: "Input",
+    ragasResultHeading: "Evaluation result",
+    ragasQuestionLabel: "User question",
+    ragasContextLabel: "Retrieved context fragment {n}",
+    ragasAnswerLabel: "RAG system answer",
+    ragasPresetGood: "Good example",
+    ragasPresetNoise: "Noise in context",
+    ragasPresetHallucination: "Add hallucination",
+    ragasRunButton: "Evaluate",
+    ragasClaimsTitle: "Detected claims",
+    ragasClaimsEmpty: "No claims - the answer is empty.",
+    ragasClaimSupported: "supported",
+    ragasClaimUnsupported: "unsupported",
+    ragasMetricContext: "Context relevance",
+    ragasMetricFaithfulness: "Faithfulness",
+    ragasMetricAnswer: "Answer relevance",
+    ragasExplainContext: "{useful} of {total} context fragments share at least one content word with the question.",
+    ragasExplainFaithfulness: "{supported} of {total} claims are grounded in the context (threshold: at least 60% shared content words).",
+    ragasExplainAnswer: "{matched} of {total} question content words appear in the answer.",
+    ragasNoDataNote: "No data to evaluate.",
+    ragasContextUsed: "used in scoring",
+    ragasContextSkipped: "skipped",
+    ragasDisclaimer: "Full RAGAS can use a model as the evaluator. This demonstration applies a simple, transparent word-matching heuristic to show the metric logic without API cost.",
+    ariaRagasPresetApplied: "Loaded example: {preset}",
+    ariaRagasHallucinationAdded: "Added a claim with no coverage in the context",
   },
 };
 
@@ -553,7 +613,96 @@ function t(key, vars) {
 // ─── State ───
 
 const MODEL = {
-  ragas:     { fixtures: { pl: [], en: [] } },
+  ragas: {
+    // Hand-verified against ragasEval(): see phase1-report.md for the word-
+    // by-word overlap accounting behind each fixture's scores.
+    hallucinationSentence: {
+      pl: "Regularna aktywność fizyczna leczy również przeziębienie w ciągu jednej doby.",
+      en: "Regular physical activity also cures the common cold within one day.",
+    },
+    fixtures: {
+      pl: [
+        {
+          id: "ragas-good",
+          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          context: [
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
+            "Regularna aktywność fizyczna, czyli regularne ćwiczenia, pomaga utrzymać prawidłową masę ciała, wzmacnia mięśnie i kości.",
+          ],
+          answer:
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne. " +
+            "Regularne ćwiczenia pomagają utrzymać prawidłową masę ciała oraz wzmacniają mięśnie i kości.",
+        },
+        {
+          id: "ragas-noise",
+          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          context: [
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
+            "Stolica Australii to Canberra, założona na początku dwudziestego wieku jako kompromis między Sydney a Melbourne.",
+          ],
+          answer:
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne.",
+        },
+        {
+          id: "ragas-hallucination",
+          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          context: [
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
+            "Regularna aktywność fizyczna, czyli regularne ćwiczenia, pomaga utrzymać prawidłową masę ciała, wzmacnia mięśnie i kości.",
+          ],
+          answer:
+            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
+            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne. " +
+            "Regularna aktywność fizyczna leczy również przeziębienie w ciągu jednej doby.",
+        },
+      ],
+      en: [
+        {
+          id: "ragas-good",
+          question: "Does regular physical activity improve heart health?",
+          context: [
+            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
+            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
+            "Regular physical activity, in other words regular exercise, helps maintain a healthy body weight, strengthens muscles and bones.",
+          ],
+          answer:
+            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
+            "Physical activity supports mental health by reducing stress and improving mood. " +
+            "Regular exercise helps maintain a healthy body weight and strengthens muscles and bones.",
+        },
+        {
+          id: "ragas-noise",
+          question: "Does regular physical activity improve heart health?",
+          context: [
+            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
+            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
+            "The capital of Australia is Canberra, chosen in the early twentieth century as a compromise between Sydney and Melbourne.",
+          ],
+          answer:
+            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
+            "Physical activity supports mental health by reducing stress and improving mood.",
+        },
+        {
+          id: "ragas-hallucination",
+          question: "Does regular physical activity improve heart health?",
+          context: [
+            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
+            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
+            "Regular physical activity, in other words regular exercise, helps maintain a healthy body weight, strengthens muscles and bones.",
+          ],
+          answer:
+            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
+            "Physical activity supports mental health by reducing stress and improving mood. " +
+            "Regular physical activity also cures the common cold within one day.",
+        },
+      ],
+    },
+  },
   ares:      { defaults: { N: 800, n: 60, biasPp: 15, errPct: 10, dimension: "context", seed: 1337 },
                trueRates: { context: 0.72, faithfulness: 0.85, relevance: 0.64 } },
   ifeval:    { constraints: [], fixtures: { pl: [], en: [] } },
@@ -623,18 +772,57 @@ function sentences(text) {
 }
 
 /**
- * Fraction of normalized words in `a` that also appear in `b` (0 when `a`
- * is empty - guards the division-by-zero pitfall).
+ * Normalized words of `a` that also appear in `b` (empty array when `a` is
+ * empty). Callers compare `.length` against a needed-word threshold, so this
+ * returns the matching words themselves rather than a ratio.
  * @param {string[]} a
  * @param {string[]} b
- * @returns {number}
+ * @returns {string[]}
  */
 function overlap(a, b) {
-  if (!a || a.length === 0) return 0;
+  if (!a || a.length === 0) return [];
   const bSet = new Set(b || []);
-  let hits = 0;
-  for (const w of a) if (bSet.has(w)) hits++;
-  return hits / a.length;
+  return a.filter((w) => bSet.has(w));
+}
+
+/**
+ * RAGAS heuristic: splits the answer into claims (sentences) and scores
+ * three metrics against the question and retrieved context, using plain
+ * word-overlap after stopword removal - no model, fully deterministic.
+ * Reference implementation, see phase1-brief.md section "RAGAS".
+ * @param {{question: string, context: string[], answer: string}} input
+ * @param {"pl"|"en"} lang
+ * @returns {{claims: string[], supported: boolean[], usefulContext: boolean[],
+ *   faithfulness: number, contextRelevance: number, answerRelevance: number}}
+ */
+function ragasEval({ question, context, answer }, lang) {
+  const qWords = normalize(question, lang);
+  const claims = sentences(answer);
+  const ctxWords = context.map((c) => normalize(c, lang));
+  const supported = claims.map((claim) => {
+    const cw = normalize(claim, lang);
+    const need = Math.max(1, Math.ceil(0.6 * cw.length));
+    return ctxWords.some((c) => overlap(cw, c).length >= need);
+  });
+  const faithfulness = claims.length ? supported.filter(Boolean).length / claims.length : 0;
+  const usefulContext = ctxWords.map((c) => overlap(c, qWords).length > 0);
+  const useful = usefulContext.filter(Boolean).length;
+  const contextRelevance = context.length ? useful / context.length : 0;
+  const aWords = new Set(normalize(answer, lang));
+  const answerRelevance = qWords.length ? qWords.filter((w) => aWords.has(w)).length / qWords.length : 0;
+  return { claims, supported, usefulContext, faithfulness, contextRelevance, answerRelevance };
+}
+
+/**
+ * Map a 0-100 score to a pass/warn/fail status token used by score-bar and
+ * status-pill DOM contract attributes.
+ * @param {number} valuePct
+ * @returns {"pass"|"warn"|"fail"}
+ */
+function scoreStatus(valuePct) {
+  if (valuePct >= SCORE_PASS_THRESHOLD) return "pass";
+  if (valuePct >= SCORE_WARN_THRESHOLD) return "warn";
+  return "fail";
 }
 
 /**
