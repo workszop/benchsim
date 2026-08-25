@@ -1070,26 +1070,33 @@ function judgePrediction(t, biasPp, errPct, rnd) {
 /**
  * Deterministic ARES experiment: generates a synthetic population against
  * the hidden true rate for `dimension`, runs the simulated judge over all N
- * examples, draws an unbiased Fisher-Yates subset of n "human labels", and
- * computes the Prediction-Powered Inference correction (PPI), its standard
- * error and 95% confidence interval. Same `seed` + params -> identical
- * result. Reference implementation, see phase2-brief.md section "ARES".
+ * examples, draws an unbiased Fisher-Yates subset of nEff "human labels" -
+ * `n` clamped to N, since the sliders allow n > N but there can never be
+ * more labels than examples - and computes the Prediction-Powered
+ * Inference correction (PPI), its standard error and 95% confidence
+ * interval. Same `seed` + params -> identical result. Reference
+ * implementation, see phase2-brief.md section "ARES" (amended: nEff
+ * clamp). The returned `N`/`n` echo the actual params this result was
+ * computed with (n already clamped) so callers never have to reach back
+ * into the inputs that may have moved on since.
  * @param {{N: number, n: number, biasPp: number, errPct: number, dimension: string, seed: number}} params
  * @returns {{trueRate: number, truth: number[], judge: number[], idx: number[],
- *   raw: number, ppi: number, se: number, ci: {lo: number, hi: number}, diffs: number[]}}
+ *   raw: number, ppi: number, se: number, ci: {lo: number, hi: number},
+ *   diffs: number[], N: number, n: number}}
  */
 function aresExperiment({ N, n, biasPp, errPct, dimension, seed }) {
   const rnd = mulberry32(seed);
   const trueRate = MODEL.ares.trueRates[dimension];
   const truth = Array.from({ length: N }, () => (rnd() < trueRate ? 1 : 0));
   const judge = truth.map(t => judgePrediction(t, biasPp, errPct, rnd));
-  const idx = fisherYates([...Array(N).keys()], rnd).slice(0, n);
+  const nEff = Math.min(n, N); // suwaki pozwalają n > N; etykiet nie może być więcej niż przykładów
+  const idx = fisherYates([...Array(N).keys()], rnd).slice(0, nEff);
   const raw = mean(judge);
   const diffs = idx.map(i => truth[i] - judge[i]);
   const ppi = clamp01(raw + mean(diffs));
-  const se = Math.sqrt(variance(judge) / N + variance(diffs) / n);
+  const se = Math.sqrt(variance(judge) / N + variance(diffs) / nEff);
   const ci = { lo: clamp01(ppi - 1.96 * se), hi: clamp01(ppi + 1.96 * se) };
-  return { trueRate, truth, judge, idx, raw, ppi, se, ci, diffs };
+  return { trueRate, truth, judge, idx, raw, ppi, se, ci, diffs, N, n: nEff };
 }
 
 /** @returns {{N: number, n: number, biasPp: number, errPct: number, dimension: string}} a fresh copy of MODEL.ares.defaults */
@@ -1707,7 +1714,7 @@ function buildAresPipeline(inputs, result) {
   const p3 = document.createElement("p");
   p3.className = "edu-small";
   if (result) {
-    p3.textContent = t("aresStage3Desc", { n: inputs.n, ppi: fmtPct(result.ppi), se: (result.se * 100).toFixed(1) });
+    p3.textContent = t("aresStage3Desc", { n: result.n, ppi: fmtPct(result.ppi), se: (result.se * 100).toFixed(1) });
   } else {
     p3.textContent = t("aresStageEmpty");
   }
@@ -1769,7 +1776,7 @@ function buildAresResultCard(inputs, result) {
   card.appendChild(ciP);
 
   card.appendChild(buildAresChart(result));
-  card.appendChild(buildAresFormulaSection(inputs, result));
+  card.appendChild(buildAresFormulaSection(result));
 
   if (inputs.n < 100) {
     const note = document.createElement("p");
@@ -1843,10 +1850,14 @@ function buildAresChart(result) {
 /**
  * "Pokaż obliczenia" toggle button plus, when expanded, the PPI/SE/CI
  * formulas with the current experiment's actual numbers substituted in.
- * @param {{N:number,n:number}} inputs
+ * Every substituted value - including N and n - is read off `result`
+ * (the params the experiment was actually computed with, `n` already
+ * clamped to N), never off the live slider `inputs`: sliders can move
+ * without a recompute, and mixing a fresh slider value with a stale
+ * result's variances would make the formula internally inconsistent.
  * @param {ReturnType<typeof aresExperiment>} result
  */
-function buildAresFormulaSection(inputs, result) {
+function buildAresFormulaSection(result) {
   const wrap = document.createElement("div");
   wrap.className = "field-group";
   const btn = document.createElement("button");
@@ -1868,9 +1879,9 @@ function buildAresFormulaSection(inputs, result) {
       meanDiff: meanDiff.toFixed(4),
       ppi: result.ppi.toFixed(4),
       varJudge: varJudge.toFixed(4),
-      N: inputs.N,
+      N: result.N,
       varDiffs: varDiffs.toFixed(4),
-      n: inputs.n,
+      n: result.n,
       se: result.se.toFixed(4),
       ciLo: result.ci.lo.toFixed(4),
       ciHi: result.ci.hi.toFixed(4),
