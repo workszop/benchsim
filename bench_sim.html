@@ -654,6 +654,8 @@ const T = {
     ifevalPresetPreamble: "Poprawny wynik z niepotrzebnym wstępem",
     ifevalRunButton: "Sprawdź",
     ifevalConstraintResultsHeading: "Warunki - wynik",
+    ifevalStrictLabel: "strict",
+    ifevalLooseLabel: "loose",
     ifevalPass: "PASS",
     ifevalFail: "FAIL",
     ifevalNoConstraints: "Włącz przynajmniej jeden warunek, aby zobaczyć wynik.",
@@ -787,6 +789,8 @@ const T = {
     ifevalPresetPreamble: "Correct result with an unnecessary preamble",
     ifevalRunButton: "Check",
     ifevalConstraintResultsHeading: "Constraints - result",
+    ifevalStrictLabel: "strict",
+    ifevalLooseLabel: "loose",
     ifevalPass: "PASS",
     ifevalFail: "FAIL",
     ifevalNoConstraints: "Enable at least one constraint to see a result.",
@@ -1317,6 +1321,10 @@ function ifevalEval(constraints, answer) {
   const strictPassed = results.filter((r) => r.strictPass).length;
   const loosePassed = results.filter((r) => r.loosePass).length;
 
+  // With zero active constraints (total === 0), every score below is 0, not
+  // a vacuous 100% - "nothing was checked" should never read as "everything
+  // passed". The panel backs this with an explicit empty-state message. The
+  // QA phase's reference numbers assume >=1 active constraint.
   return {
     constraints: results,
     variants,
@@ -2530,12 +2538,12 @@ function buildIfevalConstraintResults(result) {
     const strictPill = document.createElement("span");
     strictPill.className = "status-pill";
     strictPill.setAttribute("data-status", c.strictPass ? "pass" : "fail");
-    strictPill.textContent = "strict " + (c.strictPass ? t("ifevalPass") : t("ifevalFail"));
+    strictPill.textContent = t("ifevalStrictLabel") + " " + (c.strictPass ? t("ifevalPass") : t("ifevalFail"));
 
     const loosePill = document.createElement("span");
     loosePill.className = "status-pill";
     loosePill.setAttribute("data-status", c.loosePass ? "pass" : "fail");
-    loosePill.textContent = "loose " + (c.loosePass ? t("ifevalPass") : t("ifevalFail"));
+    loosePill.textContent = t("ifevalLooseLabel") + " " + (c.loosePass ? t("ifevalPass") : t("ifevalFail"));
 
     pills.appendChild(strictPill);
     pills.appendChild(loosePill);
