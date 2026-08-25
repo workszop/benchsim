@@ -405,6 +405,22 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
   color: var(--ink-2); line-height: 1.8; white-space: pre-wrap; overflow-x: auto;
 }
 
+/* ── IFEval panel: constraint toggles, result pills, diff view ── */
+.constraint-row {
+  border: 1px solid var(--line-2); border-radius: var(--r-md);
+  padding: 12px 14px; margin-bottom: var(--sp-3);
+  background: var(--paper); transition: border-color .2s ease, background .2s ease;
+}
+.constraint-row[data-active="true"] { border-color: var(--teal); background: var(--teal-soft); }
+.constraint-row-head { display: flex; align-items: center; gap: 10px; }
+.constraint-row-head input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0; }
+.constraint-row-head label {
+  font-family: var(--font-sans); font-weight: 600; font-size: 14px; color: var(--ink); cursor: pointer;
+}
+.constraint-param { margin-top: var(--sp-2); }
+.constraint-result-pills { display: flex; gap: 6px; flex-shrink: 0; }
+.diff-removed { color: var(--ink-3); text-decoration: line-through; }
+
 /* ── interpretation note / caveat ── */
 .note {
   background: var(--marigold-soft); color: var(--marigold-ink); border-radius: var(--r-md);
@@ -508,6 +524,22 @@ const BENCHES = [
 
 const PHASES = ["input", "process", "result", "interpretation"];
 
+// IFEval: constraint validators, verbatim per phase3-brief.md "Walidatory".
+// r = raw or loose-variant answer text, p = the constraint's resolved params.
+// validJson uses JSON.parse only - never eval.
+const VALIDATORS = {
+  requiredWord:  (r, p) => words(r).includes(p.word.toLowerCase()),
+  forbiddenWord: (r, p) => !words(r).includes(p.word.toLowerCase()),
+  maxWords:      (r, p) => r.split(/\s+/).filter(Boolean).length <= p.max,
+  exactItems:    (r, p) => r.split("\n").filter(l => /^[-*]\s/.test(l.trim())).length === p.n,
+  noComma:       (r)    => !r.includes(","),
+  validJson:     (r)    => { try { JSON.parse(r); return true; } catch { return false; } },
+  exactEnding:   (r, p) => r.trimEnd().endsWith(p.phrase),
+};
+
+// IFEval: preset fixture ids (also used as data-fixture-id values).
+const IFEVAL_FIXTURE_IDS = ["ifeval-all", "ifeval-skip-one", "ifeval-json-preamble"];
+
 // RAGAS: preset fixture ids (also used as data-fixture-id values) and the
 // score-bar pass/warn/fail thresholds (percentage points, 0-100 scale).
 const RAGAS_FIXTURE_IDS = ["ragas-good", "ragas-noise", "ragas-hallucination"];
@@ -590,6 +622,51 @@ const T = {
     ragasDisclaimer: "Pełny RAGAS może używać modelu jako evaluatora. Ta demonstracja stosuje prostą i jawną heurystykę dopasowania słów, aby pokazać logikę metryk bez kosztu API.",
     ariaRagasPresetApplied: "Wczytano przykład: {preset}",
     ariaRagasHallucinationAdded: "Dodano twierdzenie bez pokrycia w kontekście",
+
+    // ── IFEval panel ──
+    ifevalInputHeading: "Warunki i odpowiedź",
+    ifevalResultHeading: "Wynik sprawdzenia",
+    ifevalConstraintsHeading: "Warunki",
+    ifevalToggle_requiredWord: "Użyj wymaganego słowa",
+    ifevalToggle_forbiddenWord: "Nie używaj zakazanego słowa",
+    ifevalToggle_maxWords: "Maksymalnie N słów",
+    ifevalToggle_exactItems: "Dokładnie N punktów listy",
+    ifevalToggle_noComma: "Bez przecinków",
+    ifevalToggle_validJson: "Zwróć poprawny JSON",
+    ifevalToggle_exactEnding: "Zakończ dokładną frazą",
+    ifevalParamWord: "Słowo",
+    ifevalParamMax: "Maksymalna liczba słów",
+    ifevalParamN: "Liczba punktów",
+    ifevalParamPhrase: "Fraza końcowa",
+    ifevalPromptHeading: "Podgląd promptu",
+    ifevalPromptIntro: "Odpowiedz zgodnie z poniższymi warunkami:",
+    ifevalPromptEmpty: "Nie wybrano żadnych warunków - odpowiedź nie będzie sprawdzana.",
+    ifevalConstraintText_requiredWord: "użyj wymaganego słowa „{word}”",
+    ifevalConstraintText_forbiddenWord: "nie używaj zakazanego słowa „{word}”",
+    ifevalConstraintText_maxWords: "odpowiedz w maksymalnie {max} słowach",
+    ifevalConstraintText_exactItems: "podaj dokładnie {n} punkty listy (linie zaczynające się od „-” lub „*”)",
+    ifevalConstraintText_noComma: "nie używaj przecinków",
+    ifevalConstraintText_validJson: "zwróć odpowiedź jako poprawny JSON",
+    ifevalConstraintText_exactEnding: "zakończ odpowiedź dokładnie frazą „{phrase}”",
+    ifevalAnswerLabel: "Odpowiedź modelu",
+    ifevalPresetAll: "Spełnia wszystko",
+    ifevalPresetSkipOne: "Pomija jeden warunek",
+    ifevalPresetPreamble: "Poprawny wynik z niepotrzebnym wstępem",
+    ifevalRunButton: "Sprawdź",
+    ifevalConstraintResultsHeading: "Warunki - wynik",
+    ifevalPass: "PASS",
+    ifevalFail: "FAIL",
+    ifevalNoConstraints: "Włącz przynajmniej jeden warunek, aby zobaczyć wynik.",
+    ifevalMetricStrictInstr: "Instruction-level accuracy (strict)",
+    ifevalMetricStrictPrompt: "Prompt-level accuracy (strict)",
+    ifevalMetricLooseInstr: "Instruction-level accuracy (loose)",
+    ifevalMetricLoosePrompt: "Prompt-level accuracy (loose)",
+    ifevalDiffHeading: "Wariant, który zaliczył loose",
+    ifevalDiffNone: "Żaden warunek nie skorzystał z loose scoring - strict i loose są identyczne dla bieżącej odpowiedzi.",
+    ifevalDiffCaption: "Fragmenty usunięte względem surowej odpowiedzi są przekreślone.",
+    ifevalLooseWarning: "Loose ogranicza false negatives, ale może wprowadzać false positives - dlatego oba wyniki analizuje się razem.",
+    ifevalDisclaimer: "IFEval sprawdza zgodność z formatem i innymi jawnymi warunkami. Nie potwierdza, że treść odpowiedzi jest prawdziwa, trafna ani użyteczna.",
+    ariaIfevalPresetApplied: "Wczytano przykład: {preset}",
 
     // ── ARES panel ──
     aresParamsHeading: "Parametry eksperymentu",
@@ -678,6 +755,51 @@ const T = {
     ragasDisclaimer: "Full RAGAS can use a model as the evaluator. This demonstration applies a simple, transparent word-matching heuristic to show the metric logic without API cost.",
     ariaRagasPresetApplied: "Loaded example: {preset}",
     ariaRagasHallucinationAdded: "Added a claim with no coverage in the context",
+
+    // ── IFEval panel ──
+    ifevalInputHeading: "Constraints and answer",
+    ifevalResultHeading: "Check result",
+    ifevalConstraintsHeading: "Constraints",
+    ifevalToggle_requiredWord: "Use a required word",
+    ifevalToggle_forbiddenWord: "Don't use a forbidden word",
+    ifevalToggle_maxWords: "At most N words",
+    ifevalToggle_exactItems: "Exactly N list items",
+    ifevalToggle_noComma: "No commas",
+    ifevalToggle_validJson: "Return valid JSON",
+    ifevalToggle_exactEnding: "End with an exact phrase",
+    ifevalParamWord: "Word",
+    ifevalParamMax: "Maximum word count",
+    ifevalParamN: "Number of items",
+    ifevalParamPhrase: "Closing phrase",
+    ifevalPromptHeading: "Prompt preview",
+    ifevalPromptIntro: "Answer according to the constraints below:",
+    ifevalPromptEmpty: "No constraints selected - the answer won't be checked.",
+    ifevalConstraintText_requiredWord: "use the required word “{word}”",
+    ifevalConstraintText_forbiddenWord: "don't use the forbidden word “{word}”",
+    ifevalConstraintText_maxWords: "answer in at most {max} words",
+    ifevalConstraintText_exactItems: "give exactly {n} list items (lines starting with “-” or “*”)",
+    ifevalConstraintText_noComma: "don't use any commas",
+    ifevalConstraintText_validJson: "return the answer as valid JSON",
+    ifevalConstraintText_exactEnding: "end the answer with the exact phrase “{phrase}”",
+    ifevalAnswerLabel: "Model answer",
+    ifevalPresetAll: "Meets everything",
+    ifevalPresetSkipOne: "Skips one constraint",
+    ifevalPresetPreamble: "Correct result with an unnecessary preamble",
+    ifevalRunButton: "Check",
+    ifevalConstraintResultsHeading: "Constraints - result",
+    ifevalPass: "PASS",
+    ifevalFail: "FAIL",
+    ifevalNoConstraints: "Enable at least one constraint to see a result.",
+    ifevalMetricStrictInstr: "Instruction-level accuracy (strict)",
+    ifevalMetricStrictPrompt: "Prompt-level accuracy (strict)",
+    ifevalMetricLooseInstr: "Instruction-level accuracy (loose)",
+    ifevalMetricLoosePrompt: "Prompt-level accuracy (loose)",
+    ifevalDiffHeading: "Variant that passed loose",
+    ifevalDiffNone: "No constraint relied on loose scoring - strict and loose are identical for the current answer.",
+    ifevalDiffCaption: "Parts removed relative to the raw answer are struck through.",
+    ifevalLooseWarning: "Loose scoring reduces false negatives, but it can introduce false positives - so both scores should be read together.",
+    ifevalDisclaimer: "IFEval checks compliance with format and other explicit constraints. It does not confirm that the answer's content is true, accurate, or useful.",
+    ariaIfevalPresetApplied: "Loaded example: {preset}",
 
     // ── ARES panel ──
     aresParamsHeading: "Experiment parameters",
@@ -821,7 +943,109 @@ const MODEL = {
   },
   ares:      { defaults: { N: 800, n: 60, biasPp: 15, errPct: 10, dimension: "context", seed: 1337 },
                trueRates: { context: 0.72, faithfulness: 0.85, relevance: 0.64 } },
-  ifeval:    { constraints: [], fixtures: { pl: [], en: [] } },
+  ifeval: {
+    // Constraint type definitions (fixed order used everywhere: toggles,
+    // prompt preview, result rows). paramKey maps into each constraint
+    // instance's stored value (state.inputs.ifeval.constraints[id]) and into
+    // the T() "ifevalConstraintText_<id>" placeholder name.
+    constraints: [
+      { id: "requiredWord", validator: "requiredWord", paramKey: "word" },
+      { id: "forbiddenWord", validator: "forbiddenWord", paramKey: "word" },
+      { id: "maxWords", validator: "maxWords", paramKey: "max" },
+      { id: "exactItems", validator: "exactItems", paramKey: "n" },
+      { id: "noComma", validator: "noComma", paramKey: null },
+      { id: "validJson", validator: "validJson", paramKey: null },
+      { id: "exactEnding", validator: "exactEnding", paramKey: "phrase" },
+    ],
+    fixtures: {
+      pl: [
+        {
+          id: "ifeval-all",
+          constraints: {
+            requiredWord: { active: true, word: "aktywność" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: true, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: true },
+            validJson: { active: false },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer:
+            "Regularna aktywność fizyczna poprawia kondycję serca i wzmacnia mięśnie oraz kości. " +
+            "Krótkie codzienne spacery już przynoszą wymierne korzyści zdrowotne dla całego organizmu.",
+        },
+        {
+          id: "ifeval-skip-one",
+          constraints: {
+            requiredWord: { active: true, word: "aktywność" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: true, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: true },
+            validJson: { active: false },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer: "Regularna aktywność fizyczna poprawia kondycję serca, wzmacnia mięśnie oraz zmniejsza poziom stresu.",
+        },
+        {
+          id: "ifeval-json-preamble",
+          constraints: {
+            requiredWord: { active: false, word: "" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: false, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: false },
+            validJson: { active: true },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer: "Oto odpowiedź:\n{\"miasto\": \"Warszawa\", \"kraj\": \"Polska\"}",
+        },
+      ],
+      en: [
+        {
+          id: "ifeval-all",
+          constraints: {
+            requiredWord: { active: true, word: "activity" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: true, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: true },
+            validJson: { active: false },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer:
+            "Regular physical activity improves heart health and strengthens muscles and bones. " +
+            "Short daily walks already bring measurable health benefits for the whole body.",
+        },
+        {
+          id: "ifeval-skip-one",
+          constraints: {
+            requiredWord: { active: true, word: "activity" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: true, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: true },
+            validJson: { active: false },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer: "Regular physical activity improves heart health, strengthens muscles, and boosts energy levels.",
+        },
+        {
+          id: "ifeval-json-preamble",
+          constraints: {
+            requiredWord: { active: false, word: "" },
+            forbiddenWord: { active: false, word: "" },
+            maxWords: { active: false, max: 40 },
+            exactItems: { active: false, n: 3 },
+            noComma: { active: false },
+            validJson: { active: true },
+            exactEnding: { active: false, phrase: "" },
+          },
+          answer: "Here is the answer:\n{\"city\": \"Warsaw\", \"country\": \"Poland\"}",
+        },
+      ],
+    },
+  },
   questeval: { fixtures: { pl: [], en: [] } },
 };
 
@@ -991,14 +1215,218 @@ function computeRagasFixtureId(inputs, lang) {
 }
 
 /**
- * Tokenize a response string into lowercase words (no stopword removal) -
- * used for word-count style checks (e.g. IFEval length constraints).
+ * IFEval tokenizer: split on whitespace, lowercase, strip edge punctuation
+ * (leading/trailing non letter/number characters) from each token. Used by
+ * VALIDATORS.requiredWord/forbiddenWord for whole-word matching. Never eval.
  * @param {string} r
  * @returns {string[]}
  */
 function words(r) {
   if (!r) return [];
-  return r.trim().split(/\s+/).filter(Boolean);
+  return r
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(Boolean);
+}
+
+/** Remove markdown emphasis markers ("*"). @param {string} s @returns {string} */
+function stripMarkdownStars(s) {
+  return s.replace(/\*/g, "");
+}
+
+/**
+ * Drop the first line, but only when there is more than one line - on a
+ * single-line answer this is a no-op (dropping the only line would always
+ * collapse it to "", which is not a meaningful "loose" transformation).
+ * @param {string} s @returns {string}
+ */
+function dropFirstLine(s) {
+  const lines = s.split("\n");
+  return lines.length > 1 ? lines.slice(1).join("\n") : s;
+}
+
+/** Symmetric counterpart of dropFirstLine. @param {string} s @returns {string} */
+function dropLastLine(s) {
+  const lines = s.split("\n");
+  return lines.length > 1 ? lines.slice(0, -1).join("\n") : s;
+}
+
+/**
+ * Exactly 8 IFEval loose variants of `raw`: every combination (2x2x2,
+ * including the unchanged variant) of strip-markdown-stars, drop-first-line,
+ * drop-last-line. Order of ops (drop lines, then strip stars) doesn't change
+ * the result since "*" never spans a line boundary.
+ * @param {string} raw
+ * @returns {{stripStars: boolean, dropFirst: boolean, dropLast: boolean, text: string}[]}
+ */
+function looseVariants(raw) {
+  const variants = [];
+  for (const stripStars of [false, true]) {
+    for (const dropFirst of [false, true]) {
+      for (const dropLast of [false, true]) {
+        let text = raw;
+        if (dropFirst) text = dropFirstLine(text);
+        if (dropLast) text = dropLastLine(text);
+        if (stripStars) text = stripMarkdownStars(text);
+        variants.push({ stripStars, dropFirst, dropLast, text });
+      }
+    }
+  }
+  return variants;
+}
+
+/**
+ * Pure IFEval scorer (no DOM access - the QA phase calls this directly).
+ * `constraints` is the list of currently active constraint instances, each
+ * `{id, validator, params}` where `validator` is a VALIDATORS key. Runs
+ * every validator against the raw answer (strict) and against all 8 loose
+ * variants (loose passes if any variant passes), then aggregates both into
+ * instruction-level (fraction passed) and prompt-level (all-or-nothing)
+ * accuracy scores in [0, 1].
+ * @param {{id: string, validator: string, params: Object}[]} constraints
+ * @param {string} answer raw model answer text
+ * @returns {{
+ *   constraints: {id: string, strictPass: boolean, loosePass: boolean, passingVariantIndex: number|null}[],
+ *   variants: {stripStars: boolean, dropFirst: boolean, dropLast: boolean, text: string}[],
+ *   strictInstr: number, strictPrompt: number, looseInstr: number, loosePrompt: number,
+ * }}
+ */
+function ifevalEval(constraints, answer) {
+  const raw = answer || "";
+  const variants = looseVariants(raw);
+
+  const results = constraints.map((c) => {
+    const validator = VALIDATORS[c.validator];
+    const params = c.params || {};
+    const strictPass = !!validator(raw, params);
+    let loosePass = false;
+    let passingVariantIndex = null;
+    for (let i = 0; i < variants.length; i++) {
+      if (validator(variants[i].text, params)) {
+        loosePass = true;
+        passingVariantIndex = i;
+        break;
+      }
+    }
+    return { id: c.id, strictPass, loosePass, passingVariantIndex };
+  });
+
+  const total = results.length;
+  const strictPassed = results.filter((r) => r.strictPass).length;
+  const loosePassed = results.filter((r) => r.loosePass).length;
+
+  return {
+    constraints: results,
+    variants,
+    strictInstr: total ? strictPassed / total : 0,
+    strictPrompt: total > 0 && strictPassed === total ? 1 : 0,
+    looseInstr: total ? loosePassed / total : 0,
+    loosePrompt: total > 0 && loosePassed === total ? 1 : 0,
+  };
+}
+
+/**
+ * Resolve one constraint definition + its stored instance into the
+ * `{[paramKey]: value}` params object VALIDATORS expects.
+ * @param {{paramKey: string|null}} def
+ * @param {Object} instance
+ * @returns {Object}
+ */
+function buildIfevalParams(def, instance) {
+  if (!def.paramKey) return {};
+  if (def.paramKey === "max" || def.paramKey === "n") {
+    return { [def.paramKey]: Number(instance[def.paramKey]) || 0 };
+  }
+  return { [def.paramKey]: instance[def.paramKey] || "" };
+}
+
+/**
+ * The active constraints from state.inputs.ifeval, in MODEL.ifeval.constraints
+ * order, resolved into the shape ifevalEval() expects.
+ * @param {{constraints: Object}} inputs
+ * @returns {{id: string, validator: string, params: Object}[]}
+ */
+function activeIfevalConstraints(inputs) {
+  return MODEL.ifeval.constraints
+    .filter((def) => inputs.constraints[def.id].active)
+    .map((def) => ({ id: def.id, validator: def.validator, params: buildIfevalParams(def, inputs.constraints[def.id]) }));
+}
+
+/** @param {string} paramKey @returns {string} T() key for a constraint's parameter field label */
+function ifevalParamLabelKey(paramKey) {
+  if (paramKey === "word") return "ifevalParamWord";
+  if (paramKey === "max") return "ifevalParamMax";
+  if (paramKey === "n") return "ifevalParamN";
+  if (paramKey === "phrase") return "ifevalParamPhrase";
+  return "";
+}
+
+/** Readable composed prompt for the currently active IFEval constraints. @param {{constraints: Object}} inputs @returns {string} */
+function buildIfevalPromptText(inputs) {
+  const active = activeIfevalConstraints(inputs);
+  if (active.length === 0) return t("ifevalPromptEmpty");
+  const parts = active.map((c) => t("ifevalConstraintText_" + c.id, c.params));
+  return t("ifevalPromptIntro") + " " + parts.join("; ") + ".";
+}
+
+/**
+ * Look up an IFEval fixture by id for a given language, falling back to the
+ * pl list's first entry if the id is unknown (should not happen in practice).
+ * @param {string} id
+ * @param {"pl"|"en"} lang
+ */
+function findIfevalFixture(id, lang) {
+  const list = MODEL.ifeval.fixtures[lang] || MODEL.ifeval.fixtures.pl;
+  return list.find((f) => f.id === id) || list[0];
+}
+
+/** @param {string} id fixture id @returns {string|null} matching T key for its preset button label */
+function ifevalFixtureLabelKey(id) {
+  if (id === "ifeval-all") return "ifevalPresetAll";
+  if (id === "ifeval-skip-one") return "ifevalPresetSkipOne";
+  if (id === "ifeval-json-preamble") return "ifevalPresetPreamble";
+  return null;
+}
+
+/** Shallow-per-key copy of a fixture's constraints object. @param {Object} constraints @returns {Object} */
+function cloneIfevalConstraints(constraints) {
+  const out = {};
+  for (const key in constraints) out[key] = { ...constraints[key] };
+  return out;
+}
+
+/** Deep-enough copy of a fixture into the shape stored at state.inputs.ifeval. */
+function cloneIfevalInputs(fixture) {
+  return { constraints: cloneIfevalConstraints(fixture.constraints), answer: fixture.answer, fixtureId: fixture.id };
+}
+
+/** Whether `a` and `b` (constraint-instance maps) are equal on active + param value, for every known constraint type. */
+function ifevalConstraintsEqual(a, b) {
+  return MODEL.ifeval.constraints.every((def) => {
+    const ai = a[def.id], bi = b[def.id];
+    if (ai.active !== bi.active) return false;
+    if (!def.paramKey) return true;
+    return String(ai[def.paramKey]) === String(bi[def.paramKey]);
+  });
+}
+
+/**
+ * Whether the current inputs still exactly match one of the known presets
+ * (a "custom" edit, per the DOM contract, is anything that no longer does).
+ * @param {{constraints: Object, answer: string}} inputs
+ * @param {"pl"|"en"} lang
+ * @returns {string} an IFEVAL_FIXTURE_IDS entry, or "custom"
+ */
+function computeIfevalFixtureId(inputs, lang) {
+  for (const id of IFEVAL_FIXTURE_IDS) {
+    const fx = findIfevalFixture(id, lang);
+    if (fx.answer === inputs.answer && ifevalConstraintsEqual(fx.constraints, inputs.constraints)) {
+      return id;
+    }
+  }
+  return "custom";
 }
 
 /**
