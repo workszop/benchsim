@@ -1688,6 +1688,9 @@ function renderSimPanels() {
     } else if (bench.id === "ares") {
       section.className = "sim-panel-full fade-in";
       renderAresPanel(section);
+    } else if (bench.id === "ifeval") {
+      section.className = "sim-panel-full fade-in";
+      renderIfevalPanel(section);
     } else {
       section.className = "card sim-panel-full fade-in";
       const h2 = document.createElement("h2");
@@ -2320,6 +2323,357 @@ function buildAresFormulaSection(result) {
 }
 
 /**
+ * IFEval panel: two-column card layout (constraint toggles + prompt preview
+ * + answer field on the left, per-constraint PASS/FAIL rows + aggregate
+ * scores + loose-variant diff on the right). Recomputes ifevalEval from the
+ * current state.inputs.ifeval on every call - same "always live" pattern as
+ * RAGAS. Writes the panel's data-primary-score (= strict prompt-level) /
+ * data-fixture-id contract attributes (single writer: render only).
+ * @param {HTMLElement} section the panel's <section data-sim-id="ifeval">
+ */
+function renderIfevalPanel(section) {
+  const inputs = state.inputs.ifeval;
+  const result = ifevalEval(activeIfevalConstraints(inputs), inputs.answer);
+  state.results.ifeval = result;
+
+  section.setAttribute("data-primary-score", String(Math.round(result.strictPrompt * 100)));
+  section.setAttribute("data-fixture-id", inputs.fixtureId);
+
+  const grid = document.createElement("div");
+  grid.className = "sim-panel";
+
+  const left = document.createElement("div");
+  left.className = "card";
+  const leftHeading = document.createElement("h3");
+  leftHeading.className = "edu-h3";
+  leftHeading.textContent = t("ifevalInputHeading");
+  left.appendChild(leftHeading);
+  left.appendChild(buildIfevalConstraintToggles(inputs));
+  left.appendChild(buildIfevalPromptPreview(inputs));
+  left.appendChild(buildIfevalAnswerField(inputs));
+  left.appendChild(buildIfevalButtonRow());
+
+  const right = document.createElement("div");
+  right.className = "card";
+  const rightHeading = document.createElement("h3");
+  rightHeading.className = "edu-h3";
+  rightHeading.textContent = t("ifevalResultHeading");
+  right.appendChild(rightHeading);
+  right.appendChild(buildIfevalConstraintResults(result));
+  right.appendChild(buildIfevalScoreBars(result));
+  right.appendChild(buildIfevalDiffView(result, inputs));
+  const warning = document.createElement("p");
+  warning.className = "note";
+  warning.textContent = t("ifevalLooseWarning");
+  right.appendChild(warning);
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "caveat";
+  disclaimer.textContent = t("ifevalDisclaimer");
+  right.appendChild(disclaimer);
+
+  grid.appendChild(left);
+  grid.appendChild(right);
+  section.appendChild(grid);
+}
+
+function buildIfevalConstraintToggles(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("ifevalConstraintsHeading");
+  wrap.appendChild(heading);
+  MODEL.ifeval.constraints.forEach((def) => {
+    wrap.appendChild(buildIfevalConstraintRow(def, inputs.constraints[def.id]));
+  });
+  return wrap;
+}
+
+function buildIfevalConstraintRow(def, instance) {
+  const row = document.createElement("div");
+  row.className = "constraint-row";
+  row.setAttribute("data-active", String(instance.active));
+
+  const head = document.createElement("div");
+  head.className = "constraint-row-head";
+  const checkboxId = "ifevalToggle_" + def.id;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = checkboxId;
+  checkbox.checked = instance.active;
+  checkbox.addEventListener("change", () => updateIfevalToggle(def.id, checkbox.checked));
+  const label = document.createElement("label");
+  label.setAttribute("for", checkboxId);
+  label.textContent = t("ifevalToggle_" + def.id);
+  head.appendChild(checkbox);
+  head.appendChild(label);
+  row.appendChild(head);
+
+  if (def.paramKey) {
+    const paramWrap = document.createElement("div");
+    paramWrap.className = "constraint-param";
+    const inputId = "ifevalParam_" + def.id;
+    const paramLabel = document.createElement("label");
+    paramLabel.className = "field-label";
+    paramLabel.setAttribute("for", inputId);
+    paramLabel.textContent = t(ifevalParamLabelKey(def.paramKey));
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = inputId;
+    if (def.paramKey === "max" || def.paramKey === "n") input.setAttribute("inputmode", "numeric");
+    input.value = instance[def.paramKey];
+    input.addEventListener("input", () => updateIfevalParam(def.id, def.paramKey, input.value));
+    paramWrap.appendChild(paramLabel);
+    paramWrap.appendChild(input);
+    row.appendChild(paramWrap);
+  }
+  return row;
+}
+
+function buildIfevalPromptPreview(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("p");
+  label.className = "field-label";
+  label.textContent = t("ifevalPromptHeading");
+  const preview = document.createElement("p");
+  preview.className = "edu-body edu-mono";
+  preview.textContent = buildIfevalPromptText(inputs);
+  wrap.appendChild(label);
+  wrap.appendChild(preview);
+  return wrap;
+}
+
+function buildIfevalAnswerField(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "ifevalAnswerField");
+  label.textContent = t("ifevalAnswerLabel");
+  const textarea = document.createElement("textarea");
+  textarea.id = "ifevalAnswerField";
+  textarea.rows = 5;
+  textarea.value = inputs.answer;
+  textarea.addEventListener("input", () => updateIfevalAnswer(textarea.value));
+  wrap.appendChild(label);
+  wrap.appendChild(textarea);
+  return wrap;
+}
+
+function buildIfevalButtonRow() {
+  const row = document.createElement("div");
+  row.className = "btn-row";
+
+  const presetAll = document.createElement("button");
+  presetAll.type = "button";
+  presetAll.className = "btn btn-secondary";
+  presetAll.textContent = t("ifevalPresetAll");
+  presetAll.addEventListener("click", () => applyIfevalPreset("ifeval-all"));
+
+  const presetSkip = document.createElement("button");
+  presetSkip.type = "button";
+  presetSkip.className = "btn btn-secondary";
+  presetSkip.textContent = t("ifevalPresetSkipOne");
+  presetSkip.addEventListener("click", () => applyIfevalPreset("ifeval-skip-one"));
+
+  const presetPreamble = document.createElement("button");
+  presetPreamble.type = "button";
+  presetPreamble.className = "btn btn-secondary";
+  presetPreamble.textContent = t("ifevalPresetPreamble");
+  presetPreamble.addEventListener("click", () => applyIfevalPreset("ifeval-json-preamble"));
+
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = t("ifevalRunButton");
+  runBtn.addEventListener("click", () => runIfevalEval());
+
+  row.appendChild(presetAll);
+  row.appendChild(presetSkip);
+  row.appendChild(presetPreamble);
+  row.appendChild(runBtn);
+  return row;
+}
+
+function buildIfevalConstraintResults(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("ifevalConstraintResultsHeading");
+  wrap.appendChild(heading);
+
+  if (result.constraints.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "edu-small";
+    empty.textContent = t("ifevalNoConstraints");
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  result.constraints.forEach((c) => {
+    const row = document.createElement("div");
+    row.className = "status-row";
+    row.setAttribute("data-constraint-id", c.id);
+    row.setAttribute("data-pass", String(c.strictPass));
+    row.setAttribute("data-pass-loose", String(c.loosePass));
+
+    const text = document.createElement("span");
+    text.className = "edu-small";
+    text.textContent = t("ifevalToggle_" + c.id);
+    row.appendChild(text);
+
+    const pills = document.createElement("span");
+    pills.className = "constraint-result-pills";
+
+    const strictPill = document.createElement("span");
+    strictPill.className = "status-pill";
+    strictPill.setAttribute("data-status", c.strictPass ? "pass" : "fail");
+    strictPill.textContent = "strict " + (c.strictPass ? t("ifevalPass") : t("ifevalFail"));
+
+    const loosePill = document.createElement("span");
+    loosePill.className = "status-pill";
+    loosePill.setAttribute("data-status", c.loosePass ? "pass" : "fail");
+    loosePill.textContent = "loose " + (c.loosePass ? t("ifevalPass") : t("ifevalFail"));
+
+    pills.appendChild(strictPill);
+    pills.appendChild(loosePill);
+    row.appendChild(pills);
+
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function buildIfevalScoreBars(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const metrics = [
+    { key: "strict-instruction", labelKey: "ifevalMetricStrictInstr", value: result.strictInstr },
+    { key: "strict-prompt", labelKey: "ifevalMetricStrictPrompt", value: result.strictPrompt },
+    { key: "loose-instruction", labelKey: "ifevalMetricLooseInstr", value: result.looseInstr },
+    { key: "loose-prompt", labelKey: "ifevalMetricLoosePrompt", value: result.loosePrompt },
+  ];
+
+  metrics.forEach((m) => {
+    const pct = Math.round(m.value * 100);
+    const status = scoreStatus(pct);
+
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.setAttribute("data-metric", m.key);
+    row.setAttribute("data-value", String(pct));
+    row.setAttribute("data-status", status);
+
+    const label = document.createElement("span");
+    label.className = "score-label";
+    label.textContent = t(m.labelKey);
+
+    const track = document.createElement("div");
+    track.className = "score-track";
+    const fill = document.createElement("div");
+    fill.className = "score-fill";
+    fill.setAttribute("data-status", status);
+    fill.style.width = pct + "%";
+    track.appendChild(fill);
+
+    const value = document.createElement("span");
+    value.className = "score-value";
+    value.textContent = pct + "%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(value);
+    wrap.appendChild(row);
+  });
+
+  return wrap;
+}
+
+/**
+ * Raw-vs-loose-variant diff: finds the first constraint that failed strict
+ * but passed loose, and renders the raw answer with the transformation that
+ * made it pass (dropped first/last line, stripped "*" markers) struck
+ * through - a line is only shown as "removed" when the drop actually had an
+ * effect (i.e. the raw answer has more than one line; see dropFirstLine/
+ * dropLastLine), so a single-line answer never falsely appears truncated.
+ * @param {ReturnType<typeof ifevalEval>} result
+ * @param {{answer: string}} inputs
+ */
+function buildIfevalDiffView(result, inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("ifevalDiffHeading");
+  wrap.appendChild(heading);
+
+  const found = result.constraints.find((c) => !c.strictPass && c.loosePass && c.passingVariantIndex !== null);
+  if (!found) {
+    const p = document.createElement("p");
+    p.className = "edu-small";
+    p.textContent = t("ifevalDiffNone");
+    wrap.appendChild(p);
+    return wrap;
+  }
+
+  const variant = result.variants[found.passingVariantIndex];
+  const pre = document.createElement("pre");
+  pre.className = "formula-block";
+  pre.appendChild(buildIfevalDiffContent(inputs.answer || "", variant));
+  wrap.appendChild(pre);
+
+  const caption = document.createElement("p");
+  caption.className = "edu-caption";
+  caption.textContent = t("ifevalDiffCaption");
+  wrap.appendChild(caption);
+
+  return wrap;
+}
+
+/**
+ * Builds the diff fragment: raw text split into lines, with the dropped
+ * first/last line (when the raw text has more than one line) rendered
+ * struck-through, and any "*" characters struck-through when the variant
+ * stripped markdown emphasis.
+ * @param {string} raw
+ * @param {{stripStars: boolean, dropFirst: boolean, dropLast: boolean}} variant
+ * @returns {DocumentFragment}
+ */
+function buildIfevalDiffContent(raw, variant) {
+  const frag = document.createDocumentFragment();
+  const lines = raw.split("\n");
+  const multiline = lines.length > 1;
+  lines.forEach((line, i) => {
+    const isFirst = i === 0;
+    const isLast = i === lines.length - 1;
+    const removedLine = multiline && ((variant.dropFirst && isFirst) || (variant.dropLast && isLast));
+    const lineSpan = document.createElement("span");
+    if (removedLine) {
+      lineSpan.className = "diff-removed";
+      lineSpan.textContent = line;
+    } else if (variant.stripStars && line.includes("*")) {
+      line.split("").forEach((ch) => {
+        if (ch === "*") {
+          const s = document.createElement("span");
+          s.className = "diff-removed";
+          s.textContent = ch;
+          lineSpan.appendChild(s);
+        } else {
+          lineSpan.appendChild(document.createTextNode(ch));
+        }
+      });
+    } else {
+      lineSpan.textContent = line;
+    }
+    frag.appendChild(lineSpan);
+    if (i < lines.length - 1) frag.appendChild(document.createElement("br"));
+  });
+  return frag;
+}
+
+/**
  * Push a message into the aria-live region. Clears first so the same
  * message announced twice in a row is still read by screen readers.
  */
@@ -2351,6 +2705,7 @@ function setLang(lang) {
   state.lang = lang;
   saveLangToStorage(lang);
   relocalizeRagasFixture();
+  relocalizeIfevalFixture();
   render();
   announce(t("ariaLangChanged", { lang: lang === "pl" ? t("langPl") : t("langEn") }));
 }
@@ -2471,6 +2826,72 @@ function resetAresPanel() {
   announce(t("ariaAresReset"));
 }
 
+// If the current IFEval inputs still match one of the known presets, reload
+// that same preset in the new language so the demo stays coherent; a
+// "custom" edit is left untranslated (there is no source text to translate).
+function relocalizeIfevalFixture() {
+  const inputs = state.inputs.ifeval;
+  if (inputs && IFEVAL_FIXTURE_IDS.includes(inputs.fixtureId)) {
+    state.inputs.ifeval = cloneIfevalInputs(findIfevalFixture(inputs.fixtureId, state.lang));
+  }
+}
+
+// ── IFEval field editing ──
+// Same full-render + refocus + caret-preservation pattern as RAGAS: results
+// are a live function of inputs (see renderIfevalPanel), so every toggle,
+// param edit or answer keystroke immediately updates the DOM contract.
+function rerenderIfevalPreservingFocus() {
+  const active = document.activeElement;
+  const activeId = active && active.id;
+  const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+  const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+  render();
+  if (!activeId) return;
+  const el = document.getElementById(activeId);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+    if (selStart !== null && typeof el.setSelectionRange === "function") {
+      try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* not a text field - ignore */ }
+    }
+  }
+}
+
+function updateIfevalToggle(id, active) {
+  state.inputs.ifeval.constraints[id].active = active;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function updateIfevalParam(id, paramKey, value) {
+  state.inputs.ifeval.constraints[id][paramKey] = value;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function updateIfevalAnswer(value) {
+  state.inputs.ifeval.answer = value;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function applyIfevalPreset(id) {
+  state.inputs.ifeval = cloneIfevalInputs(findIfevalFixture(id, state.lang));
+  state.runState = "complete";
+  render();
+  const labelKey = ifevalFixtureLabelKey(id);
+  announce(t("ariaIfevalPresetApplied", { preset: labelKey ? t(labelKey) : id }));
+}
+
+function runIfevalEval() {
+  state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function resetIfevalInputs() {
+  state.inputs.ifeval = cloneIfevalInputs(findIfevalFixture("ifeval-all", state.lang));
+}
+
 function isTypingTarget(el) {
   if (!el) return false;
   const tag = el.tagName;
@@ -2512,6 +2933,10 @@ function runCurrentBench() {
     runAresExperiment();
     return;
   }
+  if (state.activeBench === "ifeval") {
+    runIfevalEval();
+    return;
+  }
   // Phase 0 stub for the other benches: no evaluation logic yet (added
   // per-bench in later phases).
   state.runState = "complete";
@@ -2530,6 +2955,12 @@ function resetCurrentBench() {
     resetAresPanel();
     return;
   }
+  if (state.activeBench === "ifeval") {
+    resetIfevalInputs();
+    state.runState = "idle";
+    render();
+    return;
+  }
   // Phase 0 stub for the other benches: no fixtures/inputs yet to reset.
   state.runState = "idle";
   render();
@@ -2544,6 +2975,7 @@ langBtnEnEl.addEventListener("click", () => setLang("en"));
 state.lang = loadLangFromStorage();
 resetRagasInputs();
 resetAresInputs();
+resetIfevalInputs();
 render();
   </script>
 </body>
