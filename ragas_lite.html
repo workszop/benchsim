@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAGAS Lite – wizualny explainer RAG</title>
+<style>
+:root{
+  --c-page:#eeedf2;
+  --c-page-deep:#e4e1e8;
+  --c-surface:#ffffff;
+  --c-surface-soft:#faf8fb;
+  --c-border:#ddd6df;
+  --c-border-strong:#c7bcc9;
+  --c-text:#18131a;
+  --c-text-soft:#4c434e;
+  --c-muted:#776c79;
+  --c-accent:#d20757;
+  --c-accent-hover:#a9064a;
+  --c-accent-soft:#fdebf3;
+  --c-positive:#15845f;
+  --c-positive-soft:#e8f6f0;
+  --c-reference:#267451;
+  --c-reference-soft:#e6f5eb;
+  --c-reference-border:#afd8be;
+  --c-answer:#6949a8;
+  --c-answer-soft:#f0eafd;
+  --c-answer-border:#cbbce7;
+  --c-negative:#b84450;
+  --c-negative-soft:#fbecef;
+  --c-info:#286f94;
+  --c-info-soft:#eaf5fb;
+  --c-shadow:rgba(24,19,26,.08);
+  --font-display:ui-rounded,'Trebuchet MS',system-ui,sans-serif;
+  --font-sans:system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:ui-monospace,'Cascadia Code','Liberation Mono',monospace;
+  --fs-xs:.72rem;
+  --fs-sm:.84rem;
+  --fs-base:.96rem;
+  --fs-lg:1.28rem;
+  --fs-xl:1.7rem;
+  --fs-2xl:2.3rem;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:linear-gradient(180deg,var(--c-page),var(--c-page-deep));color:var(--c-text);font-family:var(--font-sans);display:flex;flex-direction:column}
+
+/* ─── Chrome ─── */
+.top{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.6rem;flex:0 0 auto}
+.brand{display:flex;align-items:center;gap:.7rem}
+.brand svg{width:30px;height:30px;color:var(--c-text)}
+.brand h1{font-family:var(--font-display);font-size:1.1rem;margin:0}
+.brand span{display:block;color:var(--c-muted);font-size:var(--fs-xs)}
+.lang-toggle{font-family:var(--font-mono);font-size:var(--fs-xs);border:1px solid var(--c-border-strong);background:var(--c-surface);border-radius:999px;padding:.35rem .8rem;cursor:pointer;color:var(--c-text-soft)}
+.lang-toggle:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.progress{position:fixed;inset:0 0 auto;height:3px;background:var(--c-page-deep);z-index:20}
+.progress-fill{height:100%;width:0;background:var(--c-accent);transition:width .15s ease}
+
+.stage{flex:1 1 auto;display:grid;min-height:0;padding:0 1.6rem}
+.screen{grid-area:1/1;display:none;flex-direction:column;min-height:0;opacity:0}
+.screen.active{display:flex;animation:fadeIn .35s ease forwards}
+@keyframes fadeIn{to{opacity:1}}
+
+.bottom{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.6rem;color:var(--c-muted);font-size:var(--fs-xs)}
+.nav-dots{display:flex;gap:.55rem}
+.nav-dot{width:10px;height:10px;border-radius:50%;border:1px solid var(--c-border-strong);background:var(--c-surface);cursor:pointer;padding:0}
+.nav-dot[aria-current="true"]{background:var(--c-accent);border-color:var(--c-accent)}
+.keys{font-family:var(--font-mono)}
+.keys kbd{border:1px solid var(--c-border);border-radius:4px;background:var(--c-surface);padding:.05rem .35rem}
+
+/* ─── Screen scaffolding ─── */
+.screen-head{text-align:center;margin:0 auto .9rem;max-width:860px}
+.eyebrow{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);text-transform:uppercase;letter-spacing:.1em}
+.screen-head h2{font-family:var(--font-display);font-size:var(--fs-xl);margin:.25rem 0 .2rem}
+.screen-head p{color:var(--c-text-soft);margin:0;font-size:var(--fs-base)}
+.steps{list-style:none;display:grid;grid-template-columns:repeat(var(--steps,4),1fr);gap:.6rem;margin:.1rem auto .7rem;padding:0;max-width:1060px;width:100%}
+.steps li{background:var(--c-surface-soft);border:1px solid var(--c-border);border-radius:10px;padding:.5rem .7rem;display:flex;gap:.55rem;align-items:flex-start}
+.steps b{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);border:1px solid var(--c-accent);border-radius:50%;width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;margin-top:.1rem}
+.steps strong{display:block;font-size:var(--fs-sm);font-weight:600}
+.steps span{font-size:var(--fs-xs);color:var(--c-muted);line-height:1.4;display:block}
+.canvas{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+.takeaway{text-align:center;margin:0 auto;max-width:720px;color:var(--c-muted);font-size:var(--fs-sm);padding-bottom:.4rem}
+.takeaway b{color:var(--c-text)}
+.footnote{display:block;font-size:var(--fs-xs);margin-top:.25rem}
+.run-btn{font-family:var(--font-sans);font-weight:600;font-size:var(--fs-base);color:var(--c-surface);background:var(--c-accent);border:0;border-radius:10px;padding:.6rem 1.6rem;cursor:pointer}
+.run-btn:hover{background:var(--c-accent-hover)}
+.run-btn:disabled{opacity:.45;cursor:default}
+
+/* ─── Intro ─── */
+#screen-intro .canvas{gap:1.4rem}
+.intro-title{font-family:var(--font-display);font-size:var(--fs-2xl);margin:0;text-align:center;max-width:820px}
+.intro-sub{color:var(--c-text-soft);text-align:center;max-width:640px;margin:0}
+.intro-tiles{display:grid;grid-template-columns:repeat(4,minmax(150px,200px));gap:1rem}
+.intro-tile{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;padding:1rem;cursor:pointer;text-align:left;font-family:inherit;box-shadow:0 1px 3px var(--c-shadow);transition:border-color .15s,transform .15s}
+.intro-tile:hover{border-color:var(--c-accent);transform:translateY(-2px)}
+.intro-tile .tag{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent)}
+.intro-tile h3{font-family:var(--font-display);margin:.35rem 0 .3rem;font-size:var(--fs-base)}
+.intro-tile p{margin:0;color:var(--c-muted);font-size:var(--fs-xs);line-height:1.45}
+
+/* ─── Shared cards ─── */
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;padding:.85rem 1rem;box-shadow:0 1px 3px var(--c-shadow)}
+.card .label{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:.35rem}
+.card p{margin:0;font-size:var(--fs-sm);line-height:1.5;color:var(--c-text-soft)}
+
+.big-score{text-align:center;opacity:0;transition:opacity .4s ease}
+.revealed .big-score,.big-score.revealed{opacity:1}
+.big-score b{font-family:var(--font-mono);font-size:var(--fs-2xl);color:var(--c-accent);display:block}
+.big-score span{color:var(--c-muted);font-size:var(--fs-sm)}
+
+/* ─── RAGAS ─── */
+.stage[data-screen="ragas"]{display:block;overflow-y:auto;scrollbar-gutter:stable}
+#screen-ragas{overflow:visible;min-height:auto;padding-bottom:1rem}
+#screen-ragas .screen-head{margin-bottom:1.2rem;padding-top:.5rem}
+#screen-ragas .canvas{flex:0 0 auto;justify-content:flex-start;gap:1.25rem;overflow:visible;padding-bottom:1rem}
+.ragas-flows{display:flex;flex-direction:column;gap:1.5rem;width:100%;max-width:1500px}
+.ragas-flow{display:block;background:var(--c-surface-soft);border:1px solid var(--c-border);border-radius:16px;padding:1.2rem;box-shadow:0 4px 14px var(--c-shadow);transition:border-color .25s,background .25s}
+.ragas-flow[data-line-state="running"]{border-color:var(--c-accent);background:var(--c-accent-soft)}
+.ragas-flow[data-line-state="done"]{border-color:var(--c-border-strong);background:var(--c-surface)}
+.flow-head{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:.65rem;align-items:center;padding:0 .1rem .8rem;border-bottom:1px solid var(--c-border)}
+.flow-kicker{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);text-transform:uppercase;letter-spacing:.06em}
+.flow-head h3{grid-column:2;grid-row:1 / span 2;font-family:var(--font-display);font-size:var(--fs-lg);line-height:1.15;margin:0}
+.flow-metric{grid-column:1;grid-row:2;font-size:var(--fs-xs);color:var(--c-muted)}
+.micro-run{grid-column:3;grid-row:1 / span 2;font-family:var(--font-sans);font-weight:600;font-size:var(--fs-sm);color:var(--c-surface);background:var(--c-accent);border:0;border-radius:9px;padding:.55rem .9rem;cursor:pointer}
+.micro-run:hover{background:var(--c-accent-hover)}
+.micro-run:disabled{opacity:.45;cursor:default}
+.ragas-track{display:grid;gap:.65rem;align-items:stretch;min-width:0;margin-top:1rem}
+.ragas-track.use{grid-template-columns:minmax(0,1fr) auto minmax(0,1.05fr) auto minmax(0,1.2fr) auto minmax(0,.9fr) auto minmax(0,1.25fr)}
+.ragas-track.eval{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,2.2fr)}
+.flow-arrow{display:grid;place-items:center;color:var(--c-border-strong);font-size:1.45rem}
+.flow-node{min-width:0;min-height:230px;border:1px solid var(--c-border);border-radius:12px;background:var(--c-surface);padding:.9rem;transition:border-color .25s,background .25s,transform .25s;opacity:1;overflow:hidden}
+.ragas-track.eval .flow-node{min-height:320px}
+.flow-node[data-node-state="active"]{border-color:var(--c-accent);background:var(--c-accent-soft);opacity:1;transform:translateY(-2px)}
+.flow-node[data-node-state="done"]{border-color:var(--c-positive);opacity:1}
+.node-label{display:block;font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.65rem}
+.node-detail{font-size:var(--fs-sm);line-height:1.45;color:var(--c-text-soft);transition:opacity .25s;height:calc(100% - 1.5rem)}
+.node-detail p{margin:0}
+
+/* visual RAG objects */
+.question-visual{height:100%;display:grid;grid-template-columns:44px 1fr;gap:.75rem;align-items:start;padding-top:.35rem}
+.question-mark{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--c-accent);color:var(--c-surface);font-family:var(--font-display);font-size:var(--fs-xl);font-weight:800}
+.question-copy{font-size:var(--fs-base);line-height:1.5;font-weight:600;margin:0 0 .8rem!important}
+.search-visual{height:100%;display:flex;flex-direction:column;gap:.65rem;position:relative}
+.search-symbol{display:flex;align-items:center;gap:.75rem;padding:.2rem .25rem}
+.search-symbol small{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info)}
+.search-lens{width:34px;height:34px;border:3px solid var(--c-info);border-radius:50%;position:relative;flex:0 0 auto}
+.search-lens::after{content:'';position:absolute;width:13px;height:3px;border-radius:3px;background:var(--c-info);right:-10px;bottom:-5px;transform:rotate(45deg)}
+.doc-stack{display:flex;flex-direction:column;gap:.45rem}
+.visual-doc{width:100%;min-height:74px;border:1px solid var(--c-border-strong);border-left:4px solid var(--c-info);border-radius:7px;background:var(--c-info-soft);padding:.5rem .6rem;display:grid;grid-template-columns:auto 1fr;gap:.1rem .45rem;transform:translateY(3px);opacity:.82;transition:opacity .3s,transform .3s,border-color .3s}
+.visual-doc b{grid-row:1 / span 2;font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info)}
+.visual-doc small{font-family:var(--font-mono);font-size:.6rem;color:var(--c-muted)}
+.visual-doc p{font-size:var(--fs-xs);line-height:1.35;margin:0}
+.flow-node[data-node-state="active"] .visual-doc,.flow-node[data-node-state="done"] .visual-doc{opacity:1;transform:none;border-color:var(--c-info)}
+.flow-node[data-node-state="active"] .visual-doc:nth-child(2){transition-delay:.12s}
+.context-visual{display:flex;flex-direction:column;gap:.6rem;height:100%}
+.fragment-strip{display:grid;grid-template-columns:30px 1fr;gap:.55rem;align-items:start;border:1px solid var(--c-border);border-left:4px solid var(--c-info);border-radius:7px;background:var(--c-info-soft);padding:.65rem;transform:translateX(-3px);opacity:.82;transition:opacity .3s,transform .3s}
+.fragment-strip b{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info)}
+.fragment-strip p{font-size:var(--fs-xs);line-height:1.4;margin:0 0 .4rem}
+.match-words{display:inline-block;font-family:var(--font-mono);font-size:.58rem;color:var(--c-info);background:var(--c-surface);border-radius:999px;padding:.15rem .4rem}
+.flow-node[data-node-state="active"] .fragment-strip,.flow-node[data-node-state="done"] .fragment-strip{opacity:1;transform:none}
+.flow-node[data-node-state="active"] .fragment-strip:nth-child(2){transition-delay:.12s}
+.generate-wrap{height:100%;display:flex;flex-direction:column;justify-content:center;gap:1rem}
+.generate-visual{display:flex;align-items:center;justify-content:center;gap:.5rem}
+.context-feed{display:flex;flex-direction:column;gap:.18rem}
+.context-feed i{width:30px;height:18px;border-radius:4px;background:var(--c-info-soft);border-left:3px solid var(--c-info);font-family:var(--font-mono);font-size:.55rem;font-style:normal;display:grid;place-items:center;color:var(--c-info)}
+.feed-arrow{color:var(--c-info);font-size:.85rem}
+.llm-core{width:58px;height:58px;border-radius:12px;display:grid;place-items:center;background:var(--c-text);color:var(--c-surface);font-family:var(--font-mono);font-size:var(--fs-xs);box-shadow:0 3px 8px var(--c-shadow)}
+.token-stream{display:flex;gap:2px;align-items:center}
+.token-stream i{width:6px;height:6px;border-radius:50%;background:var(--c-accent);opacity:.2;transform:translateX(-4px);transition:opacity .25s,transform .25s}
+.flow-node[data-node-state="active"] .token-stream i,.flow-node[data-node-state="done"] .token-stream i{opacity:1;transform:none}
+.flow-node[data-node-state="active"] .token-stream i:nth-child(2){transition-delay:.1s}.flow-node[data-node-state="active"] .token-stream i:nth-child(3){transition-delay:.2s}
+.generator-inputs{border:1px dashed var(--c-border-strong);border-radius:8px;background:var(--c-surface-soft);padding:.65rem;text-align:center}
+.generator-inputs b{display:block;font-size:var(--fs-xs);margin-bottom:.25rem}.generator-inputs span{font-family:var(--font-mono);color:var(--c-accent)}.generator-inputs p{font-size:var(--fs-xs);margin:.35rem 0 0}
+.answer-visual{height:100%;display:grid;grid-template-columns:34px 1fr;gap:.55rem;align-items:start;padding-top:.25rem}
+.answer-avatar{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--c-text);color:var(--c-surface);font-family:var(--font-mono);font-size:var(--fs-xs)}
+.answer-bubble{position:relative;border:1px solid var(--c-border);border-radius:10px;background:var(--c-surface-soft);padding:.65rem;display:flex;flex-direction:column;gap:.5rem}
+.answer-bubble::before{content:'';position:absolute;left:-6px;top:12px;width:10px;height:10px;background:var(--c-surface-soft);border-left:1px solid var(--c-border);border-bottom:1px solid var(--c-border);transform:rotate(45deg)}
+
+/* visual claim splitting and evidence maps */
+.source-sheet{height:100%;border:1px solid var(--c-border);border-left:5px solid var(--c-accent);border-radius:9px;background:var(--c-surface-soft);padding:.85rem;display:flex;flex-direction:column;gap:.8rem}
+.source-full{font-size:var(--fs-sm);line-height:1.5!important;color:var(--c-text)!important;background:var(--c-surface);border-radius:7px;padding:.7rem;border:1px solid var(--c-border)}
+.source-sheet.model{border-left-color:var(--c-text);background:var(--c-page-deep)}
+.claim-stack{display:flex;flex-direction:column;gap:.6rem;height:100%;justify-content:center}
+.claim-slip{display:grid;grid-template-columns:42px 1fr;gap:.55rem;align-items:start;border:1px solid var(--c-border);border-radius:8px;background:var(--c-surface-soft);padding:.65rem;opacity:.82;transform:translateX(-3px);transition:opacity .25s,transform .25s,border-color .25s,background .25s}
+.claim-slip b{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent)}
+.claim-slip span{display:block;font-size:var(--fs-xs);line-height:1.4}
+.claim-slip small{display:block;margin-top:.3rem;font-family:var(--font-mono);font-size:.58rem;color:var(--c-muted)}
+.flow-node[data-node-state="active"] .claim-slip,.flow-node[data-node-state="done"] .claim-slip{opacity:1;transform:none}
+.flow-node[data-node-state="active"] .claim-slip:nth-child(2){transition-delay:.1s}.flow-node[data-node-state="active"] .claim-slip:nth-child(3){transition-delay:.2s}
+.verify-visual{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:.8rem;align-items:center}
+.evidence-mini{display:grid;grid-template-columns:minmax(150px,1fr) 80px minmax(180px,1.12fr);align-items:stretch;min-width:0}
+.context-mini,.claim-checks{display:flex;flex-direction:column;justify-content:space-around;gap:.55rem}
+[data-evidence-layout="claims-first"] .claim-checks{order:1}
+[data-evidence-layout="claims-first"] .evidence-links{order:2}
+[data-evidence-layout="claims-first"] .context-mini{order:3}
+.context-fragment{min-height:94px;display:grid;grid-template-columns:30px 1fr;gap:.45rem;align-items:start;border-radius:7px;background:var(--c-info-soft);border:1px solid var(--c-border);border-left:4px solid var(--c-info);padding:.65rem}
+.context-fragment b{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info)}
+.context-fragment p{font-size:var(--fs-xs);line-height:1.4;margin:0}
+.evidence-links{width:80px;height:300px;align-self:center;overflow:visible;color:var(--c-positive)}
+.evidence-links path{fill:none;stroke:currentColor;stroke-width:2;opacity:.12;stroke-dasharray:160;stroke-dashoffset:160;transition:stroke-dashoffset .35s,opacity .3s,color .3s}
+.evidence-links path[data-link-state="ok"]{stroke-dashoffset:0;opacity:1;color:var(--c-positive)}
+.evidence-links path[data-link-state="bad"]{stroke-dashoffset:0;opacity:1;color:var(--c-negative);stroke-dasharray:3 3}
+.support-check{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:start;gap:.45rem;min-width:0;min-height:64px;border:1px solid var(--c-border);border-radius:7px;background:var(--c-surface-soft);padding:.55rem;transition:border-color .25s,background .25s}
+.support-check::before{content:'?';display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--c-page-deep);color:var(--c-muted);font-family:var(--font-mono);font-size:.65rem;transition:background .25s,color .25s}
+.support-check b{display:block;font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);margin-bottom:.15rem}
+.support-check span{display:block;font-size:var(--fs-xs);line-height:1.35}
+.evidence-note{display:block;margin-top:.3rem;font-family:var(--font-mono);font-size:.58rem;color:var(--c-muted);opacity:.2;transition:opacity .25s,color .25s}
+.support-check[data-support="ok"] .evidence-note,.support-check[data-support="bad"] .evidence-note{opacity:1}.support-check[data-support="ok"] .evidence-note{color:var(--c-positive)}.support-check[data-support="bad"] .evidence-note{color:var(--c-negative)}
+.support-check[data-support="ok"]{border-color:var(--c-positive);background:var(--c-positive-soft)}
+.support-check[data-support="ok"]::before{content:'✓';background:var(--c-positive);color:var(--c-surface)}
+.support-check[data-support="bad"]{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.support-check[data-support="bad"]::before{content:'✗';background:var(--c-negative);color:var(--c-surface)}
+
+/* semantic claim colors */
+.flow-node[data-claim-role="reference"][data-kind="source"]{background:var(--c-reference-soft);border-color:var(--c-reference-border)}
+.flow-node[data-claim-role="answer"][data-kind="source"],.flow-node[data-claim-role="answer"][data-kind="answer"]{background:var(--c-answer-soft);border-color:var(--c-answer-border)}
+[data-claim-role="reference"] .source-sheet,[data-claim-role="reference"] .source-full,[data-claim-role="reference"] .claim-slip,[data-claim-role="reference"] .support-check[data-support="pending"]{background:var(--c-reference-soft);border-color:var(--c-reference-border)}
+[data-claim-role="reference"] .source-sheet{border-left-color:var(--c-reference)}
+[data-claim-role="reference"] .claim-slip b,[data-claim-role="reference"] .support-check b{color:var(--c-reference)}
+[data-claim-role="answer"] .source-sheet,[data-claim-role="answer"] .source-full,[data-claim-role="answer"] .claim-slip,[data-claim-role="answer"] .support-check[data-support="pending"],[data-claim-role="answer"] .answer-bubble{background:var(--c-answer-soft);border-color:var(--c-answer-border)}
+[data-claim-role="answer"] .answer-bubble::before{background:var(--c-answer-soft);border-color:var(--c-answer-border)}
+[data-claim-role="answer"] .source-sheet{border-left-color:var(--c-answer)}
+[data-claim-role="answer"] .claim-slip b,[data-claim-role="answer"] .support-check b{color:var(--c-answer)}
+.metric-dial{--score-color:var(--c-accent);--score-track:var(--c-accent-soft);position:relative;width:94px;height:94px;border-radius:50%;display:grid;place-items:center;align-content:center;background:conic-gradient(var(--score-color) 0 0,var(--score-track) 0);opacity:0;visibility:hidden;transition:opacity .3s,background .65s}
+.metric-dial[data-metric="contextRecall"]{--score-color:var(--c-reference);--score-track:var(--c-reference-soft)}
+.metric-dial[data-metric="faithfulness"]{--score-color:var(--c-answer);--score-track:var(--c-answer-soft)}
+.metric-dial::before{content:'';position:absolute;inset:9px;border-radius:50%;background:var(--c-surface);box-shadow:inset 0 0 0 1px var(--c-border)}
+.metric-dial>*{position:relative;z-index:1}
+.metric-dial b{font-family:var(--font-mono);font-size:var(--fs-base);font-weight:800;line-height:1;color:var(--c-text)}
+.metric-dial em{font-family:var(--font-mono);font-size:.62rem;font-weight:800;font-style:normal;color:var(--score-color);margin-top:.18rem}
+.metric-dial small{font-size:.58rem;font-weight:600;line-height:1.15;color:var(--c-text-soft);text-align:center;max-width:68px;margin-top:.25rem}
+.metric-dial.revealed{opacity:1;visibility:visible;background:conic-gradient(var(--score-color) 0 var(--metric-percent),var(--score-track) var(--metric-percent) 100%)}
+
+@media (max-width:1100px){
+  .ragas-track.use,.ragas-track.eval{grid-template-columns:1fr}
+  .flow-arrow{transform:rotate(90deg);min-height:18px}
+  .flow-node,.ragas-track.eval .flow-node{min-height:0}
+}
+
+/* ─── IFEval ─── */
+.ifeval-wrap{display:grid;grid-template-columns:minmax(280px,420px) minmax(280px,420px);gap:1rem;align-items:start}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:var(--fs-xs);border:1px solid var(--c-border-strong);border-radius:999px;padding:.2rem .6rem;margin:.2rem .25rem 0 0;background:var(--c-surface-soft);transition:border-color .3s,background .3s}
+.chip[data-check="ok"]{border-color:var(--c-positive);background:var(--c-positive-soft);color:var(--c-positive)}
+.chip[data-check="bad"]{border-color:var(--c-negative);background:var(--c-negative-soft);color:var(--c-negative)}
+.gate{margin-top:.4rem;border-radius:12px;padding:.7rem 1.1rem;font-family:var(--font-display);font-size:var(--fs-lg);opacity:0;transform:scale(.85);transition:opacity .35s,transform .35s;border:2px solid var(--c-border)}
+.gate.shown{opacity:1;transform:scale(1)}
+.gate.fail{border-color:var(--c-negative);background:var(--c-negative-soft);color:var(--c-negative)}
+.gate small{display:block;font-family:var(--font-sans);font-size:var(--fs-xs);font-weight:400;color:var(--c-text-soft)}
+
+/* ─── QuestEval ─── */
+.quest-wrap{display:flex;flex-direction:column;gap:.9rem;align-items:center}
+.quest-texts{display:grid;grid-template-columns:minmax(260px,400px) minmax(260px,400px);gap:1rem}
+.quest-lanes{display:grid;grid-template-columns:1fr 1fr;gap:1rem;width:100%;max-width:820px}
+.lane{display:flex;flex-direction:column;gap:.4rem}
+.lane-title{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted);text-align:center}
+.q-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;background:var(--c-surface);border:1px solid var(--c-border);border-radius:8px;padding:.35rem .7rem;font-size:var(--fs-sm);opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s,border-color .3s,background .3s}
+.q-row.shown{opacity:1;transform:none}
+.q-row[data-verdict="ok"]{border-color:var(--c-positive);background:var(--c-positive-soft)}
+.q-row[data-verdict="bad"]{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.q-row b{font-family:var(--font-mono);font-size:var(--fs-xs)}
+.quest-bars{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end;width:100%;max-width:820px}
+.qbar span{display:block;font-size:var(--fs-xs);color:var(--c-muted);margin-bottom:.25rem}
+.qbar .track{height:10px;border-radius:6px;background:var(--c-page-deep);overflow:hidden}
+.qbar .fill{height:100%;width:0;background:var(--c-accent);border-radius:6px;transition:width .8s ease}
+.qbar b{font-family:var(--font-mono);font-size:var(--fs-sm)}
+
+@media (max-width:768px){
+  .ifeval-wrap,.quest-texts,.quest-lanes,.steps{grid-template-columns:1fr}
+  #screen-ragas .screen-head{padding-inline:.5rem}
+  .ragas-flow{padding:.8rem}
+  .flow-head{grid-template-columns:1fr auto;grid-template-rows:auto auto auto;row-gap:.1rem}
+  .flow-head .flow-kicker{grid-column:1;grid-row:1}
+  .flow-head h3{grid-column:1;grid-row:2;font-size:var(--fs-base)}
+  .flow-head .flow-metric{grid-column:1;grid-row:3}
+  .flow-head .micro-run{grid-column:2;grid-row:1 / span 3}
+  .verify-visual{grid-template-columns:1fr}
+  .evidence-mini{grid-template-columns:1fr;gap:.75rem}
+  .evidence-links{display:none}
+  .metric-dial{justify-self:center}
+  .question-visual{grid-template-columns:36px 1fr}.question-mark{width:36px;height:36px;font-size:var(--fs-lg)}
+  .intro-tiles{grid-template-columns:1fr}
+  .stage{overflow-y:auto}
+  .canvas{justify-content:flex-start;padding-top:.5rem}
+}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" role="img" aria-label="Quantica Lab"><path d="M6 4h20v20h-6v5l-7-5H6V4Zm5 6v8h6.5l2.5 2v-2h1v-8H11Z" fill="currentColor"/></svg>
+    <div><h1>RAGAS Lite</h1><span data-t="ragasStandaloneSubtitle"></span></div>
+  </div>
+  <button class="lang-toggle" id="lang-toggle" type="button"></button>
+</header>
+
+<main class="stage" id="stage" data-screen="ragas"></main>
+
+<footer class="bottom">
+  <span class="keys"><kbd>Enter</kbd> / <kbd>Spacja</kbd> <span data-t="runAllHint"></span></span>
+  <span>Quantica Lab</span>
+</footer>
+
+<div class="visually-hidden" aria-live="polite" id="live"></div>
+
+<script>
+// ─── Constants ───
+
+const SCREENS = ["ragas"];
+
+const T = {
+  pl:{
+    subtitle:"3 sposoby oceniania odpowiedzi AI",
+    ragasStandaloneSubtitle:"samodzielny przewodnik wizualny",
+    runAllHint:"uruchamia wszystkie trzy przepływy",
+    keysHint:"zmiana ekranu · Enter/Spacja uruchamia demo",
+    run:"Uruchom", replay:"Powtórz",
+    introTitle:"Jak ocenić odpowiedź AI bez człowieka?",
+    introSub:"Trzy benchmarki, trzy pomysły. Jeden przykład: zakładanie Profilu Zaufanego. Każdy ekran to jedna idea i jedna animacja.",
+    tileRagas:"Czy odpowiedź trzyma się źródeł?",
+    tileIfeval:"Czy model wykonał polecenia?",
+    tileQuest:"Czy dwa teksty mówią to samo?",
+    ragasQ:"Jak działa RAG i jak RAGAS ocenia jego dwa etapy?",
+    ragasHow:"Najpierw uruchamiamy RAG. Potem osobno oceniamy wyszukiwanie i wygenerowaną odpowiedź.",
+    ragUse:"1. Użycie RAG", ragUseMetric:"przepływ aplikacji",
+    retrievalEval:"2. Ocena wyszukiwania", retrievalMetric:"context recall",
+    answerEval:"3. Ocena odpowiedzi", answerMetric:"faithfulness",
+    runMicro:"Uruchom mikro", replayMicro:"Powtórz mikro",
+    question:"Pytanie", searchDocs:"Wyszukanie dokumentów do kontekstu", context:"Kontekst",
+    generateAnswer:"Generowanie odpowiedzi", responseLabel:"Odpowiedź", modelAnswer:"Odpowiedź modelu",
+    referenceAnswer:"Odpowiedź referencyjna", splitClaims:"Podział na twierdzenia", verifyContext:"Czy kontekst wspiera twierdzenie?",
+    retrievedFragments:"3 wyszukane fragmenty", llmWithContext:"LLM czyta pytanie i kontekst",
+    knowledgeBase:"Baza wiedzy", searchResult:"wynik wyszukiwania", inputBundle:"Dane dla generatora",
+    supportedBy:"wspiera", notInContext:"brak dowodu w kontekście", conflictsWith:"sprzeczne z", generatedClaim:"twierdzenie odpowiedzi",
+    ragasTake:"<b>Retriever i generator oceniamy osobno.</b> Context recall bada pokrycie odpowiedzi referencyjnej przez kontekst, a faithfulness – oparcie odpowiedzi modelu w kontekście.",
+    ragasFoot:"Mikro-symulacje pokazują mechanizm dwóch metryk RAGAS; każdą linię można uruchomić niezależnie.",
+    ifevalQ:"Czy model wykonał polecenia?",
+    ifevalHow:"Polecenia są weryfikowalne: sprawdza je zwykły kod, bez sędziego AI.",
+    promptLabel:"Polecenie", ifevalResponseLabel:"Odpowiedź modelu", checksLabel:"Kontrole",
+    ifevalPrompt:"Odpowiedz na pytanie: jak założyć Profil Zaufany?",
+    c1:"wymagane: „bezpłatna”", c2:"wymagany cytat: Dz.U. 2005 nr 64 poz. 565", c3:"zakazane: „14 dni”",
+    ifevalStep1t:"Prompt z instrukcjami", ifevalStep1d:"Do pytania doklejamy weryfikowalne polecenia: słowa wymagane, zakazane, cytaty, format.",
+    ifevalStep2t:"Model odpowiada", ifevalStep2d:"Model musi wykonać zadanie i wszystkie instrukcje naraz.",
+    ifevalStep3t:"Kontrole w kodzie", ifevalStep3d:"Zwykłe funkcje (szukanie słów, regex, liczenie) sprawdzają każdą instrukcję – bez sędziego AI.",
+    ifevalStep4t:"Bramka strict", ifevalStep4d:"Prompt zaliczony tylko, gdy przejdą wszystkie kontrole; jedna wpadka = 0.",
+    gateFail:"NIE ZALICZONO", gateFailSub:"2/3 kontroli. Wszystkie muszą przejść.",
+    ifevalTake:"<b>Instrukcje sprawdza kod, a nie sędzia. Jedna niespełniona = całe polecenie niezaliczone.</b>",
+    ifevalFoot:"Prawdziwy IFEval: 541 promptów, 25 typów poleceń oraz wariant „loose” wybaczający formatowanie.",
+    questQ:"Czy dwa teksty mówią to samo?",
+    questHow:"Generujemy pytania z jednego tekstu i sprawdzamy, czy drugi na nie odpowiada. W obie strony.",
+    source:"Źródło", target:"Streszczenie",
+    laneFwd:"pytania ze źródła → odpowiada streszczenie?", laneBwd:"pytania ze streszczenia → potwierdza źródło?",
+    completeness:"Kompletność", groundedness:"Wierność", combined:"Wynik łączny (F1)",
+    qOnline:"Czy można założyć online?", qRequest:"Co trzeba złożyć?", qCost:"Ile kosztuje usługa?",
+    qIdentity:"Co trzeba potwierdzić?", qOffice:"Gdzie potwierdzić tożsamość?",
+    aOk:"odpowiada", aBad:"brak odpowiedzi",
+    questevalStep1t:"Pytania ze źródła", questevalStep1d:"Model QG generuje pytania o fakty ze źródła.",
+    questevalStep2t:"Ocena kompletności", questevalStep2d:"Model QA odpowiada, czytając tylko streszczenie; brak odpowiedzi = zgubiony fakt.",
+    questevalStep3t:"Ocena wierności", questevalStep3d:"W drugą stronę: pytania ze streszczenia zadajemy źródłu; brak potwierdzenia = zmyślenie.",
+    questevalStep4t:"Łączenie w F1", questevalStep4d:"Średnia harmoniczna kompletności i wierności karze słabszą stronę.",
+    questTake:"<b>Kompletność i wierność łączymy średnią harmoniczną (F1).</b> Streszczenie zgubiło „bezpłatna”, więc kompletność spada.",
+    questFoot:"QuestEval działa bez wzorcowej odpowiedzi; w oryginale pytania generuje i ocenia model QA."
+  },
+  en:{
+    subtitle:"3 ways to score an AI answer",
+    ragasStandaloneSubtitle:"standalone visual explainer",
+    runAllHint:"runs all three flows",
+    keysHint:"switch screens · Enter/Space runs the demo",
+    run:"Run", replay:"Replay",
+    introTitle:"How do you score an AI answer without a human?",
+    introSub:"Three benchmarks, three ideas. One running example: setting up a Profil Zaufany (Polish e-ID). Each screen is one idea and one animation.",
+    tileRagas:"Does the answer stick to the sources?",
+    tileIfeval:"Did the model follow instructions?",
+    tileQuest:"Do two texts say the same thing?",
+    ragasQ:"How does RAG work, and how does RAGAS score its two stages?",
+    ragasHow:"Run RAG first. Then score retrieval and the generated answer separately.",
+    ragUse:"1. Using RAG", ragUseMetric:"application flow",
+    retrievalEval:"2. Retrieval evaluation", retrievalMetric:"context recall",
+    answerEval:"3. Answer evaluation", answerMetric:"faithfulness",
+    runMicro:"Run micro demo", replayMicro:"Replay micro demo",
+    question:"Question", searchDocs:"Retrieve documents for context", context:"Context",
+    generateAnswer:"Generate answer", responseLabel:"Answer", modelAnswer:"Model answer",
+    referenceAnswer:"Reference answer", splitClaims:"Split into claims", verifyContext:"Does context support the claim?",
+    retrievedFragments:"3 retrieved fragments", llmWithContext:"LLM reads the question and context",
+    knowledgeBase:"Knowledge base", searchResult:"search result", inputBundle:"Generator input",
+    supportedBy:"supports", notInContext:"no evidence in context", conflictsWith:"conflicts with", generatedClaim:"answer claim",
+    ragasTake:"<b>Score the retriever and generator separately.</b> Context recall checks whether context covers the reference answer; faithfulness checks whether context supports the model answer.",
+    ragasFoot:"These micro simulations show the mechanism of two RAGAS metrics; each line runs independently.",
+    ifevalQ:"Did the model follow instructions?",
+    ifevalHow:"The instructions are verifiable: plain code checks them, no AI judge.",
+    promptLabel:"Prompt", ifevalResponseLabel:"Model response", checksLabel:"Checks",
+    ifevalPrompt:"Answer the question: how do you set up a Profil Zaufany?",
+    c1:"required: “bezpłatna” (free of charge)", c2:"required citation: Dz.U. 2005 nr 64 poz. 565", c3:"forbidden: “14 dni” (14 days)",
+    ifevalStep1t:"Prompt with instructions", ifevalStep1d:"Verifiable orders are attached to the question: required words, forbidden words, citations, format.",
+    ifevalStep2t:"Model answers", ifevalStep2d:"The model must handle the task and every instruction at once.",
+    ifevalStep3t:"Checks in code", ifevalStep3d:"Plain functions (word search, regex, counting) verify each instruction – no AI judge.",
+    ifevalStep4t:"Strict gate", ifevalStep4d:"The prompt passes only when every check passes; one miss = 0.",
+    gateFail:"FAIL", gateFailSub:"2/3 checks. All must pass.",
+    ifevalTake:"<b>Code checks the instructions, not a judge. One failed check = the whole prompt fails.</b>",
+    ifevalFoot:"Real IFEval: 541 prompts, 25 instruction types, plus a “loose” variant that forgives formatting.",
+    questQ:"Do two texts say the same thing?",
+    questHow:"Generate questions from one text and check whether the other answers them. Both directions.",
+    source:"Source", target:"Summary",
+    laneFwd:"questions from source → does the summary answer?", laneBwd:"questions from summary → does the source confirm?",
+    completeness:"Completeness", groundedness:"Groundedness", combined:"Combined score (F1)",
+    qOnline:"Can it be set up online?", qRequest:"What must you submit?", qCost:"How much does it cost?",
+    qIdentity:"What must be confirmed?", qOffice:"Where do you confirm identity?",
+    aOk:"answered", aBad:"no answer",
+    questevalStep1t:"Questions from source", questevalStep1d:"A QG model generates questions about facts in the source.",
+    questevalStep2t:"Score completeness", questevalStep2d:"A QA model answers them reading only the summary; no answer = a lost fact.",
+    questevalStep3t:"Score groundedness", questevalStep3d:"Reverse direction: questions from the summary are asked against the source; no confirmation = a fabrication.",
+    questevalStep4t:"Combine as F1", questevalStep4d:"The harmonic mean of completeness and groundedness punishes the weaker side.",
+    questTake:"<b>Completeness and groundedness combine via the harmonic mean (F1).</b> The summary dropped “free of charge”, so completeness falls.",
+    questFoot:"QuestEval needs no reference answer; the original generates and scores questions with a QA model."
+  }
+};
+
+// Demo content stays Polish in both languages: it is the data being evaluated.
+const RAGAS_QUESTION = "Jak założyć Profil Zaufany i gdzie potwierdzić tożsamość?";
+const RAGAS_CONTEXT = [
+  "Profil Zaufany można założyć online po złożeniu elektronicznego wniosku.",
+  "Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy.",
+  "Założenie i korzystanie z Profilu Zaufanego jest bezpłatne."
+];
+const RAGAS_REFERENCE_CLAIMS = [
+  { text:"Profil Zaufany można założyć online.", short:"Założenie online", verdict:"ok", evidence:["Doc1"] },
+  { text:"W tym celu należy złożyć elektroniczny wniosek.", short:"Złożenie elektronicznego wniosku", verdict:"ok", evidence:["Doc1"] },
+  { text:"Tożsamość potwierdza się w punkcie potwierdzającym, na przykład w urzędzie gminy.", short:"Potwierdzenie tożsamości w urzędzie gminy", verdict:"ok", evidence:["Doc2"] },
+  { text:"Usługa jest bezpłatna.", short:"Usługa jest bezpłatna", verdict:"ok", evidence:["Doc3"] }
+];
+const RAGAS_ANSWER_CLAIMS = [
+  { text:"Profil Zaufany można założyć online po złożeniu wniosku.", verdict:"ok", evidence:["Doc1"] },
+  { text:"Tożsamość potwierdza się w punkcie potwierdzającym, np. w urzędzie gminy.", verdict:"ok", evidence:["Doc2"] },
+  { text:"Profil kosztuje siedemnaście złotych.", verdict:"bad", evidence:[], conflict:"Doc3" }
+];
+const RAGAS_ANSWER = RAGAS_ANSWER_CLAIMS.map(claim => claim.text).join(" ");
+const IFEVAL_RESPONSE = "Profil Zaufany założysz online, przez internet – wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565.";
+const IFEVAL_CHECKS = [ { key:"c1", verdict:"bad" }, { key:"c2", verdict:"ok" }, { key:"c3", verdict:"ok" } ];
+const QUEST_SOURCE = "Profil Zaufany można założyć online. Należy złożyć wniosek i potwierdzić tożsamość w punkcie potwierdzającym. Usługa jest bezpłatna.";
+const QUEST_TARGET = "Profil Zaufany zakłada się online, składając wniosek. Tożsamość potwierdza się w punkcie potwierdzającym, np. w urzędzie gminy.";
+const QUEST_FORWARD = [ { q:"qOnline", verdict:"ok" }, { q:"qRequest", verdict:"ok" }, { q:"qCost", verdict:"bad" } ];
+const QUEST_BACKWARD = [ { q:"qOnline", verdict:"ok" }, { q:"qIdentity", verdict:"ok" }, { q:"qOffice", verdict:"ok" } ];
+
+const STEP_MS = 650;
+const STEP_COUNTS = { ifeval:4, questeval:4 };
+
+// ─── State ───
+
+const state = {
+  lang: localStorage.getItem("ragasLiteLang") || "pl",
+  screen: "ragas",
+  ran: { ragas:false, ifeval:false, questeval:false }
+};
+
+// ─── DOM refs ───
+
+const stage = document.getElementById("stage");
+const langToggle = document.getElementById("lang-toggle");
+const live = document.getElementById("live");
+const progressFill = document.getElementById("progress-fill");
+
+// ─── Helpers ───
+
+const t = key => T[state.lang][key] || key;
+const escapeHtml = s => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let timers = [];
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+const ragasTimers = new Map();
+function laterRagas(lineId, fn, ms){
+  const timer = setTimeout(fn, ms);
+  ragasTimers.set(lineId, [...(ragasTimers.get(lineId) || []), timer]);
+}
+function clearRagasTimers(lineId){
+  (ragasTimers.get(lineId) || []).forEach(clearTimeout);
+  ragasTimers.delete(lineId);
+}
+function clearTimers(){
+  timers.forEach(clearTimeout);
+  timers = [];
+  [...ragasTimers.keys()].forEach(clearRagasTimers);
+}
+
+// ─── Render ───
+
+function card(labelKey, text){
+  return `<div class="card"><span class="label">${t(labelKey)}</span><p>${escapeHtml(text)}</p></div>`;
+}
+
+function stepsList(id){
+  const count = STEP_COUNTS[id];
+  const items = Array.from({ length: count }, (_, i) =>
+    `<li data-stage="${i + 1}"><b>${i + 1}</b><div><strong>${t(`${id}Step${i + 1}t`)}</strong><span>${t(`${id}Step${i + 1}d`)}</span></div></li>`).join("");
+  return `<ol class="steps" style="--steps:${count}" data-stages="${count}">${items}</ol>`;
+}
+
+function screenShell(id, titleKey, subKey, body, takeKey, footKey){
+  return `<section class="screen" id="screen-${id}" data-bench="${id}" data-run-state="ready">
+    <div class="screen-head"><span class="eyebrow">${id.toUpperCase()}</span>
+      <h2>${t(titleKey)}</h2><p>${t(subKey)}</p></div>
+    ${stepsList(id)}
+    <div class="canvas">${body}
+      <button class="run-btn" data-run="${id}" type="button">${t("run")}</button>
+    </div>
+    <p class="takeaway">${t(takeKey)}<span class="footnote">${t(footKey)}</span></p>
+  </section>`;
+}
+
+function renderIntro(){
+  const tiles = [["ragas","RAGAS","tileRagas","ragasHow"],["ifeval","IFEVAL","tileIfeval","ifevalHow"],["questeval","QUESTEVAL","tileQuest","questHow"]]
+    .map(([id, tag, key, howKey]) => `<button class="intro-tile" data-goto="${id}" type="button"><span class="tag">${tag}</span><h3>${t(key)}</h3><p>${t(howKey)}</p></button>`).join("");
+  return `<section class="screen" id="screen-intro" data-bench="intro">
+    <div class="canvas">
+      <h2 class="intro-title">${t("introTitle")}</h2>
+      <p class="intro-sub">${t("introSub")}</p>
+      <div class="intro-tiles">${tiles}</div>
+    </div>
+  </section>`;
+}
+
+function renderRagas(){
+  const arrow = `<div class="flow-arrow" aria-hidden="true">›</div>`;
+  const node = (key, detail, extra="") => `<div class="flow-node" data-flow-node data-node-state="waiting" ${extra}><span class="node-label">${t(key)}</span><div class="node-detail">${detail}</div></div>`;
+  const questionVisual = `<div class="question-visual"><span class="question-mark">?</span><div><p class="question-copy">${escapeHtml(RAGAS_QUESTION)}</p></div></div>`;
+  const matchTerms = ["online · elektroniczny wniosek","tożsamość · urząd gminy","bezpłatne · Profil Zaufany"];
+  const searchVisual = `<div class="search-visual" aria-label="${t("retrievedFragments")}"><div class="search-symbol"><span class="search-lens"></span><small>${t("knowledgeBase")}</small></div><div class="doc-stack">${RAGAS_CONTEXT.map((text, index) => `<article class="visual-doc"><b>Doc${index + 1}</b><small>${t("searchResult")} ${index + 1}</small><p>${escapeHtml(text)}</p></article>`).join("")}</div></div>`;
+  const contextVisual = `<div class="context-visual" aria-label="${t("retrievedFragments")}">${RAGAS_CONTEXT.map((text, index) => `<article class="fragment-strip"><b>Doc${index + 1}</b><div><p>${escapeHtml(text)}</p><span class="match-words">${matchTerms[index]}</span></div></article>`).join("")}</div>`;
+  const contextIds = RAGAS_CONTEXT.map((_, index) => `Doc${index + 1}`);
+  const generateVisual = `<div class="generate-wrap"><div class="generate-visual" aria-label="${t("llmWithContext")}"><span class="context-feed"><i>Q</i>${contextIds.map(id => `<i>${id}</i>`).join("")}</span><span class="feed-arrow">›</span><span class="llm-core">LLM</span><span class="feed-arrow">›</span><span class="token-stream"><i></i><i></i><i></i></span></div><div class="generator-inputs"><b>${t("inputBundle")}</b><span>Q + ${contextIds.join(" + ")}</span><p>${t("llmWithContext")}</p></div></div>`;
+  const answerVisual = `<div class="answer-visual"><span class="answer-avatar">AI</span><div class="answer-bubble"><p>${escapeHtml(RAGAS_ANSWER_CLAIMS.map(claim => claim.text).join(" "))}</p></div></div>`;
+  const plainSource = (claims, variant="") => `<div class="source-sheet ${variant}"><p class="source-full">${escapeHtml(claims.map(claim => claim.text).join(" "))}</p></div>`;
+  const claimList = (claims, prefix) => `<div class="claim-stack">${claims.map((claim, index) => `<article class="claim-slip"><b>${prefix}${index + 1}</b><div><span>${escapeHtml(claim.text)}</span><small>${t("generatedClaim")} ${index + 1}</small></div></article>`).join("")}</div>`;
+  const checks = (claims, prefix, metric, metricKey, layout="context-first") => {
+    const supportedCount = claims.filter(claim => claim.verdict === "ok").length;
+    const value = supportedCount / claims.length;
+    const percent = Math.round(value * 100);
+    const paths = claims.map((claim, index) => {
+      const y = claims.length === 1 ? 150 : 50 + index * (200 / (claims.length - 1));
+      return `<path data-support-link="${index}" data-link-state="pending" d="M0 ${y} C30 ${y} 50 ${y} 80 ${y}"/>`;
+    }).join("");
+    const claimCards = claims.map((claim, index) => {
+      const evidenceText = claim.verdict === "ok" ? `${t("supportedBy")} ${(claim.evidence || []).join(", ")}` : `${t("notInContext")}${claim.conflict ? ` · ${t("conflictsWith")} ${claim.conflict}` : ""}`;
+      return `<article class="support-check" data-support-check="${index}" data-support="pending" data-expected="${claim.verdict}"><div><b>${prefix}${index + 1}</b><span>${escapeHtml(claim.text)}</span><small class="evidence-note">${evidenceText}</small></div></article>`;
+    }).join("");
+    return `<div class="verify-visual" data-evidence-layout="${layout}"><div class="evidence-mini"><div class="context-mini">${RAGAS_CONTEXT.map((text, index) => `<article class="context-fragment"><b>Doc${index + 1}</b><p>${escapeHtml(text)}</p></article>`).join("")}</div><svg class="evidence-links" viewBox="0 0 80 300" aria-hidden="true">${paths}</svg><div class="claim-checks">${claimCards}</div></div><div class="metric-dial" data-micro-score data-metric="${metric}" data-target-value="${value.toFixed(4)}" data-value="" style="--metric-percent:${percent}%"><b>${supportedCount}/${claims.length}</b><em>${percent}%</em><small>${t(metricKey)}</small></div></div>`;
+  };
+  const flowHead = (number, titleKey, metricKey, lineId) => `<div class="flow-head"><span class="flow-kicker">${number}</span><h3>${t(titleKey)}</h3><span class="flow-metric">${t(metricKey)}</span><button class="micro-run" data-run-line="${lineId}" type="button" aria-label="${t("runMicro")}: ${t(titleKey)}">${t("runMicro")}</button></div>`;
+
+  const useFlow = `<article class="ragas-flow" data-ragas-line="use" data-line-state="ready" data-stage="0" data-result="">
+    ${flowHead("RAG","ragUse","ragUseMetric","use")}
+    <div class="ragas-track use">
+      ${node("question",questionVisual,`data-kind="question"`)}${arrow}
+      ${node("searchDocs",searchVisual,`data-kind="search"`)}${arrow}
+      ${node("context",contextVisual,`data-kind="context"`)}${arrow}
+      ${node("generateAnswer",generateVisual,`data-kind="generate"`)}${arrow}
+      ${node("responseLabel",answerVisual,`data-kind="answer" data-claim-role="answer" data-rag-output`)}
+    </div>
+  </article>`;
+
+  const retrievalFlow = `<article class="ragas-flow" data-ragas-line="retrieval" data-line-state="ready" data-stage="0" data-result="">
+    ${flowHead("RAGAS","retrievalEval","retrievalMetric","retrieval")}
+    <div class="ragas-track eval">
+      ${node("referenceAnswer",plainSource(RAGAS_REFERENCE_CLAIMS),`data-kind="source" data-claim-role="reference"`)}${arrow}
+      ${node("splitClaims",claimList(RAGAS_REFERENCE_CLAIMS,"Ref"),`data-kind="claims" data-claim-role="reference"`)}${arrow}
+      ${node("verifyContext",checks(RAGAS_REFERENCE_CLAIMS,"Ref","contextRecall","retrievalMetric"),`data-kind="evidence" data-claim-role="reference" data-check-node`)}
+    </div>
+  </article>`;
+
+  const answerFlow = `<article class="ragas-flow" data-ragas-line="answer" data-line-state="ready" data-stage="0" data-result="">
+    ${flowHead("RAGAS","answerEval","answerMetric","answer")}
+    <div class="ragas-track eval">
+      ${node("modelAnswer",plainSource(RAGAS_ANSWER_CLAIMS,"model"),`data-kind="source" data-claim-role="answer"`)}${arrow}
+      ${node("splitClaims",claimList(RAGAS_ANSWER_CLAIMS,"Odp"),`data-kind="claims" data-claim-role="answer"`)}${arrow}
+      ${node("verifyContext",checks(RAGAS_ANSWER_CLAIMS,"Odp","faithfulness","answerMetric","claims-first"),`data-kind="evidence" data-claim-role="answer" data-check-node`)}
+    </div>
+  </article>`;
+
+  return `<section class="screen" id="screen-ragas" data-bench="ragas" data-run-state="ready">
+    <div class="screen-head"><span class="eyebrow">RAGAS</span><h2>${t("ragasQ")}</h2><p>${t("ragasHow")}</p></div>
+    <div class="canvas"><div class="ragas-flows">${useFlow}${retrievalFlow}${answerFlow}</div></div>
+    <p class="takeaway">${t("ragasTake")}<span class="footnote">${t("ragasFoot")}</span></p>
+  </section>`;
+}
+
+function renderIfeval(){
+  const chips = IFEVAL_CHECKS.map((c, i) => `<span class="chip" data-chip="${i}">${t(c.key)}</span>`).join("");
+  const body = `<div class="ifeval-wrap">
+      <div class="card"><span class="label">${t("promptLabel")}</span><p>${escapeHtml(t("ifevalPrompt"))}</p>
+        <span class="label" style="margin-top:.6rem">${t("checksLabel")}</span>${chips}</div>
+      ${card("ifevalResponseLabel", IFEVAL_RESPONSE)}
+    </div>
+    <div class="gate fail" id="ifeval-gate" data-metric="promptStrict" data-value="0">${t("gateFail")}<small>${t("gateFailSub")}</small></div>`;
+  return screenShell("ifeval","ifevalQ","ifevalHow",body,"ifevalTake","ifevalFoot");
+}
+
+function renderQuest(){
+  const lane = (titleKey, rows, side) => `<div class="lane"><div class="lane-title">${t(titleKey)}</div>
+    ${rows.map((r, i) => `<div class="q-row" data-lane="${side}" data-q="${i}"><span>${t(r.q)}</span><b>${r.verdict === "ok" ? "✓ " + t("aOk") : "✗ " + t("aBad")}</b></div>`).join("")}</div>`;
+  const body = `<div class="quest-wrap">
+      <div class="quest-texts">${card("source", QUEST_SOURCE)}${card("target", QUEST_TARGET)}</div>
+      <div class="quest-lanes">${lane("laneFwd", QUEST_FORWARD, "fwd")}${lane("laneBwd", QUEST_BACKWARD, "bwd")}</div>
+      <div class="quest-bars">
+        <div class="qbar"><span>${t("completeness")} · 2/3</span><div class="track"><div class="fill" data-fill="67"></div></div></div>
+        <div class="qbar"><span>${t("groundedness")} · 3/3</span><div class="track"><div class="fill" data-fill="100"></div></div></div>
+        <div class="big-score" id="quest-score" data-metric="combined" data-value="0.8"><b>80%</b><span>${t("combined")} = 2·C·G / (C+G)</span></div>
+      </div>
+    </div>`;
+  return screenShell("questeval","questQ","questHow",body,"questTake","questFoot");
+}
+
+function render(){
+  document.documentElement.lang = state.lang;
+  stage.innerHTML = renderRagas();
+  langToggle.textContent = state.lang === "pl" ? "PL / en" : "pl / EN";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.getElementById("screen-ragas").classList.add("active");
+  stage.dataset.screen = "ragas";
+  updateProgress();
+}
+
+// ─── Run animations ───
+
+function resetRagasLine(line){
+  clearRagasTimers(line.dataset.ragasLine);
+  line.querySelectorAll("[data-flow-node]").forEach(node => node.dataset.nodeState = "waiting");
+  line.querySelectorAll("[data-support-check]").forEach(check => check.dataset.support = "pending");
+  line.querySelectorAll("[data-support-link]").forEach(link => link.dataset.linkState = "pending");
+  line.querySelectorAll("[data-micro-score]").forEach(score => {
+    score.classList.remove("revealed");
+    score.dataset.value = "";
+  });
+  line.dataset.lineState = "ready";
+  line.dataset.stage = "0";
+  line.dataset.result = "";
+  const button = line.querySelector("[data-run-line]");
+  button.disabled = false;
+  button.textContent = t("runMicro");
+}
+
+function finishRagasLine(root, line){
+  const lineId = line.dataset.ragasLine;
+  line.querySelectorAll("[data-flow-node]").forEach(node => node.dataset.nodeState = "done");
+  line.dataset.lineState = "done";
+  line.dataset.stage = String(line.querySelectorAll("[data-flow-node]").length);
+  if(!line.dataset.result) line.dataset.result = "complete";
+  const button = line.querySelector("[data-run-line]");
+  button.disabled = false;
+  button.textContent = t("replayMicro");
+  root.dataset.runState = [...root.querySelectorAll("[data-ragas-line]")].every(item => item.dataset.lineState === "done") ? "done" : "partial";
+  live.textContent = `ragas ${lineId}: done`;
+  clearRagasTimers(lineId);
+}
+
+function startRagasLine(lineId){
+  const root = document.getElementById("screen-ragas");
+  const line = root.querySelector(`[data-ragas-line="${lineId}"]`);
+  resetRagasLine(line);
+  line.dataset.lineState = "running";
+  root.dataset.runState = "running";
+  state.ran.ragas = true;
+  const button = line.querySelector("[data-run-line]");
+  button.disabled = true;
+  button.textContent = t("runMicro");
+
+  const nodes = [...line.querySelectorAll("[data-flow-node]")];
+  nodes.forEach((node, index) => laterRagas(lineId, () => {
+    if(index > 0) nodes[index - 1].dataset.nodeState = "done";
+    node.dataset.nodeState = "active";
+    line.dataset.stage = String(index + 1);
+  }, STEP_MS * index));
+
+  const checks = [...line.querySelectorAll("[data-support-check]")];
+  const checkStart = STEP_MS * nodes.length;
+  checks.forEach((check, index) => laterRagas(lineId, () => {
+    check.dataset.support = check.dataset.expected;
+    const link = line.querySelector(`[data-support-link="${index}"]`);
+    if(link) link.dataset.linkState = check.dataset.expected;
+  }, checkStart + index * STEP_MS * .45));
+
+  const finishAt = checkStart + Math.max(1, checks.length) * STEP_MS * .45;
+  laterRagas(lineId, () => {
+    const score = line.querySelector("[data-micro-score]");
+    if(score){
+      score.classList.add("revealed");
+      score.dataset.value = score.dataset.targetValue;
+      line.dataset.result = score.dataset.targetValue;
+    }
+    finishRagasLine(root, line);
+  }, finishAt);
+}
+
+function runRagas(root){
+  [...root.querySelectorAll("[data-ragas-line]")].forEach(line => startRagasLine(line.dataset.ragasLine));
+}
+
+function runIfeval(root){
+  IFEVAL_CHECKS.forEach((c, i) => later(() => {
+    root.querySelector(`[data-chip="${i}"]`).dataset.check = c.verdict;
+  }, STEP_MS * (i + 1)));
+  later(() => {
+    root.querySelector("#ifeval-gate").classList.add("shown");
+    finishRun(root, "ifeval");
+  }, STEP_MS * (IFEVAL_CHECKS.length + 1));
+}
+
+function runQuest(root){
+  const rows = [...QUEST_FORWARD.map((r, i) => ["fwd", i, r.verdict]), ...QUEST_BACKWARD.map((r, i) => ["bwd", i, r.verdict])];
+  rows.forEach(([side, i, verdict], k) => later(() => {
+    const row = root.querySelector(`[data-lane="${side}"][data-q="${i}"]`);
+    row.classList.add("shown");
+    row.dataset.verdict = verdict;
+  }, STEP_MS * .6 * (k + 1)));
+  later(() => {
+    root.querySelectorAll(".qbar .fill").forEach(f => f.style.width = f.dataset.fill + "%");
+    root.querySelector("#quest-score").classList.add("revealed");
+    finishRun(root, "questeval");
+  }, STEP_MS * .6 * (rows.length + 1) + 200);
+}
+
+const RUNNERS = { ragas:runRagas, ifeval:runIfeval, questeval:runQuest };
+
+function finishRun(root, id){
+  root.dataset.runState = "done";
+  const btn = root.querySelector("[data-run]");
+  btn.disabled = false;
+  btn.textContent = t("replay");
+  live.textContent = `${id}: done`;
+}
+
+function startRun(id){
+  if(id === "ragas"){
+    runRagas(document.getElementById("screen-ragas"));
+    return;
+  }
+  clearTimers();
+  const root = document.getElementById(`screen-${id}`);
+  if(root.dataset.runState === "done"){ resetScreen(root, id); }
+  root.dataset.runState = "running";
+  root.querySelector("[data-run]").disabled = true;
+  state.ran[id] = true;
+  RUNNERS[id](root);
+}
+
+function resetScreen(root, id){
+  root.querySelectorAll("[data-verdict]").forEach(el => el.removeAttribute("data-verdict"));
+  root.querySelectorAll("[data-check]").forEach(el => el.removeAttribute("data-check"));
+  root.querySelectorAll(".shown,.revealed").forEach(el => el.classList.remove("shown","revealed"));
+  root.querySelectorAll(".qbar .fill").forEach(f => f.style.width = "0");
+  root.dataset.runState = "ready";
+}
+
+// ─── Progress ───
+
+function updateProgress(){
+  const scrollable = Math.max(1, stage.scrollHeight - stage.clientHeight);
+  progressFill.style.width = `${Math.min(100, stage.scrollTop / scrollable * 100)}%`;
+}
+
+// ─── Listeners ───
+
+document.addEventListener("click", event => {
+  const lineRun = event.target.closest("[data-run-line]");
+  if(lineRun) startRagasLine(lineRun.dataset.runLine);
+});
+
+document.addEventListener("keydown", event => {
+  if(event.key === "Home"){
+    stage.scrollTo({ top:0, behavior:"smooth" });
+  } else if((event.key === "Enter" || event.key === " ") && !event.target.closest("button")){
+    event.preventDefault();
+    runRagas(document.getElementById("screen-ragas"));
+  }
+});
+
+langToggle.addEventListener("click", () => {
+  clearTimers();
+  state.lang = state.lang === "pl" ? "en" : "pl";
+  localStorage.setItem("ragasLiteLang", state.lang);
+  render();
+  stage.scrollTop = 0;
+});
+stage.addEventListener("scroll", updateProgress, { passive:true });
+window.addEventListener("beforeunload", clearTimers);
+
+// ─── Init ───
+
+render();
+</script>
+</body>
+</html>
