@@ -171,6 +171,9 @@ button{color:inherit}
 .zone-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}
 .zone-grid .wide{grid-column:1 / -1}
 .zone .field-control{background:var(--c-white)}
+/* Auto-fit zone textareas to their text so no scrollbar appears (rows= stays as
+   the fallback for browsers without field-sizing). */
+.zone textarea.field-control{field-sizing:content;min-height:3.4rem}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
 .dot.gold{background:var(--c-gold)}
 .dot.sys{background:var(--c-sys)}
@@ -989,7 +992,7 @@ function renderRagas(){
   const cmpRel=`${dot("sys")}${t("cmpContext")} ↔ ${dot("gold")}${t("cmpQuestion")} ${t("cmpAnd")} ${dot("sys")}${t("cmpAnswer")}`;
   const cmpRecall=`${dot("sys")}${t("cmpContext")} ↔ ${dot("gold")}${t("cmpGold")}`;
   const cmpFaith=`${dot("sys")}${t("cmpContext")} ↔ ${dot("sys")}${t("cmpAnswer")}`;
-  const goldZone=`<div class="zone zone-gold" data-zone="gold"><div class="zone-head"><h4>${t("zoneGoldTitle")}</h4><p>${t("zoneGoldSub")}</p>${originChip("gold")}</div><div class="zone-grid"><label><span class="input-label">${originChip("gold")}${t("question")}</span><input class="field-control" id="r-question" value="${escapeHtml(values.question)}"></label><label><span class="input-label">${originChip("gold")}${t("gold")}</span><textarea class="field-control" id="r-gold" rows="3">${escapeHtml(values.gold ?? "")}</textarea></label></div></div>`;
+  const goldZone=`<div class="zone zone-gold" data-zone="gold"><div class="zone-head"><h4>${t("zoneGoldTitle")}</h4><p>${t("zoneGoldSub")}</p>${originChip("gold")}</div><div class="zone-grid"><label><span class="input-label">${originChip("gold")}${t("question")}</span><input class="field-control" id="r-question" value="${escapeHtml(values.question)}"></label><label><span class="input-label">${originChip("gold")}${t("gold")}</span><textarea class="field-control" id="r-gold" rows="4">${escapeHtml(values.gold ?? "")}</textarea></label></div></div>`;
   const sysZone=`<div class="zone zone-sys" data-zone="system"><div class="zone-head"><h4>${t("zoneSysTitle")}</h4><p>${t("zoneSysSub")}</p>${originChip("sys")}</div><div class="zone-grid">${values.context.map((context,index)=>`<label><span class="input-label">${originChip("sys")}${t("context")} ${index+1}</span><textarea class="field-control" id="r-ctx-${index}" data-r-context rows="3">${escapeHtml(context)}</textarea></label>`).join("")}<label class="wide"><span class="input-label">${originChip("sys")}${t("answer")}</span><textarea class="field-control" id="r-answer" rows="4">${escapeHtml(values.answer)}</textarea></label></div></div>`;
   const recallRatio=result.goldClaims.length?`${result.goldSupportedCount}/${result.goldClaims.length} ${t("goldClaimsInContext")}`:"N/A";
   const log=`proxy = overlap of canonical content words\nclause split = sentences + ";" + (i | oraz | ale)\ncontext relevance = ${result.usefulCount}/${result.fragments.length}\ncontext recall (gold) = ${result.goldSupportedCount}/${result.goldClaims.length}\nfaithfulness = ${result.supportedCount}/${result.claims.length}`;
