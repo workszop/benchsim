@@ -501,6 +501,62 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 .qa-close-btn:hover { background: var(--paper-2); color: var(--ink); }
 .qa-close-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
+/* ── AI mode: settings modal, buttons, judge-vs-heuristic layout ── */
+.ai-menu-btn { font-family: var(--font-mono); font-size: 13px; padding: 8px 14px; }
+.ai-settings-card { max-width: 480px; }
+.ai-field-group { margin-bottom: var(--sp-5); }
+.ai-field-group:last-child { margin-bottom: 0; }
+.ai-provider-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.ai-provider-btn {
+  flex: 1; min-width: 96px; font-family: var(--font-display); font-weight: 600; font-size: 14px;
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2);
+  padding: 9px 0; border-radius: var(--r-sm); cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.ai-provider-btn[aria-pressed="true"] { background: var(--teal); color: var(--on-primary); border-color: var(--teal); }
+.ai-provider-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ai-key-note { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin: var(--sp-2) 0 0; }
+.ai-key-note a { color: var(--teal-ink); }
+.ai-privacy-note {
+  background: var(--teal-soft); color: var(--teal-ink); border-radius: var(--r-md);
+  padding: 12px 16px; font-size: 13px; line-height: 1.5; margin-top: var(--sp-2);
+}
+
+.ai-run-btn { display: inline-flex; align-items: center; gap: 8px; }
+.ai-run-btn:disabled { opacity: .45; cursor: not-allowed; }
+.ai-run-btn .ai-spinner { display: none; }
+.ai-run-btn[data-loading="true"] .ai-spinner { display: inline-block; }
+.ai-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.5); border-top-color: var(--on-primary);
+  animation: aiSpin .7s linear infinite;
+}
+@keyframes aiSpin { to { transform: rotate(360deg); } }
+
+.ai-vs-heading { margin: var(--sp-6) 0 var(--sp-3); }
+.ai-vs-columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.ai-vs-col-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 var(--sp-2);
+}
+/* Two narrow columns don't have room for the full-width score-row layout
+   (11rem label + 3.4rem value leaves ~0px for the track) - shrink both
+   fixed-width children so the track keeps a visible minimum width. */
+.ai-vs-columns .score-row { gap: var(--sp-2); }
+.ai-vs-columns .score-label { width: 5.4rem; font-size: 12px; }
+.ai-vs-columns .score-value { width: 2.6rem; font-size: 12px; }
+.score-fill[data-source="ai"] { background: var(--coral); }
+.score-fill[data-source="ai"][data-status="pass"] { background: var(--success); }
+.score-fill[data-source="ai"][data-status="fail"] { background: var(--danger); }
+.score-fill[data-source="ai"][data-status="warn"] { background: var(--warning); }
+.ai-error-note {
+  background: var(--danger-soft); color: var(--danger-ink); border-radius: var(--r-md);
+  padding: 12px 16px; font-size: 13.5px; line-height: 1.5; margin-top: var(--sp-4);
+}
+.ai-claims-note {
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin-top: var(--sp-2);
+}
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */
@@ -517,6 +573,7 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
   .qe-text-grid { grid-template-columns: 1fr; }
   .qe-arrow-col { padding: var(--sp-2) 0; }
   .qe-arrow-icon { display: inline-block; transform: rotate(90deg); }
+  .ai-vs-columns { grid-template-columns: 1fr; }
 }
   </style>
 </head>
@@ -528,6 +585,7 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
       <span class="edu-tag">demo lab</span>
       <span class="edu-header-spacer"></span>
       <div class="shortcut-hints" id="shortcutHints" aria-hidden="true"></div>
+      <button type="button" class="btn btn-ghost ai-menu-btn" id="aiSettingsButton">AI</button>
       <div class="lang-switch-wrap">
         <div class="lang-switch" id="langSwitch" role="group" aria-label="Język / Language">
           <button type="button" id="langBtnPl" aria-pressed="true">PL</button>
@@ -558,6 +616,19 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
     <span class="edu-caption">Bench Sim - demo edukacyjne edulab</span>
     <button type="button" class="btn btn-ghost" id="qaButton">Uruchom testy QA</button>
   </footer>
+
+  <div class="qa-overlay" id="aiSettingsOverlay" hidden>
+    <div class="card qa-panel-card ai-settings-card" id="aiSettingsPanel" role="dialog" aria-modal="true" aria-labelledby="aiSettingsTitle">
+      <div class="qa-panel-head">
+        <div>
+          <p class="edu-overline" id="aiSettingsEyebrow">AI</p>
+          <h3 id="aiSettingsTitle">AI</h3>
+        </div>
+        <button type="button" class="qa-close-btn" id="aiSettingsCloseButton" aria-label="Zamknij">&times;</button>
+      </div>
+      <div id="aiSettingsBody"></div>
+    </div>
+  </div>
 
   <div class="qa-overlay" id="qaOverlay" hidden>
     <div class="card qa-panel-card" id="qaPanel" role="dialog" aria-modal="true" aria-labelledby="qaPanelTitle">
@@ -631,6 +702,39 @@ const STOPWORDS_EN = new Set([
   "before", "under", "around", "among", "this", "that", "these", "those",
   "it", "its", "not", "do", "does", "did",
 ]);
+
+// AI provider catalogue (Faza 6 / brief section 5). Ported from
+// ~/git-claude/slidegen/ai-models.js: same model IDs, keyPlaceholder/keyUrl
+// per provider, samplingSupported (gemini) and thinkingOptional (claude)
+// lists that gate optional request fields in the request builders below.
+const AI_MODEL_CATALOG = {
+  defaultProvider: "gemini",
+  providers: {
+    gemini: {
+      label: "Gemini",
+      models: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite-preview"],
+      samplingSupported: ["gemini-3.5-flash", "gemini-3.1-flash-lite-preview"],
+      keyPlaceholder: "AIza…",
+      keyUrl: "https://aistudio.google.com/apikey",
+    },
+    openai: {
+      label: "OpenAI",
+      models: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+      keyPlaceholder: "sk-…",
+      keyUrl: "https://platform.openai.com/api-keys",
+    },
+    claude: {
+      label: "Claude",
+      models: ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
+      thinkingOptional: ["claude-opus-4-8", "claude-sonnet-5"],
+      keyPlaceholder: "sk-ant-…",
+      keyUrl: "https://console.anthropic.com/settings/keys",
+    },
+  },
+};
+const AI_SUPPORTED_PROVIDER_IDS = ["gemini", "openai", "claude"];
+const LS_AI = "eduapp_ai";
+const AI_TIMEOUT_MS = 60000;
 
 // ─── Translations ───
 
@@ -819,6 +923,36 @@ const T = {
     questevalDisclaimer: "Pełny QuestEval generuje pytania i korzysta z modeli QA. Ta demonstracja używa przygotowanych par pytanie-odpowiedź i jawnego dopasowania fraz. Dla języka polskiego produkcyjna implementacja wymaga lematyzacji lub semantycznego porównania odpowiedzi.",
     ariaQuestevalPresetApplied: "Wczytano przykład: {preset}",
     ariaQuestevalHallucinationAdded: "Dodano fakt bez pokrycia w źródle",
+
+    // ── AI mode (Faza 6) ──
+    qaTest9: "Sanitizer sanitizeRagasJudge: poprawny fixture przechodzi, zepsute (złe typy, brak pól) zwracają null",
+    aiMenuButton: "AI",
+    aiSettingsEyebrow: "Tryb AI",
+    aiSettingsTitle: "Ustawienia AI",
+    aiSettingsCloseLabel: "Zamknij",
+    aiProviderLabel: "Dostawca",
+    aiModelLabel: "Model",
+    aiModelCustomOption: "inny model…",
+    aiModelCustomLabel: "Identyfikator modelu",
+    aiKeyLabel: "Klucz API",
+    aiKeyLinkPrefix: "Uzyskaj klucz:",
+    aiPrivacyNote: "Klucz zostaje w tej przeglądarce; zapytania idą bezpośrednio do dostawcy.",
+    aiNoKeyTooltip: "ustaw klucz w AI",
+    aiLoadingAnnounce: "ocena AI w toku",
+    aiErrorNoKey: "Brak klucza API dla wybranego dostawcy.",
+    aiErrorInvalidJson: "Model nie zwrócił poprawnego JSON-u.",
+    aiErrorInvalidShape: "Odpowiedź modelu nie pasuje do oczekiwanego schematu.",
+    aiErrorTimeout: "Upłynął limit czasu zapytania (60 s).",
+    aiErrorNetwork: "Błąd sieci: nie udało się połączyć z dostawcą.",
+    aiErrorEmpty: "Model nie zwrócił żadnej treści.",
+    aiErrorGeneric: "Błąd AI: {message}",
+    ragasAiButton: "Oceń z AI (LLM-as-judge)",
+    ragasAiVsHeading: "Heurystyka vs LLM judge",
+    ragasAiColHeuristic: "Heurystyka",
+    ragasAiColAi: "LLM judge",
+    ragasAiDisclaimer: "Ocena LLM-as-a-Judge zależy od modelu i promptu; ten sam przykład może dostać różne noty od różnych modeli. Dlatego w praktyce judge wymaga walidacji na ocenach ludzkich (patrz zakładka ARES).",
+    ragasAiClaimsNote: "Twierdzenia i etykiety wsparcia oceniła AI - służą wyłącznie do porównania z heurystyką powyżej.",
+    ifevalAiButton: "Wygeneruj odpowiedź modelu",
   },
   en: {
     eyebrow: "Evaluation simulator",
@@ -1003,6 +1137,36 @@ const T = {
     questevalDisclaimer: "Full QuestEval generates questions and uses QA models. This demonstration uses prepared question-answer pairs and explicit phrase matching. For Polish, a production implementation needs lemmatization or semantic answer comparison.",
     ariaQuestevalPresetApplied: "Loaded example: {preset}",
     ariaQuestevalHallucinationAdded: "Added a fact with no coverage in the source",
+
+    // ── AI mode (Phase 6) ──
+    qaTest9: "Sanitizer sanitizeRagasJudge: a valid fixture passes, broken ones (wrong types, missing fields) return null",
+    aiMenuButton: "AI",
+    aiSettingsEyebrow: "AI mode",
+    aiSettingsTitle: "AI settings",
+    aiSettingsCloseLabel: "Close",
+    aiProviderLabel: "Provider",
+    aiModelLabel: "Model",
+    aiModelCustomOption: "custom model…",
+    aiModelCustomLabel: "Model ID",
+    aiKeyLabel: "API key",
+    aiKeyLinkPrefix: "Get a key:",
+    aiPrivacyNote: "The key stays in this browser; requests go directly to the provider.",
+    aiNoKeyTooltip: "set a key in AI",
+    aiLoadingAnnounce: "AI evaluation in progress",
+    aiErrorNoKey: "No API key set for the selected provider.",
+    aiErrorInvalidJson: "The model did not return valid JSON.",
+    aiErrorInvalidShape: "The model's response did not match the expected schema.",
+    aiErrorTimeout: "The request timed out (60 s).",
+    aiErrorNetwork: "Network error: could not reach the provider.",
+    aiErrorEmpty: "The model returned no content.",
+    aiErrorGeneric: "AI error: {message}",
+    ragasAiButton: "Score with AI (LLM-as-judge)",
+    ragasAiVsHeading: "Heuristic vs LLM judge",
+    ragasAiColHeuristic: "Heuristic",
+    ragasAiColAi: "LLM judge",
+    ragasAiDisclaimer: "LLM-as-a-judge scoring depends on the model and the prompt; the same example can get different scores from different models. In practice a judge needs validation against human ratings (see the ARES tab).",
+    ragasAiClaimsNote: "Claims and support labels were scored by the AI - shown only for comparison with the heuristic above.",
+    ifevalAiButton: "Generate model answer",
   },
 };
 
@@ -1375,10 +1539,11 @@ const state = {
     open: false,
     results: null,          // null dopóki testy się nie uruchomiły choć raz
   },
-  ai: {                    // tryb AI (sekcja 5)
+  ai: {                    // tryb AI (sekcja 5) - modal ustawień + dwa niezależne panele
+    open: false,           // czy modal ustawień AI jest otwarty
     settings: null,        // znormalizowane eduapp_ai (provider, model, keys)
-    state: "idle",         // idle | loading | complete | error (per aktywna operacja)
-    results: {},           // ragas: wynik LLM-judge; error: ostatni komunikat
+    ragas: { state: "idle", result: null, error: null },   // idle | loading | complete | error
+    ifeval: { state: "idle", error: null },                // idle | loading | complete | error
   },
 };
 
@@ -1403,6 +1568,12 @@ const qaPanelTitleEl = document.getElementById("qaPanelTitle");
 const qaCloseButtonEl = document.getElementById("qaCloseButton");
 const qaSummaryEl = document.getElementById("qaSummary");
 const qaResultsListEl = document.getElementById("qaResultsList");
+const aiSettingsButtonEl = document.getElementById("aiSettingsButton");
+const aiSettingsOverlayEl = document.getElementById("aiSettingsOverlay");
+const aiSettingsEyebrowEl = document.getElementById("aiSettingsEyebrow");
+const aiSettingsTitleEl = document.getElementById("aiSettingsTitle");
+const aiSettingsCloseButtonEl = document.getElementById("aiSettingsCloseButton");
+const aiSettingsBodyEl = document.getElementById("aiSettingsBody");
 
 // ─── Helpers ───
 
@@ -2147,6 +2318,301 @@ function qaTest8() {
   return resultHallucination.faithfulness < resultFull.faithfulness && resultHallucination.completeness === resultFull.completeness;
 }
 
+// ─── AI provider layer (Faza 6, sekcja 5) ───
+// Ported from ~/git-claude/slidegen ai-models.js/pure.js/shared.js, converted
+// to non-streaming requests and reduced to what this app needs (no source
+// document / PDF branches - prompt only). Never called by QA tests: the
+// deterministic core works with zero network access.
+
+/** Clamp a number to [0,1]; non-numbers (incl. NaN) return null so the
+ * caller can distinguish "out of range" (clamp) from "not a number" (reject).
+ * @param {*} x @returns {number|null} */
+function clamp01(x) {
+  if (typeof x !== "number" || !Number.isFinite(x)) return null;
+  return Math.min(1, Math.max(0, x));
+}
+
+function aiProviderInfo(providerId) {
+  return AI_MODEL_CATALOG.providers[providerId] || AI_MODEL_CATALOG.providers[AI_MODEL_CATALOG.defaultProvider];
+}
+
+/**
+ * Parse the eduapp_ai JSON (raw string or null) into a valid settings object
+ * for THIS app to read: {provider, model, keys:{gemini,openai,claude}}.
+ * Unknown/legacy fields (e.g. imageModel from slidegen) are intentionally
+ * dropped here - they are preserved on write by saveAiSettings, which
+ * merges into the ORIGINAL stored object rather than this projection.
+ * @param {string|null} raw @returns {{provider:string, model:string, keys:Object}}
+ */
+function normalizeAiSettings(raw) {
+  let s = {};
+  try { s = JSON.parse(raw) ?? {}; } catch (e) { s = {}; }
+  if (typeof s !== "object" || s === null || Array.isArray(s)) s = {};
+  const provider = AI_SUPPORTED_PROVIDER_IDS.includes(s.provider) ? s.provider : AI_MODEL_CATALOG.defaultProvider;
+  const keys = { gemini: "", openai: "", claude: "" };
+  if (s.keys && typeof s.keys === "object") {
+    for (const p of Object.keys(keys)) {
+      if (typeof s.keys[p] === "string") keys[p] = s.keys[p];
+    }
+  }
+  let model = typeof s.model === "string" && s.model.trim() ? s.model.trim() : "";
+  if (!model) model = aiProviderInfo(provider).models[0];
+  return { provider, model, keys };
+}
+
+function loadAiSettings() {
+  let raw = null;
+  try { raw = localStorage.getItem(LS_AI); } catch (e) { raw = null; }
+  return normalizeAiSettings(raw);
+}
+
+/**
+ * Save this app's AI settings under the SHARED eduapp_ai key. Read-modify-
+ * write on the ORIGINAL parsed object (not the normalized projection this
+ * app reads), so fields other eduapp apps manage (e.g. imageModel) survive
+ * a save from here untouched.
+ * @param {{provider:string, model:string, keys:Object}} settings
+ */
+function saveAiSettings(settings) {
+  let raw = null;
+  try { raw = localStorage.getItem(LS_AI); } catch (e) { raw = null; }
+  let original = {};
+  try { original = JSON.parse(raw) ?? {}; } catch (e) { original = {}; }
+  if (typeof original !== "object" || original === null || Array.isArray(original)) original = {};
+  const merged = Object.assign({}, original, settings);
+  try { localStorage.setItem(LS_AI, JSON.stringify(merged)); } catch (e) { /* storage unavailable - ignore */ }
+  return merged;
+}
+
+// Gemini 3.6+ ignores/rejects temperature; only models listed in
+// samplingSupported still honour it (see AI_MODEL_CATALOG comment).
+function geminiGenerationConfig(model) {
+  const supported = AI_MODEL_CATALOG.providers.gemini.samplingSupported || [];
+  return supported.includes(model) ? { temperature: 0.4 } : null;
+}
+
+function buildGeminiRequest({ key, model, prompt }) {
+  const generationConfig = geminiGenerationConfig(model);
+  return {
+    url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: Object.assign({ contents: [{ parts: [{ text: prompt }] }] }, generationConfig ? { generationConfig } : {}),
+  };
+}
+
+function buildOpenAIRequest({ key, model, prompt }) {
+  return {
+    url: "https://api.openai.com/v1/responses",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+    body: { model, input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }] },
+  };
+}
+
+// Sonnet 5 / Opus 4.8 think by default; disabling thinking keeps the whole
+// max_tokens budget for the JSON/text answer. thinkingOptional gates it.
+function claudeThinking(model) {
+  const optional = AI_MODEL_CATALOG.providers.claude.thinkingOptional || [];
+  return optional.includes(model) ? { type: "disabled" } : null;
+}
+
+function buildClaudeRequest({ key, model, prompt }) {
+  const thinking = claudeThinking(model);
+  return {
+    url: "https://api.anthropic.com/v1/messages",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: Object.assign(
+      { model, max_tokens: 4096, messages: [{ role: "user", content: [{ type: "text", text: prompt }] }] },
+      thinking ? { thinking } : {}
+    ),
+  };
+}
+
+const AI_REQUEST_BUILDERS = { gemini: buildGeminiRequest, openai: buildOpenAIRequest, claude: buildClaudeRequest };
+
+// Non-streaming response text extraction, one candidate/message per provider.
+function extractGeminiText(data) {
+  return (data?.candidates?.[0]?.content?.parts ?? []).map((p) => p?.text ?? "").join("");
+}
+function extractOpenAIText(data) {
+  if (typeof data?.output_text === "string" && data.output_text) return data.output_text;
+  const out = Array.isArray(data?.output) ? data.output : [];
+  let text = "";
+  out.forEach((item) => {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    content.forEach((c) => {
+      if (c?.type === "output_text" && typeof c.text === "string") text += c.text;
+    });
+  });
+  return text;
+}
+function extractClaudeText(data) {
+  return (data?.content ?? []).filter((c) => c?.type === "text").map((c) => c?.text ?? "").join("");
+}
+const AI_TEXT_EXTRACTORS = { gemini: extractGeminiText, openai: extractOpenAIText, claude: extractClaudeText };
+
+// Provider-reported errors/refusals, normalised to one readable string ("" =
+// no error found). Checked both on non-2xx HTTP responses and on 2xx bodies
+// that report a refusal/failure through a provider-specific field.
+function aiProviderErrorMessage(providerId, data) {
+  if (!data || typeof data !== "object") return "";
+  if (data.error) {
+    if (typeof data.error === "string") return data.error;
+    if (typeof data.error.message === "string") return data.error.message;
+  }
+  if (providerId === "gemini") {
+    const reason = data?.candidates?.[0]?.finishReason;
+    if (reason && reason !== "STOP" && reason !== "MAX_TOKENS") return "blocked: " + reason;
+    const blockReason = data?.promptFeedback?.blockReason;
+    if (blockReason) return "blocked: " + blockReason;
+  }
+  if (providerId === "openai") {
+    if (data?.status === "failed" || data?.status === "incomplete") {
+      return data?.incomplete_details?.reason || data?.status;
+    }
+  }
+  if (providerId === "claude" && data?.stop_reason === "refusal") return "refusal";
+  return "";
+}
+
+/** Strip ONE wrapping ```/```json fence around the whole text, if present. @param {string} text @returns {string} */
+function stripJsonFence(text) {
+  const trimmed = String(text ?? "").trim();
+  const m = trimmed.match(/^```[a-zA-Z]*\n([\s\S]*?)\n?```$/);
+  return m ? m[1].trim() : trimmed;
+}
+
+/**
+ * Send `prompt` to the currently configured provider/model (non-streaming),
+ * with a 60s AbortController timeout, and return the raw response text.
+ * Throws an Error with an already-localized, normalized message on any
+ * failure (no key, network, timeout, HTTP error, provider refusal, empty
+ * response) - callers render err.message directly, never raw provider JSON.
+ * @param {string} prompt @returns {Promise<string>}
+ */
+async function aiFetchText(prompt) {
+  const settings = state.ai.settings || loadAiSettings();
+  const provider = settings.provider;
+  const key = (settings.keys && settings.keys[provider]) || "";
+  if (!key) throw new Error(t("aiErrorNoKey"));
+  const build = AI_REQUEST_BUILDERS[provider];
+  const extract = AI_TEXT_EXTRACTORS[provider];
+  const req = build({ key, model: settings.model, prompt });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), AI_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(req.url, { method: "POST", headers: req.headers, body: JSON.stringify(req.body), signal: controller.signal });
+  } catch (cause) {
+    clearTimeout(timeoutId);
+    if (cause && (cause.name === "AbortError" || cause.name === "TimeoutError")) throw new Error(t("aiErrorTimeout"));
+    throw new Error(t("aiErrorNetwork"));
+  }
+  clearTimeout(timeoutId);
+  let data = null;
+  try { data = await res.json(); } catch (e) { data = null; }
+  const providerMsg = aiProviderErrorMessage(provider, data);
+  if (!res.ok) throw new Error(t("aiErrorGeneric", { message: providerMsg || (res.status + " " + res.statusText) }));
+  if (providerMsg) throw new Error(t("aiErrorGeneric", { message: providerMsg }));
+  const text = extract(data);
+  if (!text || !text.trim()) throw new Error(t("aiErrorEmpty"));
+  return text;
+}
+
+/**
+ * Like aiFetchText, but expects (and parses) a JSON response: strips one
+ * ```/```json fence, then JSON.parse in try/catch. Callers still need to
+ * run the parsed value through a typed sanitizer before touching the DOM.
+ * @param {string} prompt @returns {Promise<*>}
+ */
+async function callAiJson(prompt) {
+  const text = await aiFetchText(prompt);
+  const stripped = stripJsonFence(text);
+  try {
+    return JSON.parse(stripped);
+  } catch (e) {
+    throw new Error(t("aiErrorInvalidJson"));
+  }
+}
+
+/**
+ * Typed sanitizer for the RAGAS LLM-judge JSON contract: requires
+ * claims:[{text:string, supported:boolean}], plus three 0-1 numbers
+ * (contextRelevance, faithfulness, answerRelevance) clamped via clamp01.
+ * Coerces nothing; any structural mismatch returns null. Extra fields on
+ * the input object are silently dropped from the returned object.
+ * @param {*} obj @returns {{claims:{text:string,supported:boolean}[], contextRelevance:number, faithfulness:number, answerRelevance:number}|null}
+ */
+function sanitizeRagasJudge(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+  if (!Array.isArray(obj.claims)) return null;
+  const claims = [];
+  for (const c of obj.claims) {
+    if (!c || typeof c !== "object") return null;
+    if (typeof c.text !== "string") return null;
+    if (typeof c.supported !== "boolean") return null;
+    claims.push({ text: c.text, supported: c.supported });
+  }
+  const contextRelevance = clamp01(obj.contextRelevance);
+  const faithfulness = clamp01(obj.faithfulness);
+  const answerRelevance = clamp01(obj.answerRelevance);
+  if (contextRelevance === null || faithfulness === null || answerRelevance === null) return null;
+  return { claims, contextRelevance, faithfulness, answerRelevance };
+}
+
+/** STRICT-JSON judge prompt for the RAGAS panel, carrying question/context/answer. @param {{question:string, context:string[], answer:string}} inputs @returns {string} */
+function buildRagasJudgePrompt(inputs) {
+  const contextList = (inputs.context || []).map((c, i) => (i + 1) + ". " + c).join("\n");
+  return (
+    "You are a strict evaluation judge for a RAG (retrieval-augmented generation) system.\n" +
+    "Question:\n" + inputs.question + "\n\n" +
+    "Retrieved context:\n" + contextList + "\n\n" +
+    "System answer:\n" + inputs.answer + "\n\n" +
+    "Evaluate the answer and return ONLY strict JSON (no markdown fence, no commentary) matching exactly this shape:\n" +
+    '{"claims":[{"text":"<claim text>","supported":true|false}],"contextRelevance":<0-1>,"faithfulness":<0-1>,"answerRelevance":<0-1>}\n' +
+    "\"claims\": every discrete factual claim in the answer, each with \"supported\" = whether the retrieved context backs it.\n" +
+    "\"contextRelevance\": how relevant the retrieved context is to the question, 0 to 1.\n" +
+    "\"faithfulness\": the fraction of claims that are supported by the context, 0 to 1.\n" +
+    "\"answerRelevance\": how relevant the answer is to the question, 0 to 1.\n" +
+    "Output raw JSON only."
+  );
+}
+
+function qaTest9() {
+  // Sanitizer QA test (no network): a valid fixture (with two out-of-range
+  // scores, which must be CLAMPED not rejected) passes; broken fixtures
+  // (wrong field types, missing fields, non-array claims, non-number score,
+  // non-object input) all return null.
+  const valid = {
+    claims: [{ text: "abc", supported: true }, { text: "def", supported: false }],
+    contextRelevance: 0.5,
+    faithfulness: 1.4,
+    answerRelevance: -0.2,
+    extraField: "dropped",
+  };
+  const sanitized = sanitizeRagasJudge(valid);
+  if (!sanitized) return false;
+  if (sanitized.faithfulness !== 1 || sanitized.answerRelevance !== 0 || sanitized.contextRelevance !== 0.5) return false;
+  if (sanitized.claims.length !== 2 || "extraField" in sanitized) return false;
+
+  const brokenMissingField = { claims: [{ text: "a", supported: true }], contextRelevance: 0.5, faithfulness: 0.5 };
+  const brokenClaimWrongType = { claims: [{ text: "a", supported: "yes" }], contextRelevance: 0.5, faithfulness: 0.5, answerRelevance: 0.5 };
+  const brokenClaimsNotArray = { claims: "nope", contextRelevance: 0.5, faithfulness: 0.5, answerRelevance: 0.5 };
+  const brokenNonNumberScore = { claims: [], contextRelevance: "high", faithfulness: 0.5, answerRelevance: 0.5 };
+
+  return sanitizeRagasJudge(brokenMissingField) === null
+    && sanitizeRagasJudge(brokenClaimWrongType) === null
+    && sanitizeRagasJudge(brokenClaimsNotArray) === null
+    && sanitizeRagasJudge(brokenNonNumberScore) === null
+    && sanitizeRagasJudge(null) === null
+    && sanitizeRagasJudge("not an object") === null
+    && sanitizeRagasJudge([]) === null;
+}
+
 // Ordered test list. Append future tests (e.g. test 9, phase 6) here without
 // touching runQaTests() itself.
 const QA_TESTS = [
@@ -2158,6 +2624,7 @@ const QA_TESTS = [
   { id: "qa-6", labelKey: "qaTest6", fn: qaTest6 },
   { id: "qa-7", labelKey: "qaTest7", fn: qaTest7 },
   { id: "qa-8", labelKey: "qaTest8", fn: qaTest8 },
+  { id: "qa-9", labelKey: "qaTest9", fn: qaTest9 },
 ];
 
 /**
@@ -2328,6 +2795,7 @@ function renderRagasPanel(section) {
   const faithfulnessPct = Math.round(result.faithfulness * 100);
   section.setAttribute("data-primary-score", String(faithfulnessPct));
   section.setAttribute("data-fixture-id", inputs.fixtureId);
+  section.setAttribute("data-ai-state", state.ai.ragas.state);
 
   const grid = document.createElement("div");
   grid.className = "sim-panel";
@@ -2355,10 +2823,117 @@ function renderRagasPanel(section) {
   disclaimer.className = "caveat";
   disclaimer.textContent = t("ragasDisclaimer");
   right.appendChild(disclaimer);
+  right.appendChild(buildRagasAiVsSection(result));
 
   grid.appendChild(left);
   grid.appendChild(right);
   section.appendChild(grid);
+}
+
+/** One score-row/score-fill pair carrying data-source ("heuristic"|"ai"), reused by the RAGAS "Heurystyka vs LLM judge" columns. @param {string} key @param {string} labelKey @param {number} value 0-1 @param {"heuristic"|"ai"} source */
+function buildRagasMetricBar(key, labelKey, value, source) {
+  const pct = Math.round(value * 100);
+  const status = scoreStatus(pct);
+  const row = document.createElement("div");
+  row.className = "score-row";
+  row.setAttribute("data-metric", key);
+  row.setAttribute("data-value", String(pct));
+  row.setAttribute("data-status", status);
+  row.setAttribute("data-source", source);
+
+  const label = document.createElement("span");
+  label.className = "score-label";
+  label.textContent = t(labelKey);
+
+  const track = document.createElement("div");
+  track.className = "score-track";
+  const fill = document.createElement("div");
+  fill.className = "score-fill";
+  fill.setAttribute("data-status", status);
+  fill.setAttribute("data-source", source);
+  fill.style.width = pct + "%";
+  track.appendChild(fill);
+
+  const value_ = document.createElement("span");
+  value_.className = "score-value";
+  value_.textContent = pct + "%";
+
+  row.appendChild(label);
+  row.appendChild(track);
+  row.appendChild(value_);
+  return row;
+}
+
+/**
+ * "Heurystyka vs LLM judge" two-column comparison (data-source="heuristic"
+ * left, data-source="ai" right). The AI column reflects state.ai.ragas.state
+ * (idle/loading/complete/error); an AI error never touches the heuristic
+ * column, which is always the live ragasEval() result passed in.
+ * @param {{contextRelevance:number, faithfulness:number, answerRelevance:number}} result
+ */
+function buildRagasAiVsSection(result) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4 ai-vs-heading";
+  heading.textContent = t("ragasAiVsHeading");
+  wrap.appendChild(heading);
+
+  const columns = document.createElement("div");
+  columns.className = "ai-vs-columns";
+
+  const heuristicCol = document.createElement("div");
+  const hLabel = document.createElement("p");
+  hLabel.className = "ai-vs-col-label";
+  hLabel.textContent = t("ragasAiColHeuristic");
+  heuristicCol.appendChild(hLabel);
+  heuristicCol.appendChild(buildRagasMetricBar("context-relevance", "ragasMetricContext", result.contextRelevance, "heuristic"));
+  heuristicCol.appendChild(buildRagasMetricBar("faithfulness", "ragasMetricFaithfulness", result.faithfulness, "heuristic"));
+  heuristicCol.appendChild(buildRagasMetricBar("answer-relevance", "ragasMetricAnswer", result.answerRelevance, "heuristic"));
+
+  const aiCol = document.createElement("div");
+  const aLabel = document.createElement("p");
+  aLabel.className = "ai-vs-col-label";
+  aLabel.textContent = t("ragasAiColAi");
+  aiCol.appendChild(aLabel);
+
+  const aiState = state.ai.ragas.state;
+  if (aiState === "loading") {
+    const p = document.createElement("p");
+    p.className = "edu-small";
+    p.textContent = t("aiLoadingAnnounce") + "…";
+    aiCol.appendChild(p);
+  } else if (aiState === "complete" && state.ai.ragas.result) {
+    const r = state.ai.ragas.result;
+    aiCol.appendChild(buildRagasMetricBar("context-relevance", "ragasMetricContext", r.contextRelevance, "ai"));
+    aiCol.appendChild(buildRagasMetricBar("faithfulness", "ragasMetricFaithfulness", r.faithfulness, "ai"));
+    aiCol.appendChild(buildRagasMetricBar("answer-relevance", "ragasMetricAnswer", r.answerRelevance, "ai"));
+    const claimsNote = document.createElement("p");
+    claimsNote.className = "ai-claims-note";
+    claimsNote.textContent = t("ragasAiClaimsNote") + " (" + r.claims.length + ")";
+    aiCol.appendChild(claimsNote);
+  } else if (aiState === "error") {
+    const err = document.createElement("p");
+    err.className = "ai-error-note";
+    err.textContent = state.ai.ragas.error || "";
+    aiCol.appendChild(err);
+  } else {
+    const idle = document.createElement("p");
+    idle.className = "edu-small";
+    idle.textContent = t("ragasAiButton");
+    aiCol.appendChild(idle);
+  }
+
+  columns.appendChild(heuristicCol);
+  columns.appendChild(aiCol);
+  wrap.appendChild(columns);
+
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "caveat";
+  disclaimer.textContent = t("ragasAiDisclaimer");
+  wrap.appendChild(disclaimer);
+
+  return wrap;
 }
 
 function buildRagasQuestionField(inputs) {
@@ -2449,10 +3024,18 @@ function buildRagasButtonRow() {
   runBtn.textContent = t("ragasRunButton");
   runBtn.addEventListener("click", () => runRagasEval());
 
+  const aiBtn = buildAiRunButton({
+    id: "ragasAiButton",
+    labelKey: "ragasAiButton",
+    loading: state.ai.ragas.state === "loading",
+    onClick: () => runRagasAiJudge(),
+  });
+
   row.appendChild(presetGood);
   row.appendChild(presetNoise);
   row.appendChild(addHallucination);
   row.appendChild(runBtn);
+  row.appendChild(aiBtn);
   return row;
 }
 
@@ -2536,6 +3119,7 @@ function buildRagasScoreBars(result, inputs) {
     row.setAttribute("data-metric", m.key);
     row.setAttribute("data-value", String(pct));
     row.setAttribute("data-status", status);
+    row.setAttribute("data-source", "heuristic");
 
     const label = document.createElement("span");
     label.className = "score-label";
@@ -2546,6 +3130,7 @@ function buildRagasScoreBars(result, inputs) {
     const fill = document.createElement("div");
     fill.className = "score-fill";
     fill.setAttribute("data-status", status);
+    fill.setAttribute("data-source", "heuristic");
     fill.style.width = pct + "%";
     track.appendChild(fill);
 
@@ -2943,6 +3528,7 @@ function renderIfevalPanel(section) {
 
   section.setAttribute("data-primary-score", String(Math.round(result.strictPrompt * 100)));
   section.setAttribute("data-fixture-id", inputs.fixtureId);
+  section.setAttribute("data-ai-state", state.ai.ifeval.state);
 
   const grid = document.createElement("div");
   grid.className = "sim-panel";
@@ -2957,6 +3543,17 @@ function renderIfevalPanel(section) {
   left.appendChild(buildIfevalPromptPreview(inputs));
   left.appendChild(buildIfevalAnswerField(inputs));
   left.appendChild(buildIfevalButtonRow());
+  if (state.ai.ifeval.state === "loading") {
+    const loading = document.createElement("p");
+    loading.className = "edu-small";
+    loading.textContent = t("aiLoadingAnnounce") + "…";
+    left.appendChild(loading);
+  } else if (state.ai.ifeval.state === "error") {
+    const err = document.createElement("p");
+    err.className = "ai-error-note";
+    err.textContent = state.ai.ifeval.error || "";
+    left.appendChild(err);
+  }
 
   const right = document.createElement("div");
   right.className = "card";
@@ -3094,10 +3691,18 @@ function buildIfevalButtonRow() {
   runBtn.textContent = t("ifevalRunButton");
   runBtn.addEventListener("click", () => runIfevalEval());
 
+  const aiBtn = buildAiRunButton({
+    id: "ifevalAiButton",
+    labelKey: "ifevalAiButton",
+    loading: state.ai.ifeval.state === "loading",
+    onClick: () => runIfevalAiGenerate(),
+  });
+
   row.appendChild(presetAll);
   row.appendChild(presetSkip);
   row.appendChild(presetPreamble);
   row.appendChild(runBtn);
+  row.appendChild(aiBtn);
   return row;
 }
 
@@ -3646,12 +4251,177 @@ function renderQaPanel() {
   });
 }
 
+/** True when a non-empty key is stored for `providerId` (defaults to the currently selected provider). @param {string} [providerId] @returns {boolean} */
+function aiHasKey(providerId) {
+  const settings = state.ai.settings;
+  if (!settings) return false;
+  const id = providerId || settings.provider;
+  return !!(settings.keys && settings.keys[id] && settings.keys[id].trim());
+}
+
+/**
+ * Shared AI-run button: disabled (with a tooltip) while no key is set for
+ * the current provider, shows a spinner via data-loading while an AI
+ * operation is in flight. Used by both the RAGAS judge and IFEval generate
+ * buttons (section 5 UI states).
+ * @param {{id:string, labelKey:string, loading:boolean, onClick:Function}} opts
+ */
+function buildAiRunButton({ id, labelKey, loading, onClick }) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-secondary ai-run-btn";
+  btn.id = id;
+  const spinner = document.createElement("span");
+  spinner.className = "ai-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  btn.appendChild(spinner);
+  const label = document.createElement("span");
+  label.textContent = t(labelKey);
+  btn.appendChild(label);
+  const hasKey = aiHasKey();
+  btn.disabled = !hasKey || loading;
+  if (!hasKey) btn.title = t("aiNoKeyTooltip");
+  btn.setAttribute("data-loading", String(!!loading));
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+/**
+ * Single writer for the AI settings modal: provider/model catalogue + custom
+ * ID input + key field + keyUrl link + privacy note. Every field autosaves
+ * to eduapp_ai on change via saveAiSettings (read-modify-write, section 5).
+ */
+function renderAiSettingsModal() {
+  aiSettingsOverlayEl.hidden = !state.ai.open;
+  aiSettingsEyebrowEl.textContent = t("aiSettingsEyebrow");
+  aiSettingsTitleEl.textContent = t("aiSettingsTitle");
+  aiSettingsCloseButtonEl.setAttribute("aria-label", t("aiSettingsCloseLabel"));
+  if (!state.ai.open) return;
+
+  const settings = state.ai.settings || loadAiSettings();
+  const info = aiProviderInfo(settings.provider);
+  const isCurated = info.models.includes(settings.model);
+
+  aiSettingsBodyEl.innerHTML = "";
+
+  // ── provider picker ──
+  const providerGroup = document.createElement("div");
+  providerGroup.className = "ai-field-group";
+  const providerLabel = document.createElement("p");
+  providerLabel.className = "field-label";
+  providerLabel.textContent = t("aiProviderLabel");
+  providerGroup.appendChild(providerLabel);
+  const providerRow = document.createElement("div");
+  providerRow.className = "ai-provider-row";
+  providerRow.setAttribute("role", "group");
+  providerRow.setAttribute("aria-label", t("aiProviderLabel"));
+  AI_SUPPORTED_PROVIDER_IDS.forEach((id) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ai-provider-btn";
+    btn.setAttribute("aria-pressed", String(id === settings.provider));
+    btn.textContent = AI_MODEL_CATALOG.providers[id].label;
+    btn.addEventListener("click", () => setAiProvider(id));
+    providerRow.appendChild(btn);
+  });
+  providerGroup.appendChild(providerRow);
+  aiSettingsBodyEl.appendChild(providerGroup);
+
+  // ── model picker (catalogue + custom ID) ──
+  const modelGroup = document.createElement("div");
+  modelGroup.className = "ai-field-group";
+  const modelLabel = document.createElement("label");
+  modelLabel.className = "field-label";
+  modelLabel.setAttribute("for", "aiModelSelect");
+  modelLabel.textContent = t("aiModelLabel");
+  const modelSelect = document.createElement("select");
+  modelSelect.id = "aiModelSelect";
+  info.models.forEach((m) => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    modelSelect.appendChild(opt);
+  });
+  const customOpt = document.createElement("option");
+  customOpt.value = "__custom__";
+  customOpt.textContent = t("aiModelCustomOption");
+  modelSelect.appendChild(customOpt);
+  modelSelect.value = isCurated ? settings.model : "__custom__";
+  modelSelect.addEventListener("change", () => {
+    if (modelSelect.value === "__custom__") {
+      renderAiSettingsModal();
+      const customInput = document.getElementById("aiModelCustomInput");
+      if (customInput) customInput.focus();
+    } else {
+      setAiModel(modelSelect.value);
+    }
+  });
+  modelGroup.appendChild(modelLabel);
+  modelGroup.appendChild(modelSelect);
+
+  if (!isCurated) {
+    const customWrap = document.createElement("div");
+    customWrap.style.marginTop = "8px";
+    const customLabel = document.createElement("label");
+    customLabel.className = "field-label";
+    customLabel.setAttribute("for", "aiModelCustomInput");
+    customLabel.textContent = t("aiModelCustomLabel");
+    const customInput = document.createElement("input");
+    customInput.type = "text";
+    customInput.id = "aiModelCustomInput";
+    customInput.spellcheck = false;
+    customInput.autocomplete = "off";
+    customInput.value = settings.model;
+    customInput.addEventListener("change", () => {
+      if (customInput.value.trim()) setAiModel(customInput.value.trim());
+    });
+    customWrap.appendChild(customLabel);
+    customWrap.appendChild(customInput);
+    modelGroup.appendChild(customWrap);
+  }
+  aiSettingsBodyEl.appendChild(modelGroup);
+
+  // ── API key + privacy note ──
+  const keyGroup = document.createElement("div");
+  keyGroup.className = "ai-field-group";
+  const keyLabel = document.createElement("label");
+  keyLabel.className = "field-label";
+  keyLabel.setAttribute("for", "aiKeyInput");
+  keyLabel.textContent = t("aiKeyLabel") + " - " + info.label;
+  const keyInput = document.createElement("input");
+  keyInput.type = "password";
+  keyInput.id = "aiKeyInput";
+  keyInput.autocomplete = "off";
+  keyInput.spellcheck = false;
+  keyInput.placeholder = info.keyPlaceholder;
+  keyInput.value = (settings.keys && settings.keys[settings.provider]) || "";
+  keyInput.addEventListener("input", () => setAiKey(settings.provider, keyInput.value.trim()));
+  const keyNote = document.createElement("p");
+  keyNote.className = "ai-key-note";
+  keyNote.textContent = t("aiKeyLinkPrefix") + " ";
+  const keyLink = document.createElement("a");
+  keyLink.href = info.keyUrl;
+  keyLink.target = "_blank";
+  keyLink.rel = "noopener";
+  keyLink.textContent = info.keyUrl.replace("https://", "");
+  keyNote.appendChild(keyLink);
+  keyGroup.appendChild(keyLabel);
+  keyGroup.appendChild(keyInput);
+  keyGroup.appendChild(keyNote);
+  const privacyNote = document.createElement("p");
+  privacyNote.className = "ai-privacy-note";
+  privacyNote.textContent = t("aiPrivacyNote");
+  keyGroup.appendChild(privacyNote);
+  aiSettingsBodyEl.appendChild(keyGroup);
+}
+
 function render() {
   renderChrome();
   renderBenchTabs();
   renderProgress();
   renderSimPanels();
   renderQaPanel();
+  renderAiSettingsModal();
   syncDomContract();
 }
 
@@ -3674,6 +4444,44 @@ function openQaPanel() {
 function closeQaPanel() {
   state.qa.open = false;
   render();
+}
+
+// ── AI settings modal (Faza 6) ──
+function openAiSettingsModal() {
+  state.ai.settings = state.ai.settings || loadAiSettings();
+  state.ai.open = true;
+  render();
+}
+
+function closeAiSettingsModal() {
+  state.ai.open = false;
+  render();
+}
+
+function setAiProvider(providerId) {
+  const settings = state.ai.settings;
+  if (settings.provider === providerId) return;
+  settings.provider = providerId;
+  settings.model = aiProviderInfo(providerId).models[0];
+  saveAiSettings(settings);
+  render();
+}
+
+function setAiModel(model) {
+  const settings = state.ai.settings;
+  settings.model = model;
+  saveAiSettings(settings);
+  render();
+}
+
+// Deliberately does not call render(): the key <input> already reflects the
+// user's keystroke, and re-rendering the whole modal on every keystroke
+// would steal its focus. Other panels' AI-button enabled state catches up
+// on their next real render (tab switch, preset click, or modal close).
+function setAiKey(providerId, key) {
+  const settings = state.ai.settings;
+  settings.keys[providerId] = key;
+  saveAiSettings(settings);
 }
 
 function setLang(lang) {
@@ -3756,6 +4564,32 @@ function appendRagasHallucination() {
 
 function runRagasEval() {
   state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+// "Oceń z AI (LLM-as-judge)": sends question/context/answer to the
+// configured provider, sanitizes the JSON reply through sanitizeRagasJudge,
+// and stores it in state.ai.ragas - entirely separate from state.results.ragas,
+// so a failed or bogus AI call never touches the heuristic result.
+async function runRagasAiJudge() {
+  if (!aiHasKey()) return;
+  const inputs = state.inputs.ragas;
+  state.ai.ragas.state = "loading";
+  state.ai.ragas.error = null;
+  render();
+  announce(t("aiLoadingAnnounce"));
+  try {
+    const prompt = buildRagasJudgePrompt(inputs);
+    const raw = await callAiJson(prompt);
+    const sanitized = sanitizeRagasJudge(raw);
+    if (!sanitized) throw new Error(t("aiErrorInvalidShape"));
+    state.ai.ragas.result = sanitized;
+    state.ai.ragas.state = "complete";
+  } catch (err) {
+    state.ai.ragas.error = err && err.message ? err.message : String(err);
+    state.ai.ragas.state = "error";
+  }
   render();
   announce(t("ariaResultUpdated"));
 }
@@ -3861,6 +4695,32 @@ function applyIfevalPreset(id) {
 
 function runIfevalEval() {
   state.runState = "complete";
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+// "Wygeneruj odpowiedź modelu": sends the composed constraint prompt to the
+// configured provider and drops the RAW response text into the answer
+// field, then the normal (deterministic) ifevalEval() scores it on the next
+// render - the model is tested against the constraints, not simulated.
+async function runIfevalAiGenerate() {
+  if (!aiHasKey()) return;
+  const inputs = state.inputs.ifeval;
+  state.ai.ifeval.state = "loading";
+  state.ai.ifeval.error = null;
+  render();
+  announce(t("aiLoadingAnnounce"));
+  try {
+    const prompt = buildIfevalPromptText(inputs);
+    const text = await aiFetchText(prompt);
+    inputs.answer = text.trim();
+    inputs.fixtureId = computeIfevalFixtureId(inputs, state.lang);
+    state.ai.ifeval.state = "complete";
+    state.runState = "complete";
+  } catch (err) {
+    state.ai.ifeval.error = err && err.message ? err.message : String(err);
+    state.ai.ifeval.state = "error";
+  }
   render();
   announce(t("ariaResultUpdated"));
 }
@@ -3987,6 +4847,10 @@ function handleKeydown(e) {
     closeQaPanel();
     return;
   }
+  if (e.key === "Escape" && state.ai.open) {
+    closeAiSettingsModal();
+    return;
+  }
   if (typing) return;
 
   if (e.key >= "1" && e.key <= "4") {
@@ -4053,10 +4917,16 @@ qaCloseButtonEl.addEventListener("click", closeQaPanel);
 qaOverlayEl.addEventListener("click", (e) => {
   if (e.target === qaOverlayEl) closeQaPanel();
 });
+aiSettingsButtonEl.addEventListener("click", openAiSettingsModal);
+aiSettingsCloseButtonEl.addEventListener("click", closeAiSettingsModal);
+aiSettingsOverlayEl.addEventListener("click", (e) => {
+  if (e.target === aiSettingsOverlayEl) closeAiSettingsModal();
+});
 
 // ─── Init ───
 
 state.lang = loadLangFromStorage();
+state.ai.settings = loadAiSettings();
 resetRagasInputs();
 resetAresInputs();
 resetIfevalInputs();
