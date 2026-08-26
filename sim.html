@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BenchSim – interaktywny symulator ewaluacji RAG</title>
+<link rel="icon" type="image/png" href="quantica-q-mark-black.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="quantica-q-mark-white.png" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500;600&amp;family=Poppins:wght@400;500;600;700&amp;family=Raleway:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-page:#eeedf2;
+  --c-page-deep:#e4e1e8;
+  --c-surface:#ffffff;
+  --c-surface-soft:#faf8fb;
+  --c-surface-raised:#f6f2f6;
+  --c-border:#ddd6df;
+  --c-border-strong:#c7bcc9;
+  --c-text:#18131a;
+  --c-text-soft:#4c434e;
+  --c-muted:#776c79;
+  --c-accent:#d20757;
+  --c-accent-hover:#a9064a;
+  --c-accent-soft:#fdebf3;
+  --c-positive:#15845f;
+  --c-positive-soft:#e8f6f0;
+  --c-negative:#b84450;
+  --c-negative-soft:#fbecef;
+  --c-warning:#a86c18;
+  --c-warning-soft:#fff3dd;
+  --c-info:#286f94;
+  --c-info-soft:#eaf5fb;
+  --c-violet:#6f56a6;
+  --c-violet-soft:#f1ecfb;
+  --c-amber:#a86c18;
+  --c-amber-soft:#fff4df;
+  --c-gold:var(--c-amber);
+  --c-gold-soft:var(--c-amber-soft);
+  --c-sys:var(--c-info);
+  --c-sys-soft:var(--c-info-soft);
+  --c-ink:#10151c;
+  --c-ink-soft:#1a222d;
+  --c-terminal-text:#d6dde7;
+  --c-terminal-muted:#8290a2;
+  --c-terminal-accent:#ff669e;
+  --c-white:#ffffff;
+  --c-overlay:rgba(24,19,26,.14);
+  --c-backdrop:rgba(24,19,26,.5);
+  --c-shadow:rgba(24,19,26,.08);
+  --font-display:'Raleway','Poppins',system-ui,sans-serif;
+  --font-sans:'Poppins',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --fs-xs:.72rem;
+  --fs-sm:.84rem;
+  --fs-base:.96rem;
+  --fs-md:1.05rem;
+  --fs-lg:1.28rem;
+  --fs-xl:1.7rem;
+  --fs-2xl:2.15rem;
+  --lh-tight:1.2;
+  --lh-base:1.55;
+  --align-start:left;
+  --align-center:center;
+  --space-1:.25rem;
+  --space-2:.5rem;
+  --space-3:.75rem;
+  --space-4:1rem;
+  --space-5:1.5rem;
+  --space-6:2rem;
+  --space-7:3rem;
+  --radius-sm:.5rem;
+  --radius:.75rem;
+  --radius-lg:1rem;
+  --radius-pill:999px;
+  --shadow-sm:0 1px 2px var(--c-shadow);
+  --shadow-md:0 12px 32px var(--c-shadow);
+  --content-max:1600px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,var(--c-page),var(--c-page-deep));color:var(--c-text);font-family:var(--font-sans);font-size:var(--fs-base);line-height:var(--lh-base);min-height:100vh}
+button,input{font:inherit}
+button{color:inherit}
+.app{width:100%;max-width:var(--content-max);margin:0 auto;padding:var(--space-5)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);margin-bottom:var(--space-5)}
+.brand{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.brand img{width:34px;height:34px;flex:0 0 auto}
+.brand-copy{min-width:0}
+.brand h1{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin:0}
+.brand p{color:var(--c-muted);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.top-actions{display:flex;align-items:center;gap:var(--space-2)}
+.model-chip,.lang-group,.icon-button{border:1px solid var(--c-border);background:var(--c-surface);box-shadow:var(--shadow-sm)}
+.model-chip{border-radius:var(--radius);padding:var(--space-2) var(--space-3);display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);font-weight:600}
+.model-dot{width:8px;height:8px;border-radius:50%;background:var(--c-positive);box-shadow:0 0 0 3px var(--c-positive-soft)}
+.lang-group{display:flex;border-radius:var(--radius);padding:3px}
+.lang-group button{border:0;background:transparent;border-radius:calc(var(--radius) - 3px);padding:var(--space-2) var(--space-3);cursor:pointer;font-size:var(--fs-sm);font-weight:700}
+.lang-group button.active{background:var(--c-accent);color:var(--c-white)}
+
+.tabs-wrap{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--c-page) 76%,transparent);padding:0 0 var(--space-4)}
+.tabs{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-2);cursor:pointer;white-space:nowrap;font-family:var(--font-display);font-weight:700;box-shadow:var(--shadow-sm)}
+.tab:hover{border-color:var(--c-accent)}
+.tab.active{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.tab-number{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--radius-sm);background:var(--c-surface-raised);color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)}
+.tab.active .tab-number{background:var(--c-overlay);color:var(--c-white)}
+
+.method-shell{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden}
+.method-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-5);align-items:start;padding:var(--space-6);border-bottom:1px solid var(--c-border)}
+.eyebrow{display:flex;align-items:center;gap:var(--space-2);color:var(--c-accent);font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.eyebrow-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.method-title{font-family:var(--font-display);font-size:var(--fs-2xl);line-height:var(--lh-tight);margin:0}
+.method-answer{color:var(--c-text-soft);font-size:var(--fs-md);max-width:780px;margin:var(--space-3) 0 0}
+.mode-note{min-width:260px;max-width:340px;background:var(--c-warning-soft);border:1px solid var(--c-warning);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm)}
+.mode-note strong{display:block;margin-bottom:var(--space-1)}
+
+.preset-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3) var(--space-4);flex-wrap:wrap;padding:var(--space-3) var(--space-6);background:var(--c-surface-soft);border-bottom:1px solid var(--c-border)}
+.preset-set{display:flex;flex-wrap:wrap;gap:var(--space-2);min-width:0}
+.preset-set::-webkit-scrollbar{display:none}
+.preset{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-pill);padding:var(--space-2) var(--space-3);white-space:nowrap;cursor:pointer;font-size:var(--fs-sm);font-weight:600}
+.preset.active{border-color:var(--c-accent);background:var(--c-accent-soft);color:var(--c-accent)}
+.change-note{flex:1 1 280px;font-size:var(--fs-sm);color:var(--c-muted);text-align:var(--align-start)}
+.change-note strong{color:var(--c-text)}
+
+.canvas{padding:var(--space-6)}
+.section-title{font-family:var(--font-display);font-size:var(--fs-lg);margin:0 0 var(--space-4)}
+.section-kicker{color:var(--c-muted);font-size:var(--fs-sm);margin:-.6rem 0 var(--space-4)}
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4)}
+.soft-card{background:var(--c-surface-soft)}
+.label{display:block;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.field{border:1px solid var(--c-border-strong);background:var(--c-white);border-radius:var(--radius-sm);padding:var(--space-3);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:var(--lh-base)}
+.status{display:inline-flex;align-items:center;gap:var(--space-1);border-radius:var(--radius-pill);padding:.22rem .55rem;font-size:var(--fs-xs);font-weight:700;white-space:nowrap}
+.status.pass{background:var(--c-positive-soft);color:var(--c-positive)}
+.status.fail{background:var(--c-negative-soft);color:var(--c-negative)}
+.status.info{background:var(--c-info-soft);color:var(--c-info)}
+.status.warn{background:var(--c-warning-soft);color:var(--c-warning)}
+.method-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.7fr);gap:var(--space-5);align-items:start}
+.summary-rail{display:grid;gap:var(--space-3);position:sticky;top:78px}
+.summary-card{border:1px solid var(--c-border);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4)}
+.summary-card h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.summary-card p{color:var(--c-muted);font-size:var(--fs-sm);margin:var(--space-2) 0 0}
+.metric-value{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin-top:var(--space-2)}
+.ratio{font-family:var(--font-mono);color:var(--c-muted);font-size:var(--fs-xs);margin-top:var(--space-1)}
+.neutral-track{height:8px;border-radius:var(--radius-pill);background:var(--c-surface-raised);overflow:hidden;margin-top:var(--space-3)}
+.neutral-fill{height:100%;border-radius:inherit;background:var(--c-accent)}
+.metric-group-label{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin:var(--space-2) 0 0}
+
+.log-details{border-top:1px solid var(--c-border);background:var(--c-surface-soft)}
+.log-details summary{cursor:pointer;padding:var(--space-4) var(--space-6);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);list-style:none}
+.log-details summary::-webkit-details-marker{display:none}
+.log-details summary::after{content:'+';font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--c-accent)}
+.log-details[open] summary::after{content:'−'}
+.terminal{margin:0 var(--space-6) var(--space-6);background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);white-space:pre-wrap}
+.terminal .muted{color:var(--c-terminal-muted)}
+.terminal .accent{color:var(--c-terminal-accent)}
+
+/* RAGAS */
+.origin{display:inline-flex;align-items:center;border-radius:var(--radius-pill);padding:.12rem .5rem;font-family:var(--font-mono);font-size:var(--fs-xs);font-weight:600;white-space:nowrap}
+.origin.gold{background:var(--c-gold-soft);color:var(--c-gold);border:1px solid var(--c-gold)}
+.origin.sys{background:var(--c-sys-soft);color:var(--c-sys);border:1px solid var(--c-sys)}
+.input-label .origin{font-size:.62rem;padding:.08rem .4rem;margin-right:var(--space-1)}
+.zone{border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-4)}
+.zone-gold{border:2px dashed var(--c-gold);background:var(--c-gold-soft)}
+.zone-sys{border:2px solid var(--c-sys);background:var(--c-sys-soft)}
+.zone-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2) var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-3)}
+.zone-head h4{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.zone-head p{margin:0;font-size:var(--fs-xs);color:var(--c-text-soft)}
+.zone-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}
+.zone-grid .wide{grid-column:1 / -1}
+.zone .field-control{background:var(--c-white)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.dot.gold{background:var(--c-gold)}
+.dot.sys{background:var(--c-sys)}
+.compare-note .dot,.map-mode .dot{margin:0 .3rem 0 .1rem;vertical-align:-1px}
+.map-section{margin-top:var(--space-5)}
+.evidence-map{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:var(--space-3);align-items:stretch}
+.evidence-column,.claims-column{display:grid;gap:var(--space-3)}
+.fragment{position:relative;border:1px solid var(--c-border);border-left:4px solid var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3)}
+.fragment.dimmed{border-left-color:var(--c-border-strong);background:var(--c-surface-soft);opacity:.72}
+.fragment-head,.claim-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
+.fragment p,.claim p{font-size:var(--fs-sm);margin:0}
+.match-words{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info);margin-top:var(--space-2)}
+.connectors{display:grid;align-content:space-around;color:var(--c-accent)}
+.connector{display:flex;align-items:center}
+.connector::before{content:'';height:2px;background:currentColor;flex:1}
+.connector::after{content:'›';font-family:var(--font-display);font-size:var(--fs-xl);line-height:1}
+.claim{border:1px solid var(--c-positive);background:var(--c-positive-soft);border-radius:var(--radius);padding:var(--space-3)}
+.claim.unsupported{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.evidence-ref{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2)}
+.evidence-ref span{border-radius:var(--radius-pill);background:var(--c-white);padding:.18rem .45rem;font-size:var(--fs-xs);font-family:var(--font-mono)}
+.map-toggle{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-4)}
+.map-mode{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-pill);padding:var(--space-2) var(--space-3);cursor:pointer;font-size:var(--fs-sm);font-weight:600}
+.map-mode:hover{border-color:var(--c-accent)}
+.map-mode.active{border-color:var(--c-accent);background:var(--c-accent-soft);color:var(--c-accent)}
+.stage-card{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius);padding:var(--space-3);display:grid;gap:var(--space-3)}
+.stage-head{display:flex;align-items:flex-start;gap:var(--space-2)}
+.stage-num{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--c-accent);color:var(--c-white);font-family:var(--font-mono);font-size:var(--fs-xs);flex:0 0 auto}
+.stage-head b{font-family:var(--font-display);font-size:var(--fs-md)}
+.stage-head p{margin:.1rem 0 0;color:var(--c-muted);font-size:var(--fs-xs)}
+.compare-note{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted);margin-top:var(--space-2)}
+
+
+/* IFEVAL */
+.prompt-card{background:var(--c-ink-soft);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);margin:0 0 var(--space-5);white-space:pre-wrap;overflow-wrap:anywhere}
+.prompt-card .prompt-label{color:var(--c-terminal-accent);display:block;margin-bottom:var(--space-2)}
+.overall-gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-4);align-items:center;border:1px solid var(--c-border);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-4)}
+.overall-gate.pass{border-color:var(--c-positive);background:var(--c-positive-soft)}
+.overall-gate.fail{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.overall-gate h3{font-family:var(--font-display);font-size:var(--fs-lg);margin:0}
+.overall-gate p{color:var(--c-text-soft);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.gate-chain{display:flex;align-items:center;gap:var(--space-1);flex-wrap:wrap;justify-content:flex-end}
+.gate-node{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--c-positive);color:var(--c-white);font-size:var(--fs-xs);font-weight:700}
+.gate-node.fail{background:var(--c-negative)}
+.gate-arrow{color:var(--c-muted)}
+.constraint-table{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.constraint-row{display:grid;grid-template-columns:minmax(190px,1fr) minmax(220px,1.6fr) 90px 90px;align-items:center}
+.constraint-row>div{padding:var(--space-3);border-top:1px solid var(--c-border);font-size:var(--fs-sm)}
+.constraint-row.header{background:var(--c-surface-raised);font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.constraint-row.header>div{border-top:0}
+.constraint-name{display:flex;align-items:start;gap:var(--space-2);font-weight:600}
+.category-dot{width:9px;height:9px;border-radius:50%;margin-top:.38rem;flex:0 0 auto;background:var(--c-info)}
+.category-dot.forbid{background:var(--c-amber)}
+.category-dot.citation{background:var(--c-violet)}
+.constraint-evidence{color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)!important}
+.result-cell{text-align:var(--align-center)}
+.four-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-top:var(--space-4)}
+.mini-metric{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-3);background:var(--c-surface-soft)}
+.mini-metric span{color:var(--c-muted);font-size:var(--fs-xs)}
+.mini-metric b{display:block;font-family:var(--font-display);font-size:var(--fs-lg);margin-top:var(--space-1)}
+
+/* QUESTEVAL */
+.text-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-5)}
+.text-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.text-card p{font-family:var(--font-mono);font-size:var(--fs-sm);margin:0}
+.scope-note{display:flex;align-items:center;gap:var(--space-2);color:var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm);margin-bottom:var(--space-4)}
+.qa-lanes{display:grid;gap:var(--space-4)}
+.qa-lane{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.lane-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--c-surface-raised)}
+.lane-head h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.lane-head span{font-size:var(--fs-xs);color:var(--c-muted)}
+.qa-row{display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(120px,.7fr) 34px minmax(120px,.7fr) 86px;align-items:center;padding:var(--space-3) var(--space-4);border-top:1px solid var(--c-border);gap:var(--space-2);font-size:var(--fs-sm)}
+.qa-question{font-weight:600}
+.qa-answer{font-family:var(--font-mono);font-size:var(--fs-xs);padding:var(--space-2);background:var(--c-surface-soft);border-radius:var(--radius-sm)}
+.qa-arrow{text-align:var(--align-center);color:var(--c-accent);font-size:var(--fs-lg)}
+.issue-row{background:var(--c-warning-soft)}
+.quest-summary{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:var(--space-3);margin-top:var(--space-4)}
+.balance-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.balance-card.combined{border-color:var(--c-accent);background:var(--c-accent-soft)}
+.balance-card span{color:var(--c-muted);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.balance-card b{display:block;font-family:var(--font-display);font-size:var(--fs-xl);margin-top:var(--space-1)}
+.balance-card p{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-1) 0 0}
+
+.footer{display:flex;justify-content:space-between;gap:var(--space-4);color:var(--c-muted);font-size:var(--fs-xs);padding:var(--space-4) var(--space-1)}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Interactive layer */
+button,textarea,select,input{font:inherit}
+button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--c-info);outline-offset:3px}
+.method-shell,.canvas,.method-layout,.evidence-column,.claims-column,.control-groups,.qa-lanes{min-width:0}
+.field-control{width:100%;border:1px solid var(--c-border-strong);background:var(--c-white);color:var(--c-text);border-radius:var(--radius-sm);padding:var(--space-3);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:var(--lh-base);resize:vertical}
+.field-control:hover{border-color:var(--c-accent)}
+.field-control[aria-invalid="true"]{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.input-stack{display:grid;gap:var(--space-3)}
+.input-label{display:block;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-3)}
+.button{border:1px solid var(--c-border-strong);background:var(--c-surface);border-radius:var(--radius);padding:.68rem .95rem;cursor:pointer;font-weight:700;font-size:var(--fs-sm)}
+.button:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.button.primary{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.button.primary:hover{background:var(--c-accent-hover);color:var(--c-white)}
+.button:disabled{cursor:wait;opacity:.65}
+.button-row-end{margin-left:auto}
+.method-copy{overflow-wrap:anywhere}
+.source-note{font-size:var(--fs-xs);color:var(--c-muted);margin:calc(var(--space-2) * -1) 0 var(--space-4)}
+.source-note a{color:var(--c-info);font-weight:700}
+.method-head .source-note{margin:var(--space-1) 0 0}
+.empty-state{border:1px dashed var(--c-border-strong);border-radius:var(--radius);padding:var(--space-5);color:var(--c-muted);text-align:var(--align-center)}
+.metric-card[data-value="na"] .metric-value{color:var(--c-muted)}
+.evidence-map[data-connection-mode="explicit"] .fragment[data-used="false"]{opacity:.68}
+.evidence-link{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);margin-top:var(--space-2)}
+.connector-list{display:grid;place-content:center;font-family:var(--font-display);font-size:var(--fs-2xl);line-height:1;color:var(--c-accent)}
+.ifeval-brief{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-4);align-items:start;margin-bottom:var(--space-5)}
+.brief-col{display:grid;gap:var(--space-4);align-content:start;min-width:0}
+.user-prompt{border:1px solid var(--c-border);border-left:4px solid var(--c-accent);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4);margin:0;font-size:var(--fs-sm);line-height:var(--lh-base)}
+.annotation-card{background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);margin:0;font-family:var(--font-mono);font-size:var(--fs-xs);line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.json-key{color:var(--c-terminal-accent)}
+.json-string{color:#8fd3a8}
+.constraint-list{display:grid;gap:var(--space-2)}
+.constraint-chip{display:flex;align-items:flex-start;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);background:var(--c-surface-soft);font-size:var(--fs-xs)}
+.constraint-chip input{margin-top:.2rem;accent-color:var(--c-accent)}
+.result-cell::before{display:none;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;margin-right:var(--space-2)}
+.qa-answer{overflow-wrap:anywhere}
+.na-cell{color:var(--c-muted)}
+.ai-result{border:1px solid var(--c-violet);background:var(--c-violet-soft);border-radius:var(--radius);padding:var(--space-4);margin-top:var(--space-4)}
+.ai-result h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-3)}
+.ai-result ul{margin:.35rem 0 0;padding-left:1.2rem}
+.ai-error{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.qa-panel{margin-top:var(--space-5);border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-lg);padding:var(--space-4)}
+.qa-panel h2{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-3)}
+.qa-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+.qa-check{display:flex;justify-content:space-between;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);font-size:var(--fs-xs)}
+.footer-actions{display:flex;gap:var(--space-3);align-items:center}
+.link-button{border:0;background:none;padding:0;color:var(--c-accent);font-weight:700;cursor:pointer;font-size:inherit}
+#ai-dialog{border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:var(--space-5);max-width:460px;width:calc(100vw - 2rem);background:var(--c-surface);color:var(--c-text);font-family:var(--font-sans);box-shadow:var(--shadow-md)}
+#ai-dialog::backdrop{background:var(--c-backdrop)}
+#ai-dialog h2{font-family:var(--font-display);margin:0 0 var(--space-4)}
+.provider-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
+.provider-row button.active{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.ai-note{font-size:var(--fs-xs);color:var(--c-muted)}
+.loading-dot{animation:pulse 1s ease-in-out infinite}
+.scope-note.warn{color:var(--c-warning);background:var(--c-warning-soft)}
+.scope-note.ok{color:var(--c-positive);background:var(--c-positive-soft)}
+.scope-note{margin-top:var(--space-3)}
+.instr-chip{display:inline-flex;align-items:center;gap:.25rem;border-radius:var(--radius-pill);padding:.16rem .5rem;margin:0 .22rem .22rem 0;font-family:var(--font-mono);font-size:var(--fs-xs);background:var(--c-positive-soft);color:var(--c-positive)}
+.instr-chip.bad{background:var(--c-negative-soft);color:var(--c-negative)}
+.instr-count{display:block;font-style:normal;font-weight:400;color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs);margin-top:.2rem;overflow-wrap:anywhere}
+.category-dot.format{background:var(--c-violet)}
+.category-dot.length{background:var(--c-positive)}
+.qa-answer b{display:block;font-family:var(--font-sans);font-size:var(--fs-sm);font-weight:600;color:var(--c-text)}
+.qa-answer em{display:block;font-style:normal;color:var(--c-muted);font-size:var(--fs-xs);margin-top:.15rem}
+.qa-answer.na-cell b{color:var(--c-muted);font-weight:400}
+@keyframes pulse{50%{opacity:.35}}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.loading-dot{animation:none}}
+
+@media(max-width:1050px){
+  .method-layout{grid-template-columns:1fr}
+  .summary-rail{position:static;grid-template-columns:repeat(3,1fr)}
+  .constraint-row{grid-template-columns:minmax(180px,1.2fr) minmax(140px,1fr) 80px 80px}
+}
+
+@media(max-width:768px){
+  :root{--fs-2xl:1.65rem;--fs-xl:1.4rem}
+  .app{padding:var(--space-4)}
+  .topbar{align-items:flex-start;margin-bottom:var(--space-4)}
+  .brand img{width:28px;height:28px}
+  .brand p{display:none}
+  .model-chip{width:40px;height:40px;padding:0;justify-content:center}
+  .model-chip .model-text{display:none}
+  .tabs-wrap{margin:0 calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
+  .method-head{grid-template-columns:1fr;padding:var(--space-4)}
+  .mode-note{min-width:0;max-width:none}
+  .preset-bar{display:block;padding:var(--space-3) var(--space-4)}
+  .change-note{margin-top:var(--space-2)}
+  .canvas{padding:var(--space-4)}
+  .zone-grid,.text-pair{grid-template-columns:1fr}
+  .zone-grid .wide{grid-column:auto}
+  .evidence-map{grid-template-columns:1fr}
+  .connectors{display:none}
+  .summary-rail{grid-template-columns:1fr}
+  .constraint-table{overflow:visible;border:0}
+  .constraint-row.header{display:none}
+  .constraint-row{grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--c-border);border-radius:var(--radius);margin-bottom:var(--space-2);overflow:hidden}
+  .constraint-row>div{border-top:0}
+  .constraint-name,.constraint-evidence{grid-column:1 / -1}
+  .constraint-evidence{border-top:1px solid var(--c-border)!important}
+  .result-cell{border-top:1px solid var(--c-border)!important;background:var(--c-surface-soft)}
+  .four-metrics{grid-template-columns:1fr 1fr}
+  .overall-gate{grid-template-columns:1fr}
+  .gate-chain{justify-content:flex-start}
+  .qa-row{grid-template-columns:1fr 34px 1fr 78px}
+  .qa-question{grid-column:1 / -1}
+  .quest-summary{grid-template-columns:1fr 1fr}
+  .balance-card.combined{grid-column:1 / -1}
+  .log-details summary{padding:var(--space-4)}
+  .terminal{margin:0 var(--space-4) var(--space-4)}
+  .footer{display:block}
+  .ifeval-brief{grid-template-columns:1fr}
+  .result-cell::before{display:inline;content:attr(data-label)}
+  .qa-checks{grid-template-columns:1fr}
+  .footer-actions{margin-top:var(--space-2)}
+  .button-row-end{margin-left:0}
+}
+</style>
+</head>
+<body>
+<main class="app" id="app" data-active-bench="ragas" data-lang="pl" data-run-state="ready">
+  <header class="topbar">
+    <div class="brand">
+      <img src="quantica-q-mark-black.png" alt="Quantica Lab">
+      <div class="brand-copy">
+        <h1>BenchSim</h1>
+        <p data-t="appSubtitle"></p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="model-chip" id="ai-chip" data-action="ai-settings" type="button" aria-label="Local mode">
+        <span class="model-dot"></span>
+        <span class="model-text"></span>
+      </button>
+      <div class="lang-group" role="group" aria-label="Language">
+        <button type="button" data-lang="pl">PL</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs-wrap">
+    <nav class="tabs" id="tabs" aria-label="Evaluation methods"></nav>
+  </div>
+
+  <section id="method-root"></section>
+
+  <section id="qa-root" hidden></section>
+
+  <footer class="footer">
+    <span id="footer-note"></span>
+    <span class="footer-actions"><span id="shortcuts-note"></span><button class="link-button" id="qa-toggle" type="button"></button></span>
+  </footer>
+  <div class="visually-hidden" aria-live="polite" id="live"></div>
+</main>
+
+<dialog id="ai-dialog"></dialog>
+
+<script>
+"use strict";
+
+// ─── Constants ───
+
+const BENCHES = [
+  { id:"ragas", name:"RAGAS", number:"1" },
+  { id:"ifeval", name:"IFEval", number:"2" },
+  { id:"questeval", name:"QuestEval", number:"3" }
+];
+
+// Scenario order per bench — drives the "R" shortcut and the preset bar.
+const PRESET_ORDER = {
+  ragas:["good","noise","halluc"],
+  ifeval:["good","miss","markdown","tail"],
+  questeval:["full","missing","halluc"]
+};
+
+// IFEval: size of the original released benchmark, for scale context.
+const IFEVAL_ORIGINAL = { prompts:541, types:25 };
+
+const T = {
+  pl:{
+    appSubtitle:"interaktywny symulator metod ewaluacji RAG",
+    footer:"Symulacja edukacyjna – uproszczone, jawne proxy zamiast pełnych implementacji benchmarków.",
+    shortcuts:"Skróty: 1–3 metody · Ctrl/⌘ + Enter oblicza · R zmienia scenariusz",
+    qaShow:"Pokaż testy",qaHide:"Ukryj testy",qaTitle:"Wbudowane testy kontraktu",
+    learning:"Tryb edukacyjny",proxy:"To jawne, deterministyczne przybliżenie. Pokazuje mechanizm i ślad dowodowy, nie odtwarza pełnego benchmarku.",
+    scenarios:"Scenariusze",changed:"Co się zmienia:",run:"Oblicz wynik",calculation:"Logi systemowe",inputs:"Dane wejściowe",
+    question:"Pytanie",context:"Kontekst",answer:"Odpowiedź",source:"Tekst źródłowy",target:"Tekst docelowy",
+    ragasQuestion:"Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
+    ragasGood:"Przykładowe pytanie",ragasNoise:"Szum w kontekście",ragasHalluc:"Halucynacja",
+    ragasGoodChange:"Twierdzenia odpowiedzi mają źródła, ale context recall ujawnia, że retriever nie znalazł faktu o bezpłatności z wzorcowej odpowiedzi.",ragasNoiseChange:"Dodatkowy fragment obniża trafność kontekstu, ale nie uziemienie odpowiedzi.",ragasHallucChange:"Zdanie złożone spójnikiem „i” rozbija się na dwa twierdzenia – oba bez źródła.",
+    evidenceMap:"Mapa dowodów",evidenceSub:"Każde twierdzenie odpowiedzi wskazuje konkretne fragmenty, które je wspierają. To ocena generatora.",
+    evidenceGoldSub:"Ile twierdzeń wzorcowej odpowiedzi ma pokrycie w wyszukanym kontekście? To ocena retrievera.",
+    mapAnswer:"Kontekst ↔ odpowiedź",mapGold:"Kontekst ↔ wzorcowa odpowiedź",
+    retriever:"Retriever",generator:"Generator",
+    retrieverDesc:"Czy wyszukane fragmenty są trafne i kompletne?",generatorDesc:"Czy odpowiedź trzyma się wyszukanych fragmentów?",
+    cmpContext:"kontekst",cmpQuestion:"pytanie",cmpAnswer:"odpowiedź",cmpGold:"wzorzec",cmpAnd:"i",
+    zoneGoldTitle:"Zbiór ewaluacyjny",zoneGoldSub:"przygotowane z góry przez anotatora – to miara, nie wynik",
+    zoneSysTitle:"Przebieg systemu",zoneSysSub:"to wygenerował oceniany system RAG – to podlega ocenie",
+    originGold:"WZORZEC",originSys:"SYSTEM",
+    useful:"użyteczny",redundant:"zbędny",coversGold:"wspiera wzorzec",unusedGold:"zbędny dla wzorca",supported:"wspierane",unsupported:"niewspierane",fragment:"Kontekst",claim:"Twierdzenie",gold:"Wzorcowa odpowiedź",
+    contextRel:"Context relevance",contextRecall:"Context recall",faithfulness:"Faithfulness",usefulFragments:"użyteczne fragmenty",supportedClaims:"wspierane twierdzenia",goldClaimsInContext:"twierdzenia wzorca w kontekście",
+    clauseNote:"Twierdzenia rozbijamy na zdania, średniki i spójniki (i / oraz / ale), żeby zdanie mieszające prawdę z fałszem nie przeszło w całości.",
+    ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
+    ifevalPrompt:"Odpowiedz na pytanie: Jak założyć profil zaufany?",
+    ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalMarkdown:"Pogrubienie w słowie",ifevalTail:"Dopisek na końcu",
+    ifevalGoodChange:"Każda instrukcja przechodzi; bramka AND zalicza cały prompt.",
+    ifevalMissChange:"Brak jednego wymaganego terminu oblewa prompt mimo wysokiego wyniku instruction-level.",
+    ifevalMarkdownChange:"„bez**płatna**” rozpada się na „bez platna”: wymagany termin znika, a zakazany „płatna” się pojawia. Loose usuwa gwiazdki i odzyskuje wynik – naprawiony false negative.",
+    ifevalTailChange:"Zakazane twierdzenie stoi w ostatniej linii, którą loose usuwa. Odpowiedź nadal je zawiera, więc loose zalicza ją fałszywie – to false positive.",
+    userPrompt:"Prompt użytkownika",userPromptSub:"Samo pytanie użytkownika — bez żadnych warunków.",annotationTitle:"Karta anotatora",annotationSub:"Rekord zbioru ewaluacyjnego: wszystko, czego anotator wymaga od dobrej odpowiedzi.",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    allMust:"Wszystkie instrukcje muszą przejść jednocześnie.",
+    cInclude:"Uwzględnij wymagane terminy",cExclude:"Nie używaj zakazanych terminów",cCitations:"Zacytuj obie podstawy prawne",
+    instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
+    found:"znaleziono",notFound:"nie znaleziono",absent:"brak zakazanej frazy",present:"znaleziono zakazaną frazę",
+    looseNote:"Wariant loose sprawdza 8 przekształceń odpowiedzi (usunięcie gwiazdek × pierwszej linii × ostatniej linii) i zalicza warunek, jeśli spełnia go którekolwiek z nich – tak jak oficjalna implementacja IFEval.",
+    scaleNote:"Oryginalny IFEval: {p} promptów i {t} typów instrukcji. Tutaj: {n} instrukcji w jednym prompcie.",
+    questQuestion:"Czy tekst docelowy zachowuje informacje źródła bez dodawania nowych twierdzeń?",questFull:"Pełne pokrycie",questMissing:"Pominięty fakt",questHalluc:"Dodana halucynacja",
+    questFullChange:"Oba kierunki QA przechodzą: treść jest kompletna i uziemiona.",questMissingChange:"Kierunek źródło → cel ujawnia utraconą informację.",questHallucChange:"Kierunek cel → źródło ujawnia twierdzenie bez pokrycia.",
+    scope:"Zakres proxy: zamknięty zestaw 5 faktów źródłowych i 1 kontrolowanej halucynacji – tyle pytań na tekst generuje PLainBench.",
+    forward:"Źródło → cel",forwardSub:"Czy ważne informacje zostały zachowane?",backward:"Cel → źródło",backwardSub:"Czy każde rozpoznane twierdzenie ma pokrycie?",
+    qaQuestion:"Pytanie QA",sourceAnswer:"W tekście źródłowym",targetAnswer:"W tekście docelowym",outcome:"Wynik",
+    completeness:"Completeness",groundedness:"Faithfulness",combined:"Wynik łączny",noClaims:"Brak rozpoznanych twierdzeń – wynik N/A",missingInfo:"brak informacji",matchedPhrase:"dopasowana fraza",
+    qOnline:"Czy profil można założyć online?",qRequest:"Czy trzeba złożyć wniosek?",qIdentity:"Czy trzeba potwierdzić tożsamość?",qOffice:"Gdzie można ją potwierdzić?",qCost:"Ile kosztuje usługa?",qApp:"Czy aplikacja mObywatel jest wymagana?",
+    references:"Źródła scenariusza: aktualne informacje o Profilu Zaufanym oraz akty prawne",
+    aiTitle:"Tryb lokalny",aiBody:"Ta wersja nie wywołuje żadnego modelu i nie przechowuje kluczy API. Wszystkie wyniki są liczone deterministycznie w przeglądarce i mają widoczny ślad dowodowy.",
+    localMode:"Tryb lokalny",close:"Zamknij",ready:"Gotowe",updated:"Wynik zaktualizowany",testPass:"PASS",testFail:"FAIL"
+  },
+  en:{
+    appSubtitle:"interactive simulator of RAG evaluation methods",
+    footer:"Educational simulation – explicit simplified proxies, not full benchmark implementations.",
+    shortcuts:"Shortcuts: 1–3 methods · Ctrl/⌘ + Enter evaluates · R changes scenario",
+    qaShow:"Show tests",qaHide:"Hide tests",qaTitle:"Built-in contract tests",
+    learning:"Learning mode",proxy:"This is an explicit deterministic approximation. It demonstrates the mechanism and evidence trail, not the full benchmark.",
+    scenarios:"Scenarios",changed:"What changes:",run:"Evaluate",calculation:"System logs",inputs:"Inputs",
+    question:"Question",context:"Context",answer:"Answer",source:"Source text",target:"Target text",
+    ragasQuestion:"Are the answer's claims grounded in the retrieved sources?",
+    ragasGood:"Sample question",ragasNoise:"Context noise",ragasHalluc:"Hallucination",
+    ragasGoodChange:"The answer's claims have sources, but context recall reveals the retriever missed the reference-answer fact about the service being free.",ragasNoiseChange:"An extra fragment lowers context relevance without changing answer grounding.",ragasHallucChange:"A sentence joined by “and” splits into two claims – both without a source.",
+    evidenceMap:"Evidence map",evidenceSub:"Each answer claim points to the exact fragments that support it. This scores the generator.",
+    evidenceGoldSub:"How many claims of the reference answer are covered by the retrieved context? This scores the retriever.",
+    mapAnswer:"Context ↔ answer",mapGold:"Context ↔ reference answer",
+    retriever:"Retriever",generator:"Generator",
+    retrieverDesc:"Are the retrieved fragments relevant and complete?",generatorDesc:"Does the answer stick to the retrieved fragments?",
+    cmpContext:"context",cmpQuestion:"question",cmpAnswer:"answer",cmpGold:"gold",cmpAnd:"&",
+    zoneGoldTitle:"Evaluation set",zoneGoldSub:"prepared upfront by the annotator – the measure, not the output",
+    zoneSysTitle:"System run",zoneSysSub:"generated by the RAG system under test – this is what gets scored",
+    originGold:"GOLD",originSys:"SYSTEM",
+    useful:"useful",redundant:"redundant",coversGold:"supports gold",unusedGold:"unused by gold",supported:"supported",unsupported:"unsupported",fragment:"Context",claim:"Claim",gold:"Reference answer",
+    contextRel:"Context relevance",contextRecall:"Context recall",faithfulness:"Faithfulness",usefulFragments:"useful fragments",supportedClaims:"supported claims",goldClaimsInContext:"gold claims found in context",
+    clauseNote:"Claims are split on sentences, semicolons and coordinating conjunctions (and / or / but) so a sentence mixing a true and a false statement cannot pass as a whole.",
+    ifevalQuestion:"Does the answer satisfy every explicit and automatically verifiable constraint?",
+    ifevalPrompt:"Answer the question: how do you set up a profil zaufany?",
+    ifevalGood:"Satisfies all",ifevalMiss:"Misses one",ifevalMarkdown:"Bold inside a word",ifevalTail:"Trailing line",
+    ifevalGoodChange:"Every instruction passes, so the AND gate passes the prompt.",
+    ifevalMissChange:"One missing term fails the prompt despite a high instruction-level score.",
+    ifevalMarkdownChange:"“bez**płatna**” normalises to “bez platna”: the required term disappears and the forbidden “płatna” appears. Loose strips the asterisks and recovers – a repaired false negative.",
+    ifevalTailChange:"The forbidden claim sits on the last line, which loose drops. The answer still contains it, so loose passes it wrongly – a false positive.",
+    userPrompt:"User prompt",userPromptSub:"The user's question on its own — it carries no constraints.",annotationTitle:"Annotator record",annotationSub:"One line of the evaluation set: everything the annotator requires of a good answer.",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    allMust:"Every instruction must pass at the same time.",
+    cInclude:"Include the required terms",cExclude:"Do not use the forbidden terms",cCitations:"Cite both legal acts",
+    instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
+    found:"found",notFound:"not found",absent:"forbidden phrase absent",present:"forbidden phrase found",
+    looseNote:"The loose variant checks 8 transformations of the answer (strip asterisks × drop first line × drop last line) and passes a constraint if any of them satisfies it – as the official IFEval implementation does.",
+    scaleNote:"Original IFEval: {p} prompts across {t} instruction types. Here: {n} instructions in a single prompt.",
+    questQuestion:"Does the target preserve source information without adding unsupported claims?",questFull:"Full coverage",questMissing:"Missing fact",questHalluc:"Added hallucination",
+    questFullChange:"Both QA directions pass: the target is complete and grounded.",questMissingChange:"The source → target direction reveals lost information.",questHallucChange:"The target → source direction reveals an unsupported claim.",
+    scope:"Proxy scope: a closed set of 5 source facts and 1 controlled hallucination – the same number of questions per text that PLainBench generates.",
+    forward:"Source → target",forwardSub:"Were important facts retained?",backward:"Target → source",backwardSub:"Is every recognized claim grounded?",
+    qaQuestion:"QA question",sourceAnswer:"In the source text",targetAnswer:"In the target text",outcome:"Outcome",
+    completeness:"Completeness",groundedness:"Faithfulness",combined:"Combined",noClaims:"No recognized claims – score is N/A",missingInfo:"no information",matchedPhrase:"matched phrase",
+    qOnline:"Can the profile be created online?",qRequest:"Is an application required?",qIdentity:"Must identity be confirmed?",qOffice:"Where can it be confirmed?",qCost:"How much does the service cost?",qApp:"Is the mObywatel app required?",
+    references:"Scenario sources: current Trusted Profile guidance and legal acts",
+    aiTitle:"Local mode",aiBody:"This version calls no model and stores no API keys. Every score is computed deterministically in the browser and exposes its evidence trail.",
+    localMode:"Local mode",close:"Close",ready:"Ready",updated:"Result updated",testPass:"PASS",testFail:"FAIL"
+  }
+};
+
+// ─── Fixtures ───
+
+const RAGAS_CONTEXT_CORE = [
+  "Profil Zaufany można założyć online po złożeniu elektronicznego wniosku.",
+  "Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym.",
+  "Dowód osobisty zawiera fotografię oraz dane posiadacza."
+];
+const RAGAS_QUESTION = "Jak założyć Profil Zaufany i gdzie potwierdzić tożsamość?";
+const RAGAS_ANSWER_CORE = "Profil Zaufany można założyć online po złożeniu wniosku. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym.";
+// The reference answer scores the retriever: its last claim (bezpłatność) has no
+// supporting fragment in the retrieved context, so context recall stays below 100%.
+// "na przykład" instead of "np." — the clause splitter treats "np." as a sentence end.
+const RAGAS_GOLD = "Profil Zaufany zakłada się online po złożeniu elektronicznego wniosku. Tożsamość potwierdza się w punkcie potwierdzającym, na przykład w urzędzie gminy. Usługa jest bezpłatna.";
+
+const RAGAS_PRESETS = {
+  good:{ question:RAGAS_QUESTION, gold:RAGAS_GOLD, context:[...RAGAS_CONTEXT_CORE], answer:RAGAS_ANSWER_CORE },
+  noise:{
+    question:RAGAS_QUESTION,
+    gold:RAGAS_GOLD,
+    context:[
+      RAGAS_CONTEXT_CORE[0],RAGAS_CONTEXT_CORE[1],
+      "Paszport biometryczny zawiera mikroprocesor. Dowód osobisty zawiera fotografię.",
+      "Wniosek o paszport składa się osobiście."
+    ],
+    answer:RAGAS_ANSWER_CORE
+  },
+  // The added sentence joins two independent false claims with "i" — clause splitting
+  // has to separate them, otherwise one lump sentence would hide half the hallucination.
+  halluc:{ question:RAGAS_QUESTION, gold:RAGAS_GOLD, context:[...RAGAS_CONTEXT_CORE], answer:`${RAGAS_ANSWER_CORE} Profil jest ważny bezterminowo i kosztuje siedemnaście złotych.` }
+};
+
+// ─── IFEval rubric (classic prompt: task + include + exclude + citations + format) ───
+
+const IFEVAL_RUBRIC = {
+  include:[
+    "online|przez internet",
+    "wniosek|wniosku",
+    "tożsamość|tożsamości",
+    "punkcie potwierdzającym|urzędzie gminy|urzędzie skarbowym",
+    "bezpłatnie|bezpłatna|nieodpłatnie"
+  ],
+  exclude:[
+    "14 dni|czternaście dni",
+    "płatna|opłata skarbowa|za opłatą"
+  ],
+  citations:[
+    "Dz.U. 2005 nr 64 poz. 565",
+    "Dz.U. 2020 poz. 1194"
+  ]
+};
+const IFEVAL_RECORD_KEY = 1187;
+
+// Every row names the IFEval instruction id an annotator would write into the eval
+// record; all three exist in the released benchmark. Order here drives the annotator
+// card, the instruction list and the results table alike, so the three views can
+// never drift apart.
+const IFEVAL_CONSTRAINTS = [
+  { id:"include",   label:"cInclude",   dot:"",         iid:"keywords:existence",       kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.include },
+  { id:"citations", label:"cCitations", dot:"citation", iid:"keywords:existence",       kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.citations },
+  { id:"exclude",   label:"cExclude",   dot:"forbid",   iid:"keywords:forbidden_words", kwarg:"forbidden_words", terms:()=>IFEVAL_RUBRIC.exclude }
+];
+
+const IFEVAL_ANSWER_GOOD = "Profil Zaufany założysz online, przez internet — wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub w urzędzie skarbowym, albo zdalnie przez bankowość elektroniczną. Usługa jest bezpłatna. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194.";
+const IFEVAL_ANSWER_MISS = IFEVAL_ANSWER_GOOD.replace(" Usługa jest bezpłatna.","");
+// Emphasis inside a word splits it: "bez**płatna**" normalises to "bez platna", so the
+// required term disappears AND the forbidden term "płatna" appears. Stripping the
+// asterisks restores what the model actually wrote — a false negative loose repairs.
+const IFEVAL_ANSWER_MARKDOWN = IFEVAL_ANSWER_GOOD.replace("bezpłatna","bez**płatna**");
+// The forbidden claim sits on the last line, exactly where loose's dropLast erases it.
+// The answer really does say it, so loose passing here is a false positive.
+const IFEVAL_ANSWER_TAIL = `${IFEVAL_ANSWER_GOOD}\nUwaga: dla firm usługa jest płatna.`;
+
+const IFEVAL_ANSWERS = { good:IFEVAL_ANSWER_GOOD, miss:IFEVAL_ANSWER_MISS, markdown:IFEVAL_ANSWER_MARKDOWN, tail:IFEVAL_ANSWER_TAIL };
+
+// ─── QuestEval fixtures ───
+
+const QUEST_SOURCE = "Profil Zaufany można założyć online. Należy złożyć wniosek i potwierdzić tożsamość. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym. Usługa jest bezpłatna.";
+const QUEST_TARGET_FULL = "Profil Zaufany zakłada się online, składając wniosek. Trzeba potwierdzić tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym. Usługa jest bezpłatna.";
+const QUEST_TARGETS = {
+  full:QUEST_TARGET_FULL,
+  missing:QUEST_TARGET_FULL.replace(" Usługa jest bezpłatna.",""),
+  halluc:`${QUEST_TARGET_FULL} Aplikacja mObywatel jest wymagana.`
+};
+
+// `gold` is what the panel shows a human; `accepted` are the matcher patterns behind it.
+const QUEST_FACTS = [
+  { id:"online",   question:"qOnline",   gold:"online",                                    accepted:["online","przez internet"], origin:"source" },
+  { id:"request",  question:"qRequest",  gold:"wniosek",                                   accepted:["wniosek"], origin:"source" },
+  { id:"identity", question:"qIdentity", gold:"potwierdzić tożsamość",                     accepted:["potwierdzic tozsamosc","potwierdzenie tozsamosci"], origin:"source" },
+  { id:"office",   question:"qOffice",   gold:"punkt potwierdzający · urząd gminy · urząd skarbowy", accepted:["punkt potwierdzajacy","urzad gminy","urzad skarbowy"], minMatches:2, origin:"source" },
+  { id:"free",     question:"qCost",     gold:"bezpłatna",                                 accepted:["bezplatna","bezplatnie","bez oplat"], origin:"source" },
+  { id:"app",      question:"qApp",      gold:"aplikacja mObywatel",                       accepted:["aplikacja mobywatel","mobywatel jest wymagany","wymaga aplikacji mobywatel"], origin:"hallucination" }
+];
+
+// ─── State ───
+
+const state = {
+  activeBench:"ragas",
+  lang:localStorage.getItem("coSimLang") || "pl",
+  runState:"ready",
+  showQa:new URLSearchParams(location.search).get("qa") === "1",
+  preset:{ ragas:"good", ifeval:"miss", questeval:"full" },
+  ragasMap:"answer",
+  values:{
+    ragas:structuredClone(RAGAS_PRESETS.good),
+    ifeval:{ answer:IFEVAL_ANSWER_MISS },
+    questeval:{ source:QUEST_SOURCE, target:QUEST_TARGET_FULL }
+  },
+  results:{},
+  qa:[]
+};
+
+// ─── DOM refs ───
+
+const app = document.querySelector("#app");
+const tabs = document.querySelector("#tabs");
+const methodRoot = document.querySelector("#method-root");
+const qaRoot = document.querySelector("#qa-root");
+const live = document.querySelector("#live");
+const aiDialog = document.querySelector("#ai-dialog");
+
+// ─── Helpers ───
+
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+const t = key => T[state.lang][key] ?? key;
+const fmt = (key,vars) => Object.entries(vars ?? {}).reduce((text,[name,value]) => text.split(`{${name}}`).join(value), t(key));
+// Polish needs three forms (1 / 2-4 / 5+); English just needs a trailing s.
+function plural(count,forms){
+  if(state.lang !== "pl") return count === 1 ? forms[0] : forms[1];
+  const tens = count % 100, units = count % 10;
+  if(count === 1) return forms[0];
+  if(units >= 2 && units <= 4 && (tens < 12 || tens > 14)) return forms[1];
+  return forms[2];
+}
+const instructionCount = count => `${count} ${plural(count,state.lang==="pl"?["instrukcja","instrukcje","instrukcji"]:["instruction","instructions"])}`;
+const clamp = (value,min=0,max=1) => Math.max(min,Math.min(max,value));
+const locale = () => state.lang === "pl" ? "pl-PL" : "en-US";
+const pct = value => value === null || !Number.isFinite(value) ? "N/A" : new Intl.NumberFormat(locale(),{style:"percent",maximumFractionDigits:1}).format(value);
+const announce = message => { live.textContent = ""; requestAnimationFrame(()=>{ live.textContent = message; }); };
+
+function normText(value){
+  return String(value ?? "").toLowerCase().replace(/ł/g,"l").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+}
+
+const STOP_WORDS = new Set("a aby albo and are be czy do dla gdzie how i in is jak jest lub mozna na of po sie the to w with z za oraz".split(" "));
+const STEMS = [
+  [/^zaloz/,"zalozyc"],[/^zaklad/,"zalozyc"],[/^wniosk/,"wniosek"],[/^potwierdz/,"potwierdzic"],[/^tozsamosc/,"tozsamosc"],
+  [/^urzed/,"urzad"],[/^skarbow/,"skarbowy"],[/^bezplat/,"bezplatny"],[/^profil/,"profil"],[/^internet/,"online"]
+];
+
+function tokens(value){
+  return normText(value).split(/\s+/).filter(word => word.length > 2 && !STOP_WORDS.has(word)).map(word => {
+    const match = STEMS.find(([pattern])=>pattern.test(word));
+    return match ? match[1] : word;
+  });
+}
+
+function unique(values){ return [...new Set(values)]; }
+function overlap(left,right){ const set = new Set(right); return unique(left.filter(item=>set.has(item))); }
+
+// QuestEval matches meaning-ish: stem + stop-word aware, so "urzędzie gminy" answers
+// a gold "urząd gminy". IFEval must stay literal, so it uses termPresent() below.
+function phraseMatches(text,phrase){
+  const haystack = ` ${tokens(text).join(" ")} `;
+  const needle = ` ${tokens(phrase).join(" ")} `;
+  return haystack.includes(needle);
+}
+
+// Literal, whole-word term lookup on normalised text. Word boundaries matter: a naive
+// substring test would report the forbidden term "płatna" inside "bezpłatna".
+const TERM_CACHE = new Map();
+function termPattern(term){
+  const normalized = normText(term);
+  if(!normalized) return null;
+  if(!TERM_CACHE.has(normalized)){
+    const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    TERM_CACHE.set(normalized,new RegExp(`(?:^| )${escaped}(?: |$)`));
+  }
+  return TERM_CACHE.get(normalized);
+}
+function termPresent(text,term){
+  const pattern = termPattern(term);
+  return Boolean(pattern) && pattern.test(normText(text));
+}
+
+function factPresent(text,fact){
+  const hits = fact.accepted.filter(item=>phraseMatches(text,item)).length;
+  return hits >= (fact.minMatches || 1);
+}
+function factEvidence(text,fact){ return fact.accepted.filter(item=>phraseMatches(text,item)).join(" · "); }
+
+function captureInputs(){
+  if(state.activeBench === "ragas"){
+    state.values.ragas.question = document.querySelector("#r-question")?.value ?? "";
+    state.values.ragas.gold = document.querySelector("#r-gold")?.value ?? "";
+    state.values.ragas.answer = document.querySelector("#r-answer")?.value ?? "";
+    state.values.ragas.context = [...document.querySelectorAll("[data-r-context]")].map(node=>node.value);
+  } else if(state.activeBench === "ifeval"){
+    state.values.ifeval.answer = document.querySelector("#i-answer")?.value ?? "";
+  } else {
+    state.values.questeval.source = document.querySelector("#q-source")?.value ?? "";
+    state.values.questeval.target = document.querySelector("#q-target")?.value ?? "";
+  }
+}
+
+// ─── Evaluation engines ───
+
+// Split an answer into individual claims at sentence ends, semicolons and coordinating
+// conjunctions. Without the conjunction split a mixed sentence such as
+// "jest bezterminowy i kosztuje 17 zł" would be scored as a single claim and could
+// inherit support from its true half. Ported from deep_sim.
+function claimClauses(text){
+  return String(text)
+    .split(/(?<=[.!?;])\s+|\s+(?:i|oraz|ale)\s+/)
+    .map(part => part.trim().replace(/[.;!?]+$/,"").trim())
+    .filter(Boolean);
+}
+
+// Shared by the model answer (faithfulness) and the reference answer (context recall):
+// split a text into claims and look for supporting fragments in the retrieved context.
+function matchAgainstContexts(text,contexts){
+  return claimClauses(text).map((claimText,index)=>{
+    const claimTokens = unique(tokens(claimText));
+    const matches = contexts.map((context,contextIndex)=>({contextIndex,terms:overlap(claimTokens,context.tokens)}))
+      .filter(match=>match.terms.length >= Math.min(2,Math.max(1,claimTokens.length)));
+    return { index,text:claimText,tokens:claimTokens,matches,supported:matches.length>0 };
+  });
+}
+
+function evaluateRagas(values){
+  const contexts = values.context.map(text=>({text,tokens:tokens(text)})).filter(item=>item.text.trim());
+  const questionTokens = unique(tokens(values.question));
+  const claims = matchAgainstContexts(values.answer,contexts);
+  const goldClaims = matchAgainstContexts(values.gold ?? "",contexts);
+  const fragments = contexts.map((context,index)=>{
+    const claimIds = claims.filter(claim=>claim.matches.some(match=>match.contextIndex===index)).map(claim=>claim.index);
+    const goldIds = goldClaims.filter(claim=>claim.matches.some(match=>match.contextIndex===index)).map(claim=>claim.index);
+    const goldTerms = unique(goldClaims.flatMap(claim=>claim.matches.filter(match=>match.contextIndex===index).flatMap(match=>match.terms)));
+    const questionTerms = overlap(context.tokens,questionTokens);
+    // A fragment counts as useful when it either matches the question or actually
+    // grounds a claim — otherwise the map could label a cited fragment "redundant".
+    return { index,text:context.text,claimIds,goldIds,goldTerms,questionTerms,useful:claimIds.length>0 || questionTerms.length>=2 };
+  });
+  const usefulCount = fragments.filter(item=>item.useful).length;
+  const supportedCount = claims.filter(item=>item.supported).length;
+  const goldSupportedCount = goldClaims.filter(item=>item.supported).length;
+  return {
+    empty:!values.question.trim() || !values.answer.trim() || !contexts.length,
+    fragments,claims,goldClaims,questionTokens,usefulCount,supportedCount,goldSupportedCount,
+    contextRelevance:fragments.length ? usefulCount/fragments.length : 0,
+    contextRecall:goldClaims.length ? goldSupportedCount/goldClaims.length : null,
+    faithfulness:claims.length ? supportedCount/claims.length : 0
+  };
+}
+
+// ─── IFEval ───
+
+function groupTerms(group){ return group.split("|").map(item=>item.trim()).filter(Boolean); }
+
+// One rubric row can carry several independent instructions (one per term group).
+// Instruction-level accuracy is counted over those, matching IFEval's own granularity.
+function ifevalInstructions(){
+  return IFEVAL_CONSTRAINTS.flatMap(constraint=>constraint.terms().map(group=>({
+    constraint:constraint.id, group, label:groupTerms(group).join(" / ")
+  })));
+}
+
+function checkInstruction(instruction,answer){
+  if(instruction.constraint==="include"){
+    const hit=groupTerms(instruction.group).find(term=>termPresent(answer,term));
+    return { pass:Boolean(hit), evidence:hit || t("notFound") };
+  }
+  if(instruction.constraint==="exclude"){
+    const hit=groupTerms(instruction.group).find(term=>termPresent(answer,term));
+    return { pass:!hit, evidence:hit ? `${t("present")}: ${hit}` : t("absent") };
+  }
+  const pass=termPresent(answer,instruction.group);
+  return { pass, evidence:pass ? instruction.group : t("notFound") };
+}
+
+// The official IFEval loose score tries the answer plus every combination of three
+// repairs — strip Markdown asterisks, drop the first line, drop the last line — and
+// accepts an instruction if any of the 8 variants satisfies it.
+function answerVariants(answer){
+  const stripMarkdown=text=>text.replace(/\*/g,"");
+  const dropFirst=text=>text.split("\n").slice(1).join("\n").trim();
+  const dropLast=text=>text.split("\n").slice(0,-1).join("\n").trim();
+  const variants=[];
+  for(const md of [false,true]) for(const first of [false,true]) for(const last of [false,true]){
+    let variant=answer;
+    if(md) variant=stripMarkdown(variant);
+    if(first) variant=dropFirst(variant);
+    if(last) variant=dropLast(variant);
+    variants.push(variant);
+  }
+  return variants;
+}
+
+function evaluateIfeval(answer){
+  const variants=answerVariants(answer);
+  const scored=ifevalInstructions().map(instruction=>{
+    const strict=checkInstruction(instruction,answer);
+    const loosePass=variants.some(variant=>checkInstruction(instruction,variant).pass);
+    return { ...instruction, strict, loose:{ pass:loosePass } };
+  });
+  const rows=IFEVAL_CONSTRAINTS.map(constraint=>{
+    const items=scored.filter(item=>item.constraint===constraint.id);
+    return { ...constraint, items, strictPass:items.every(item=>item.strict.pass), loosePass:items.every(item=>item.loose.pass) };
+  });
+  const strictPassed=scored.filter(item=>item.strict.pass).length;
+  const loosePassed=scored.filter(item=>item.loose.pass).length;
+  return {
+    rows,instructions:scored,total:scored.length,strictPassed,loosePassed,
+    strictInstr:scored.length ? strictPassed/scored.length : 1,
+    strictPrompt:strictPassed===scored.length ? 1 : 0,
+    looseInstr:scored.length ? loosePassed/scored.length : 1,
+    loosePrompt:loosePassed===scored.length ? 1 : 0,
+    annotation:ifevalAnnotation()
+  };
+}
+
+// One line of the eval set, in the shape the IFEval release uses: the prompt as the
+// user typed it, plus a parallel instruction_id_list / kwargs pair the checker reads.
+// Built from IFEVAL_RUBRIC, so what the card shows is literally what gets checked.
+function ifevalAnnotation(){
+  const prompt=t("ifevalPrompt");
+  const kwargs=constraint=>({
+    [constraint.kwarg]:constraint.terms().map(group=>{ const alts=groupTerms(group); return alts.length>1 ? alts : alts[0]; })
+  });
+  return {
+    key:IFEVAL_RECORD_KEY,
+    prompt:prompt.length>72 ? `${prompt.slice(0,72).trimEnd()}…` : prompt,
+    instruction_id_list:IFEVAL_CONSTRAINTS.map(constraint=>constraint.iid),
+    kwargs:IFEVAL_CONSTRAINTS.map(kwargs)
+  };
+}
+
+// Fill-style JSON printer: anything that fits on one line stays on one line, so the
+// term groups read as ["online", "przez internet"] instead of six lines each.
+function inlineJson(value){
+  if(Array.isArray(value)) return `[${value.map(inlineJson).join(", ")}]`;
+  if(value && typeof value === "object") return `{${Object.entries(value).map(([key,item])=>`${JSON.stringify(key)}: ${inlineJson(item)}`).join(", ")}}`;
+  return JSON.stringify(value);
+}
+function compactJson(value,indent=""){
+  const inline=inlineJson(value);
+  if(typeof value !== "object" || value === null || indent.length+inline.length <= 84) return inline;
+  const pad=`${indent}  `;
+  const body=Array.isArray(value)
+    ? value.map(item=>pad+compactJson(item,pad))
+    : Object.entries(value).map(([key,item])=>`${pad}${JSON.stringify(key)}: ${compactJson(item,pad)}`);
+  return `${Array.isArray(value)?"[":"{"}\n${body.join(",\n")}\n${indent}${Array.isArray(value)?"]":"}"}`;
+}
+
+// Minimal JSON colouring: keys first, then string values. Escaping runs before the
+// regexes, so the patterns match on &quot; and can never re-enter an inserted span.
+function highlightJson(value){
+  return escapeHtml(compactJson(value))
+    .replace(/&quot;((?:(?!&quot;)[\s\S])*?)&quot;(\s*:)/g,'<span class="json-key">&quot;$1&quot;</span>$2')
+    .replace(/([:[,]\s*)&quot;((?:(?!&quot;)[\s\S])*?)&quot;/g,'$1<span class="json-string">&quot;$2&quot;</span>');
+}
+
+// ─── QuestEval ───
+
+function evaluateQuest(values){
+  const describe=(text,fact)=>factEvidence(text,fact) || t("missingInfo");
+  const sides=fact=>{
+    const sourceHas=factPresent(values.source,fact), targetHas=factPresent(values.target,fact);
+    return { sourceHas,targetHas,sourceEvidence:describe(values.source,fact),targetEvidence:describe(values.target,fact) };
+  };
+  const sourceFacts=QUEST_FACTS.filter(fact=>fact.origin==="source" && factPresent(values.source,fact));
+  const forward=sourceFacts.map(fact=>({...fact,...sides(fact),found:factPresent(values.target,fact)}));
+  const presentTarget=QUEST_FACTS.filter(fact=>factPresent(values.target,fact));
+  const backward=presentTarget.map(fact=>({...fact,...sides(fact),found:factPresent(values.source,fact)}));
+  const completeness=forward.length?forward.filter(fact=>fact.found).length/forward.length:null;
+  const faithfulness=backward.length?backward.filter(fact=>fact.found).length/backward.length:null;
+  const combined=completeness===null||faithfulness===null||completeness+faithfulness===0?null:2*completeness*faithfulness/(completeness+faithfulness);
+  return {forward,backward,completeness,faithfulness,combined};
+}
+
+// ─── Render helpers ───
+
+function methodHeader(title,question){
+  return `<header class="method-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span>${t("learning")}</div><h2 class="method-title">${title}</h2><p class="method-answer">${t(question)}</p>${scenarioSources()}</div><aside class="mode-note"><strong>${t("learning")}</strong>${t("proxy")}</aside></header>`;
+}
+
+function presetBar(){
+  const bench=state.activeBench;
+  const active=state.preset[bench];
+  const items=PRESET_ORDER[bench].map(id=>`<button class="preset ${active===id?"active":""}" type="button" data-action="preset" data-preset="${id}" aria-pressed="${active===id}">${t(PRESET_META[bench][id][0])}</button>`).join("");
+  return `<div class="preset-bar"><div class="preset-set" aria-label="${t("scenarios")}">${items}</div><div class="change-note"><strong>${t("changed")}</strong> ${t(PRESET_META[bench][active][1])}</div></div>`;
+}
+
+const PRESET_META = {
+  ragas:{ good:["ragasGood","ragasGoodChange"], noise:["ragasNoise","ragasNoiseChange"], halluc:["ragasHalluc","ragasHallucChange"] },
+  ifeval:{ good:["ifevalGood","ifevalGoodChange"], miss:["ifevalMiss","ifevalMissChange"], markdown:["ifevalMarkdown","ifevalMarkdownChange"], tail:["ifevalTail","ifevalTailChange"] },
+  questeval:{ full:["questFull","questFullChange"], missing:["questMissing","questMissingChange"], halluc:["questHalluc","questHallucChange"] }
+};
+
+function logDetails(content){
+  return `<details class="log-details" data-calculation-log><summary>${t("calculation")}</summary><pre class="terminal">${escapeHtml(content)}</pre></details>`;
+}
+
+function note(kind,text){
+  return `<div class="scope-note ${kind}"><span aria-hidden="true">ⓘ</span><span>${text}</span></div>`;
+}
+
+// `key` stays language-independent so DOM contract selectors survive a PL/EN switch;
+// `label` is the human-facing (translated) heading.
+function metricCard(key,label,value,ratio,group="",compare=""){
+  const width=value===null?0:Math.round(clamp(value)*100);
+  return `<section class="summary-card metric-card" data-metric="${key}" data-value="${value===null?"na":value.toFixed(4)}">${group?`<div class="metric-group-label">${group}</div>`:""}<h3>${escapeHtml(label)}</h3><div class="metric-value">${pct(value)}</div><div class="ratio">${escapeHtml(ratio)}</div>${compare?`<div class="compare-note">${compare}</div>`:""}<div class="neutral-track" aria-hidden="true"><div class="neutral-fill" style="width:${width}%"></div></div></section>`;
+}
+
+function status(pass){ return `<span class="status ${pass?"pass":"fail"}">${pass?t("testPass"):t("testFail")}</span>`; }
+
+function scenarioSources(){
+  return `<p class="source-note">${t("references")}: <a href="https://www.gov.pl/web/profilzaufany/najczesciej-zadawane-pytania2" target="_blank" rel="noreferrer">gov.pl</a> · <a href="https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20200001194" target="_blank" rel="noreferrer">ISAP</a></p>`;
+}
+
+function shell(id,body,log,extra=""){
+  return `<article class="method-shell" data-sim-id="${id}" data-sim-state="${state.runState}" data-preset="${state.preset[id]}"${extra}>${methodHeader(SHELL_TITLES[id],SHELL_QUESTIONS[id])}${presetBar()}<div class="canvas">${body}</div>${logDetails(log)}</article>`;
+}
+
+const SHELL_TITLES = { ragas:"RAGAS", ifeval:"IFEval", questeval:"QuestEval" };
+const SHELL_QUESTIONS = { ragas:"ragasQuestion", ifeval:"ifevalQuestion", questeval:"questQuestion" };
+
+// ─── RAGAS ───
+
+// Origin marking (proposition 1: colour zones): amber = evaluation-set data prepared
+// by an annotator, blue = organic output of the RAG system under test.
+const dot=origin=>`<span class="dot ${origin}" aria-hidden="true"></span>`;
+const originChip=origin=>`<span class="origin ${origin}">${t(origin==="gold"?"originGold":"originSys")}</span>`;
+const cap=text=>text.charAt(0).toUpperCase()+text.slice(1);
+
+function renderRagas(){
+  const values=state.values.ragas; const result=state.results.ragas || evaluateRagas(values);
+  const mode=state.ragasMap;
+  const mapClaims=mode==="gold"?result.goldClaims:result.claims;
+  const prefix=mode==="gold"?"G":"C";
+  const linkIds=fragment=>mode==="gold"?fragment.goldIds:fragment.claimIds;
+  // In gold mode the fragment cards argue about recall: which gold claims a fragment
+  // grounds and through which shared terms — not about question relevance.
+  const fragments=result.fragments.map(fragment=>{
+    const used=mode==="gold"?fragment.goldIds.length>0:fragment.useful;
+    const terms=mode==="gold"?fragment.goldTerms:fragment.questionTerms;
+    const badge=mode==="gold"?(used?t("coversGold"):t("unusedGold")):(fragment.useful?t("useful"):t("redundant"));
+    return `<article class="fragment ${used?"":"dimmed"}" data-fragment="${fragment.index+1}" data-used="${fragment.useful}" data-supports-gold="${fragment.goldIds.length>0}"><div class="fragment-head"><b>${t("fragment")} ${fragment.index+1}</b><span class="status ${used?"info":"warn"}">${badge}</span></div><p>${escapeHtml(fragment.text)}</p><div class="match-words">${terms.length?escapeHtml(terms.join(" · ")):"∅"}</div><div class="evidence-link">${linkIds(fragment).length?`→ ${prefix}${linkIds(fragment).map(index=>index+1).join(`, ${prefix}`)}`:"→ ∅"}</div></article>`;
+  }).join("");
+  const claimCards=mapClaims.map(claim=>`<article class="claim ${claim.supported?"":"unsupported"}" data-${mode==="gold"?"gold-claim":"claim"}="${claim.index+1}" data-supported="${claim.supported}"><div class="claim-head"><b>${mode==="gold"?`${originChip("gold")} G${claim.index+1}`:`${t("claim")} C${claim.index+1}`}</b>${status(claim.supported)}</div><p>${escapeHtml(claim.text)}</p><div class="evidence-ref">${claim.matches.length?claim.matches.map(match=>`<span>K${match.contextIndex+1}: ${escapeHtml(match.terms.join(" · "))}</span>`).join(""):`<span>${t("notFound")}</span>`}</div></article>`).join("");
+  const mapBtn=(id,label)=>`<button class="map-mode ${mode===id?"active":""}" type="button" data-action="map-mode" data-map="${id}" aria-pressed="${mode===id}">${label}</button>`;
+  const mapToggle=`<div class="map-toggle" role="group" aria-label="${t("evidenceMap")}">${mapBtn("answer",`${dot("sys")}${cap(t("cmpContext"))} ↔ ${dot("sys")}${t("cmpAnswer")}`)}${mapBtn("gold",`${dot("sys")}${cap(t("cmpContext"))} ↔ ${dot("gold")}${t("gold").toLowerCase()}`)}</div>`;
+  const cmpRel=`${dot("sys")}${t("cmpContext")} ↔ ${dot("gold")}${t("cmpQuestion")} ${t("cmpAnd")} ${dot("sys")}${t("cmpAnswer")}`;
+  const cmpRecall=`${dot("sys")}${t("cmpContext")} ↔ ${dot("gold")}${t("cmpGold")}`;
+  const cmpFaith=`${dot("sys")}${t("cmpContext")} ↔ ${dot("sys")}${t("cmpAnswer")}`;
+  const goldZone=`<div class="zone zone-gold" data-zone="gold"><div class="zone-head"><h4>${t("zoneGoldTitle")}</h4><p>${t("zoneGoldSub")}</p>${originChip("gold")}</div><div class="zone-grid"><label><span class="input-label">${originChip("gold")}${t("question")}</span><input class="field-control" id="r-question" value="${escapeHtml(values.question)}"></label><label><span class="input-label">${originChip("gold")}${t("gold")}</span><textarea class="field-control" id="r-gold" rows="3">${escapeHtml(values.gold ?? "")}</textarea></label></div></div>`;
+  const sysZone=`<div class="zone zone-sys" data-zone="system"><div class="zone-head"><h4>${t("zoneSysTitle")}</h4><p>${t("zoneSysSub")}</p>${originChip("sys")}</div><div class="zone-grid">${values.context.map((context,index)=>`<label><span class="input-label">${originChip("sys")}${t("context")} ${index+1}</span><textarea class="field-control" id="r-ctx-${index}" data-r-context rows="3">${escapeHtml(context)}</textarea></label>`).join("")}<label class="wide"><span class="input-label">${originChip("sys")}${t("answer")}</span><textarea class="field-control" id="r-answer" rows="4">${escapeHtml(values.answer)}</textarea></label></div></div>`;
+  const recallRatio=result.goldClaims.length?`${result.goldSupportedCount}/${result.goldClaims.length} ${t("goldClaimsInContext")}`:"N/A";
+  const log=`proxy = overlap of canonical content words\nclause split = sentences + ";" + (i | oraz | ale)\ncontext relevance = ${result.usefulCount}/${result.fragments.length}\ncontext recall (gold) = ${result.goldSupportedCount}/${result.goldClaims.length}\nfaithfulness = ${result.supportedCount}/${result.claims.length}`;
+  const body=`<div class="method-layout"><div>${goldZone}${sysZone}<div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></div><aside class="summary-rail"><div class="stage-card" data-stage="retriever"><div class="stage-head"><span class="stage-num">1</span><div><b>${t("retriever")}</b><p>${t("retrieverDesc")}</p></div></div>${metricCard("contextRelevance",t("contextRel"),result.contextRelevance,`${result.usefulCount}/${result.fragments.length} ${t("usefulFragments")}`,"",cmpRel)}${metricCard("contextRecall",t("contextRecall"),result.contextRecall,recallRatio,"",cmpRecall)}</div><div class="stage-card" data-stage="generator"><div class="stage-head"><span class="stage-num">2</span><div><b>${t("generator")}</b><p>${t("generatorDesc")}</p></div></div>${metricCard("faithfulness",t("faithfulness"),result.faithfulness,`${result.supportedCount}/${result.claims.length} ${t("supportedClaims")}`,"",cmpFaith)}</div></aside></div><section class="map-section"><h3 class="section-title">${t("evidenceMap")}</h3>${mapToggle}<p class="section-kicker">${mode==="gold"?t("evidenceGoldSub"):t("evidenceSub")}</p>${result.empty?`<div class="empty-state">${t("notFound")}</div>`:`<div class="evidence-map" data-map-mode="${mode}"><div class="evidence-column">${fragments}</div><div class="connector-list" aria-hidden="true">›</div><div class="claims-column">${claimCards}</div></div>`}${note("",t("clauseNote"))}</section>`;
+  return shell("ragas",body,log);
+}
+
+// ─── IFEval ───
+
+function renderIfeval(){
+  const values=state.values.ifeval; const result=state.results.ifeval || evaluateIfeval(values.answer);
+  const rows=result.rows.map((row,index)=>{
+    const chips=row.items.map(item=>`<span class="instr-chip ${item.strict.pass?"ok":"bad"}" data-instruction="${escapeHtml(item.label)}" data-strict="${item.strict.pass}" data-loose="${item.loose.pass}" title="${escapeHtml(item.strict.evidence)}">${item.strict.pass?"✓":"✗"} ${escapeHtml(item.label)}</span>`).join("");
+    return `<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strictPass}" data-loose="${row.loosePass}"><div class="constraint-name"><span class="category-dot ${row.dot}"></span><span>${index+1}. ${t(row.label)}<em class="instr-count">${row.iid} · ${instructionCount(row.items.length)}</em></span></div><div class="constraint-evidence">${chips}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strictPass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loosePass)}</div></div>`;
+  }).join("");
+  const all=result.strictPrompt===1;
+  const chain=result.rows.map((row,index)=>`<span class="gate-node ${row.strictPass?"":"fail"}" title="${escapeHtml(t(row.label))}">${index+1}</span>${index<result.rows.length-1?`<span class="gate-arrow">∧</span>`:""}`).join("");
+  const metrics=[["strictInstr","instrStrict",result.strictInstr],["strictPrompt","promptStrict",result.strictPrompt],["looseInstr","instrLoose",result.looseInstr],["loosePrompt","promptLoose",result.loosePrompt]];
+  const log=[
+    `strict instruction = ${result.strictPassed}/${result.total}`,
+    `strict prompt = AND(${result.instructions.map(item=>item.strict.pass?1:0).join(",")}) = ${result.strictPrompt}`,
+    `loose  instruction = ${result.loosePassed}/${result.total}`,
+    `loose  prompt = ${result.loosePrompt}`,
+    `loose variants = strip "*" x drop first line x drop last line = 8 candidates`,
+    `term matching is whole-word on normalised text, so "płatna" does not fire inside "bezpłatna"`
+  ].join("\n");
+  const body=`<div class="ifeval-brief"><div class="brief-col"><section><span class="input-label">${t("userPrompt")}</span><p class="section-kicker">${t("userPromptSub")}</p><blockquote class="user-prompt">${escapeHtml(t("ifevalPrompt"))}</blockquote></section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="7">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><div class="brief-col"><section><span class="input-label">${t("annotationTitle")}</span><p class="section-kicker">${t("annotationSub")}</p><pre class="annotation-card method-copy">${highlightJson(result.annotation)}</pre></section></div></div><section class="overall-gate ${all?"pass":"fail"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${result.strictPassed}/${result.total}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([key,label,value])=>`<div class="mini-metric" data-metric="${key}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div>${note("",t("looseNote"))}${note("",fmt("scaleNote",{p:IFEVAL_ORIGINAL.prompts,t:IFEVAL_ORIGINAL.types,n:result.total}))}`;
+  return shell("ifeval",body,log,` data-prompt-pass="${all}"`);
+}
+
+// ─── QuestEval ───
+
+function qaRow(fact){
+  const cell=(has,evidence)=>`<div class="qa-answer ${has?"":"na-cell"}"><b>${escapeHtml(has?fact.gold:t("missingInfo"))}</b><em>${escapeHtml(evidence)}</em></div>`;
+  return `<div class="qa-row ${fact.found?"":"issue-row"}" data-fact="${fact.id}" data-found="${fact.found}"><div class="qa-question">${t(fact.question)}</div>${cell(fact.sourceHas,fact.sourceEvidence)}<div class="qa-arrow" aria-hidden="true">↔</div>${cell(fact.targetHas,fact.targetEvidence)}<div>${status(fact.found)}</div></div>`;
+}
+
+function qaLane(title,subtitle,rows,empty=false){
+  return `<section class="qa-lane" data-lane="${title}"><div class="lane-head"><div><h3>${t(title)}</h3><span>${t(subtitle)}</span></div><span>${rows.length}</span></div><div class="qa-row constraint-row header"><div>${t("qaQuestion")}</div><div>${t("sourceAnswer")}</div><div></div><div>${t("targetAnswer")}</div><div>${t("outcome")}</div></div>${rows.length?rows.map(qaRow).join(""):`<div class="empty-state">${empty?t("noClaims"):t("notFound")}</div>`}</section>`;
+}
+
+function renderQuest(){
+  const values=state.values.questeval; const result=state.results.questeval || evaluateQuest(values);
+  const ratio=(score,rows)=>score===null?"N/A":`${rows.filter(row=>row.found).length}/${rows.length}`;
+  const log=[
+    `forward completeness = ${ratio(result.completeness,result.forward)}`,
+    `backward faithfulness = ${ratio(result.faithfulness,result.backward)}`,
+    `combined harmonic mean = ${pct(result.combined)}`,
+    `Only claims in the declared closed fact set can be detected.`
+  ].join("\n");
+  const body=`<div class="text-pair"><label class="text-card"><span class="input-label">${t("source")}</span><textarea class="field-control" id="q-source" rows="6">${escapeHtml(values.source)}</textarea></label><label class="text-card"><span class="input-label">${t("target")}</span><textarea class="field-control" id="q-target" rows="6">${escapeHtml(values.target)}</textarea></label></div><div class="actions" style="margin-top:calc(var(--space-4) * -1);margin-bottom:var(--space-4)"><button class="button primary" data-action="evaluate">${t("run")}</button></div>${note("",t("scope"))}<div class="qa-lanes">${qaLane("forward","forwardSub",result.forward)}${qaLane("backward","backwardSub",result.backward,true)}</div><div class="quest-summary">${metricCard("completeness",t("completeness"),result.completeness,ratio(result.completeness,result.forward))}${metricCard("groundedness",t("groundedness"),result.faithfulness,ratio(result.faithfulness,result.backward))}<div class="balance-card combined" data-metric="combined" data-value="${result.combined===null?"na":result.combined.toFixed(4)}"><span>${t("combined")}</span><b>${pct(result.combined)}</b><p>${result.combined===null?t("noClaims"):"F1 = 2 × C × F / (C + F)"}</p></div></div>`;
+  return shell("questeval",body,log,` data-combined="${result.combined===null?"na":result.combined.toFixed(4)}"`);
+}
+
+// ─── Render ───
+
+const EVALUATORS = {
+  ragas:()=>evaluateRagas(state.values.ragas),
+  ifeval:()=>evaluateIfeval(state.values.ifeval.answer),
+  questeval:()=>evaluateQuest(state.values.questeval)
+};
+const RENDERERS = { ragas:renderRagas, ifeval:renderIfeval, questeval:renderQuest };
+
+function evaluateActive(announceResult=true){
+  captureInputs();
+  state.runState="evaluated";
+  state.results[state.activeBench]=EVALUATORS[state.activeBench]();
+  renderMethod();
+  if(announceResult) announce(t("updated"));
+}
+
+function renderShell(){
+  document.documentElement.lang=state.lang; app.dataset.activeBench=state.activeBench; app.dataset.lang=state.lang; app.dataset.runState=state.runState;
+  document.querySelector(".brand-copy p").textContent=t("appSubtitle");
+  document.querySelector("#ai-chip .model-text").textContent=t("localMode");
+  document.querySelectorAll("[data-lang]").forEach(button=>button.classList.toggle("active",button.dataset.lang===state.lang));
+  tabs.innerHTML=BENCHES.map(bench=>`<button class="tab ${bench.id===state.activeBench?"active":""}" type="button" role="tab" data-action="bench" data-bench="${bench.id}" aria-selected="${bench.id===state.activeBench}">${bench.name}<span class="tab-number">${bench.number}</span></button>`).join("");
+  document.querySelector("#footer-note").textContent=t("footer");
+  document.querySelector("#shortcuts-note").textContent=t("shortcuts");
+  document.querySelector("#qa-toggle").textContent=state.showQa?t("qaHide"):t("qaShow");
+}
+
+function renderMethod(){
+  methodRoot.innerHTML=RENDERERS[state.activeBench]();
+  app.dataset.runState=state.runState;
+  renderQa();
+}
+
+function runQaTests(){
+  const good=evaluateRagas(RAGAS_PRESETS.good), halluc=evaluateRagas(RAGAS_PRESETS.halluc);
+  const conjunction=evaluateRagas({question:RAGAS_QUESTION,context:["Profil Zaufany wymaga wniosku."],answer:"Profil jest płatny i wymaga wniosku."});
+  const goodIf=evaluateIfeval(IFEVAL_ANSWER_GOOD);
+  const missIf=evaluateIfeval(IFEVAL_ANSWER_MISS);
+  const tail=evaluateIfeval(IFEVAL_ANSWER_TAIL);
+  const markdown=evaluateIfeval(IFEVAL_ANSWER_MARKDOWN);
+  const full=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGETS.full});
+  const missing=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGETS.missing});
+  const hallucQuest=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGETS.halluc});
+  const empty=evaluateQuest({source:QUEST_SOURCE,target:""});
+  return [
+    ["RAGAS: hallucination lowers faithfulness",halluc.faithfulness<good.faithfulness],
+    ["RAGAS: every evidence reference exists",good.claims.every(claim=>claim.matches.every(match=>Boolean(good.fragments[match.contextIndex])))],
+    ["RAGAS: a fragment cited by a claim is never marked redundant",good.fragments.every(fragment=>!fragment.claimIds.length || fragment.useful)],
+    ["RAGAS: 'X i Y' splits into two claims",conjunction.claims.length>=2 && conjunction.claims.some(claim=>!claim.supported)],
+    ["RAGAS: context recall flags the gold fact the retriever missed",good.contextRecall!==null && good.contextRecall<1 && good.goldClaims.some(claim=>!claim.supported)],
+    ["RAGAS: empty reference answer makes context recall N/A",evaluateRagas({...RAGAS_PRESETS.good,gold:""}).contextRecall===null],
+    ["RAGAS: a fragment grounding a gold claim lists the shared terms",good.fragments.every(fragment=>!fragment.goldIds.length || fragment.goldTerms.length>0)],
+    ["IFEval: good answer passes all four metrics",goodIf.strictPrompt===1&&goodIf.loosePrompt===1],
+    ["IFEval: one missing term fails the prompt but not every instruction",missIf.strictPrompt===0&&missIf.strictInstr>0.8],
+    ["IFEval: bold inside a word is a false negative that loose repairs",markdown.strictPrompt===0&&markdown.loosePrompt===1],
+    ["IFEval: bold inside a word breaks a required term and trips a forbidden one",markdown.strictPassed===markdown.total-2],
+    ["IFEval: a trailing forbidden claim is a false positive that loose creates",tail.strictPrompt===0&&tail.loosePrompt===1],
+    ["IFEval: forbidden 'płatna' does not fire inside 'bezpłatna'",evaluateIfeval(IFEVAL_ANSWER_GOOD).rows.find(row=>row.id==="exclude").strictPass],
+    ["QuestEval: missing fact lowers completeness",missing.completeness<full.completeness],
+    ["QuestEval: hallucination lowers faithfulness",hallucQuest.faithfulness<full.faithfulness],
+    ["QuestEval: empty target is N/A",empty.faithfulness===null&&empty.combined===null],
+    ["QuestEval: every row shows a gold answer",full.forward.every(fact=>Boolean(fact.gold))],
+    ["QuestEval: a hallucinated claim shows present in target, absent in source",hallucQuest.backward.some(fact=>fact.id==="app" && fact.targetHas && !fact.sourceHas && !fact.found)]
+  ].map(([name,pass])=>({name,pass}));
+}
+
+function renderQa(){
+  qaRoot.hidden=!state.showQa;
+  // Only run the suite when the panel is visible — it re-simulates four benchmarks.
+  if(!state.showQa){ state.qa=[]; qaRoot.innerHTML=""; return; }
+  state.qa=runQaTests();
+  qaRoot.innerHTML=`<div class="qa-panel" data-tests-total="${state.qa.length}" data-tests-passed="${state.qa.filter(test=>test.pass).length}"><h2>${t("qaTitle")}</h2><div class="qa-checks">${state.qa.map(test=>`<div class="qa-check" data-test-pass="${test.pass}"><span>${escapeHtml(test.name)}</span>${status(test.pass)}</div>`).join("")}</div></div>`;
+}
+
+function render(){ renderShell(); renderMethod(); }
+
+// ─── Presets ───
+
+function applyPreset(id){
+  state.preset[state.activeBench]=id;
+  state.runState="preset";
+  if(state.activeBench==="ragas") state.values.ragas=structuredClone(RAGAS_PRESETS[id]);
+  if(state.activeBench==="ifeval") state.values.ifeval.answer=IFEVAL_ANSWERS[id];
+  if(state.activeBench==="questeval") state.values.questeval={source:QUEST_SOURCE,target:QUEST_TARGETS[id]};
+  state.results[state.activeBench]=EVALUATORS[state.activeBench]();
+  renderMethod();
+  announce(t("updated"));
+}
+
+function openLocalDialog(){
+  aiDialog.innerHTML=`<h2>${t("aiTitle")}</h2><p>${t("aiBody")}</p><div class="actions"><button class="button primary button-row-end" id="ai-close" type="button">${t("close")}</button></div>`;
+  aiDialog.showModal();
+  document.querySelector("#ai-close").addEventListener("click",()=>aiDialog.close(),{once:true});
+}
+
+// ─── Listeners ───
+
+document.addEventListener("click",event=>{
+  const action=event.target.closest("[data-action]");
+  if(action){
+    if(action.dataset.action==="bench"){ captureInputs(); state.activeBench=action.dataset.bench; state.runState="ready"; render(); announce(BENCHES.find(bench=>bench.id===state.activeBench).name); }
+    if(action.dataset.action==="preset") applyPreset(action.dataset.preset);
+    if(action.dataset.action==="map-mode"){ captureInputs(); state.ragasMap=action.dataset.map; renderMethod(); announce(action.dataset.map==="gold"?t("mapGold"):t("mapAnswer")); }
+    if(action.dataset.action==="evaluate") evaluateActive();
+    if(action.dataset.action==="ai-settings") openLocalDialog();
+    return;
+  }
+  const language=event.target.closest("[data-lang]");
+  if(language){ captureInputs(); state.lang=language.dataset.lang; localStorage.setItem("coSimLang",state.lang); state.results={}; render(); announce(t("ready")); }
+});
+
+document.querySelector("#qa-toggle").addEventListener("click",()=>{ state.showQa=!state.showQa; renderShell(); renderQa(); });
+
+document.addEventListener("keydown",event=>{
+  // A focused <button> is not a text field: leaving it out would kill 1–3 / R right
+  // after the user clicks a scenario pill.
+  const editing=event.target.matches("input,textarea,select") || event.target.isContentEditable;
+  if((event.ctrlKey||event.metaKey)&&event.key==="Enter"){ event.preventDefault(); evaluateActive(); return; }
+  if(editing) return;
+  const bench=BENCHES.find(item=>item.number===event.key);
+  if(bench){ state.activeBench=bench.id; state.runState="ready"; render(); announce(bench.name); return; }
+  if(event.key.toLowerCase()==="r"){
+    const order=PRESET_ORDER[state.activeBench];
+    applyPreset(order[(order.indexOf(state.preset[state.activeBench])+1)%order.length]);
+  }
+});
+
+// ─── Init ───
+
+BENCHES.forEach(bench=>{ state.results[bench.id]=EVALUATORS[bench.id](); });
+render();
+</script>
+</body>
+</html>
