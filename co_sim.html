@@ -300,7 +300,14 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
 .axis-range.end{right:0}
 .axis-range.start{left:0}
 .point-label{max-width:120px}
-.ifeval-editor{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr);gap:var(--space-4);margin-bottom:var(--space-5)}
+.ifeval-brief{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-4);align-items:start;margin-bottom:var(--space-5)}
+.brief-col{display:grid;gap:var(--space-4);align-content:start;min-width:0}
+.brief-col .scope-note{margin:0}
+.user-prompt{border:1px solid var(--c-border);border-left:4px solid var(--c-accent);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4);margin:0;font-size:var(--fs-sm);line-height:var(--lh-base)}
+.annotation-card{background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);margin:0;font-family:var(--font-mono);font-size:var(--fs-xs);line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.json-key{color:var(--c-terminal-accent)}
+.json-string{color:#8fd3a8}
+.ext{display:inline-block;border-radius:var(--radius-pill);background:var(--c-violet-soft);color:var(--c-violet);padding:0 .38rem;font-size:var(--fs-xs);font-weight:700}
 .constraint-list{display:grid;gap:var(--space-2)}
 .constraint-chip{display:flex;align-items:flex-start;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);background:var(--c-surface-soft);font-size:var(--fs-xs)}
 .constraint-chip input{margin-top:.2rem;accent-color:var(--c-accent)}
@@ -331,7 +338,7 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
 .control-hint{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-2) 0 0}
 .instr-chip{display:inline-flex;align-items:center;gap:.25rem;border-radius:var(--radius-pill);padding:.16rem .5rem;margin:0 .22rem .22rem 0;font-family:var(--font-mono);font-size:var(--fs-xs);background:var(--c-positive-soft);color:var(--c-positive)}
 .instr-chip.bad{background:var(--c-negative-soft);color:var(--c-negative)}
-.instr-count{display:block;font-style:normal;font-weight:400;color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs);margin-top:.15rem}
+.instr-count{display:block;font-style:normal;font-weight:400;color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs);margin-top:.2rem;overflow-wrap:anywhere}
 .category-dot.format{background:var(--c-violet)}
 .category-dot.length{background:var(--c-positive)}
 .correction-callout.neutral{background:var(--c-surface-raised)}
@@ -389,7 +396,7 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
   .log-details summary{padding:var(--space-4)}
   .terminal{margin:0 var(--space-4) var(--space-4)}
   .footer{display:block}
-  .ifeval-editor{grid-template-columns:1fr}
+  .ifeval-brief{grid-template-columns:1fr}
   .result-cell::before{display:inline;content:attr(data-label)}
   .qa-checks{grid-template-columns:1fr}
   .footer-actions{margin-top:var(--space-2)}
@@ -469,7 +476,7 @@ const T = {
     shortcuts:"Skróty: 1–4 metody · Ctrl/⌘ + Enter oblicza · R zmienia scenariusz",
     qaShow:"Pokaż testy",qaHide:"Ukryj testy",qaTitle:"Wbudowane testy kontraktu",
     learning:"Tryb edukacyjny",proxy:"To jawne, deterministyczne przybliżenie. Pokazuje mechanizm i ślad dowodowy, nie odtwarza pełnego benchmarku.",
-    scenarios:"Scenariusze",changed:"Co się zmienia:",run:"Oblicz wynik",calculation:"Dziennik obliczeń",inputs:"Dane wejściowe",
+    scenarios:"Scenariusze",changed:"Co się zmienia:",run:"Oblicz wynik",calculation:"Logi systemowe",inputs:"Dane wejściowe",
     question:"Pytanie",context:"Fragment kontekstu",answer:"Odpowiedź",source:"Tekst źródłowy",target:"Tekst docelowy",
     ragasQuestion:"Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
     ragasGood:"Dobry przykład",ragasNoise:"Szum w kontekście",ragasHalluc:"Halucynacja",
@@ -490,13 +497,13 @@ const T = {
     truthNote:"„Prawda w puli” to zrealizowana średnia wylosowanych N przykładów, a nie parametr suwaka – właśnie ją szacuje PPI.",
     zoomNote:"Oś przycięta do zakresu danych.",
     ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
-    ifevalTask:"Wyjaśnij, jak założyć Profil Zaufany i gdzie potwierdzić tożsamość.",
+    ifevalPrompt:"Cześć! Przygotowuję krótką notkę dla mieszkańców na stronę urzędu. Wyjaśnij prosto, jak założyć Profil Zaufany i gdzie potwierdzić tożsamość. Napisz, że wniosek składa się online, przez internet, wspomnij o potwierdzeniu tożsamości i wymień miejsca: w punkcie potwierdzającym, w urzędzie gminy albo w urzędzie skarbowym. Zaznacz, że usługa jest bezpłatna, i podaj podstawę prawną: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194. Nie pisz, że coś trwa 14 dni, ani że usługa jest płatna. Zacznij od słów „Profil Zaufany”, nie używaj gwiazdek do wyróżnień i zmieść się w 90 słowach.",
     ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalPreamble:"Wstęp przed odpowiedzią",ifevalMarkdown:"Pogrubienia Markdown",
     ifevalGoodChange:"Każda instrukcja przechodzi; bramka AND zalicza cały prompt.",
     ifevalMissChange:"Brak jednego wymaganego terminu oblewa prompt mimo wysokiego wyniku instruction-level.",
     ifevalPreambleChange:"Wstęp psuje warunek początku odpowiedzi; loose usuwa pierwszą linię i odzyskuje wynik – to naprawiony false negative.",
     ifevalMarkdownChange:"Odpowiedź naprawdę zawiera gwiazdki, ale loose je usuwa i zalicza warunek – to false positive wariantu loose.",
-    builtPrompt:"Zbudowany prompt",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    userPrompt:"Prompt użytkownika",userPromptSub:"Zwykłe polecenie — tak, jak napisałby je człowiek.",annotationTitle:"Karta anotatora",annotationSub:"Jeden rekord zbioru ewaluacyjnego IFEval.",annotationNote:"Rekord powstaje z tej samej rubryki, którą wykonuje checker, więc karta nie może rozjechać się z wynikami. Zagnieżdżona lista, np. [\"online\",\"przez internet\"], znaczy „którykolwiek z wariantów” — w oryginalnym IFEval kwargs.keywords jest listą płaską. Identyfikatory oznaczone {ext} to rozszerzenia tego scenariusza, pozostałe pochodzą z opublikowanego benchmarku.",extension:"rozszerzenie",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Wszystkie instrukcje muszą przejść jednocześnie.",
     cInclude:"Uwzględnij wymagane terminy",cExclude:"Nie używaj zakazanych terminów",cCitations:"Zacytuj obie podstawy prawne",
     cStartsWith:"Zacznij odpowiedź od frazy „{v}”",cNoMarkdown:"Nie używaj znaczników Markdown (*)",cMaxWords:"Użyj maksymalnie {v} słów",
@@ -521,7 +528,7 @@ const T = {
     shortcuts:"Shortcuts: 1–4 methods · Ctrl/⌘ + Enter evaluates · R changes scenario",
     qaShow:"Show tests",qaHide:"Hide tests",qaTitle:"Built-in contract tests",
     learning:"Learning mode",proxy:"This is an explicit deterministic approximation. It demonstrates the mechanism and evidence trail, not the full benchmark.",
-    scenarios:"Scenarios",changed:"What changes:",run:"Evaluate",calculation:"Calculation log",inputs:"Inputs",
+    scenarios:"Scenarios",changed:"What changes:",run:"Evaluate",calculation:"System logs",inputs:"Inputs",
     question:"Question",context:"Context fragment",answer:"Answer",source:"Source text",target:"Target text",
     ragasQuestion:"Are the answer's claims grounded in the retrieved sources?",
     ragasGood:"Good example",ragasNoise:"Context noise",ragasHalluc:"Hallucination",
@@ -542,13 +549,13 @@ const T = {
     truthNote:"“Truth in pool” is the realised mean of the N drawn examples, not the slider parameter – that is exactly what PPI estimates.",
     zoomNote:"Axis cropped to the data range.",
     ifevalQuestion:"Does the answer satisfy every explicit and automatically verifiable constraint?",
-    ifevalTask:"Explain how to create a Trusted Profile and where identity is confirmed. Answer in Polish.",
+    ifevalPrompt:"Hi! I'm putting together a short note for residents on the council website. Explain simply how to set up a Profil Zaufany and where identity is confirmed — answer in Polish. Say the application is filed online, przez internet, mention potwierdzenie tożsamości and name the places: w punkcie potwierdzającym, w urzędzie gminy or w urzędzie skarbowym. Point out that the service is bezpłatna, and cite the legal basis: Dz.U. 2005 nr 64 poz. 565 and Dz.U. 2020 poz. 1194. Don't say anything takes 14 dni, or that the service is płatna. Start with the words “Profil Zaufany”, don't use asterisks for emphasis, and keep it under 90 words.",
     ifevalGood:"Satisfies all",ifevalMiss:"Misses one",ifevalPreamble:"Preamble before the answer",ifevalMarkdown:"Markdown bold",
     ifevalGoodChange:"Every instruction passes, so the AND gate passes the prompt.",
     ifevalMissChange:"One missing term fails the prompt despite a high instruction-level score.",
     ifevalPreambleChange:"The preamble breaks the opening-phrase rule; loose drops the first line and recovers – a repaired false negative.",
     ifevalMarkdownChange:"The answer really does contain asterisks, but loose strips them and passes – a false positive of the loose variant.",
-    builtPrompt:"Built prompt",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    userPrompt:"User prompt",userPromptSub:"An ordinary request, written the way a person would write it.",annotationTitle:"Annotator record",annotationSub:"One line of the IFEval evaluation set.",annotationNote:"The record is generated from the same rubric the checker runs, so the card cannot drift from the results. A nested list such as [\"online\",\"przez internet\"] means “any of these variants” — in the original IFEval kwargs.keywords is a flat list. Ids marked {ext} are extensions added by this scenario; the rest come from the released benchmark.",extension:"extension",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Every instruction must pass at the same time.",
     cInclude:"Include the required terms",cExclude:"Do not use the forbidden terms",cCitations:"Cite both legal acts",
     cStartsWith:"Start the answer with “{v}”",cNoMarkdown:"Do not use Markdown markers (*)",cMaxWords:"Use at most {v} words",
@@ -616,14 +623,20 @@ const IFEVAL_RUBRIC = {
   startsWith:"Profil Zaufany",
   maxWords:90
 };
+const IFEVAL_RECORD_KEY = 1187;
 
+// Every row names the IFEval instruction id an annotator would write into the eval
+// record. Four of them exist in the released benchmark; `custom:true` marks the two
+// this scenario adds, so the card never implies more fidelity than it has.
+// Order here drives the annotator card, the instruction list and the results table
+// alike, so the three views can never drift apart.
 const IFEVAL_CONSTRAINTS = [
-  { id:"include",    label:"cInclude",    kind:"group",  dot:"" },
-  { id:"exclude",    label:"cExclude",    kind:"group",  dot:"forbid" },
-  { id:"citations",  label:"cCitations",  kind:"group",  dot:"citation" },
-  { id:"startsWith", label:"cStartsWith", kind:"atomic", dot:"format" },
-  { id:"noMarkdown", label:"cNoMarkdown", kind:"atomic", dot:"format" },
-  { id:"maxWords",   label:"cMaxWords",   kind:"atomic", dot:"length" }
+  { id:"include",    label:"cInclude",    dot:"",         iid:"keywords:existence",              kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.include },
+  { id:"citations",  label:"cCitations",  dot:"citation", iid:"keywords:existence",              kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.citations },
+  { id:"exclude",    label:"cExclude",    dot:"forbid",   iid:"keywords:forbidden_words",        kwarg:"forbidden_words", terms:()=>IFEVAL_RUBRIC.exclude },
+  { id:"startsWith", label:"cStartsWith", dot:"format",   iid:"startend:start_checker",          kwarg:"phrase",          custom:true, terms:()=>[IFEVAL_RUBRIC.startsWith] },
+  { id:"noMarkdown", label:"cNoMarkdown", dot:"format",   iid:"detectable_format:no_markdown",   kwarg:"markers",         custom:true, terms:()=>["*"] },
+  { id:"maxWords",   label:"cMaxWords",   dot:"length",   iid:"length_constraints:number_words", kwarg:"num_words",       terms:()=>[String(IFEVAL_RUBRIC.maxWords)] }
 ];
 
 const IFEVAL_ANSWER_GOOD = "Profil Zaufany założysz online, przez internet — wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub w urzędzie skarbowym, albo zdalnie przez bankowość elektroniczną. Usługa jest bezpłatna. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194.";
@@ -882,14 +895,9 @@ function groupTerms(group){ return group.split("|").map(item=>item.trim()).filte
 // One rubric row can carry several independent instructions (one per term group).
 // Instruction-level accuracy is counted over those, matching IFEval's own granularity.
 function ifevalInstructions(){
-  const rows=[];
-  IFEVAL_RUBRIC.include.forEach(group=>rows.push({ constraint:"include", label:groupTerms(group).join(" / "), group }));
-  IFEVAL_RUBRIC.exclude.forEach(group=>rows.push({ constraint:"exclude", label:groupTerms(group).join(" / "), group }));
-  IFEVAL_RUBRIC.citations.forEach(term=>rows.push({ constraint:"citations", label:term, group:term }));
-  rows.push({ constraint:"startsWith", label:IFEVAL_RUBRIC.startsWith, group:IFEVAL_RUBRIC.startsWith });
-  rows.push({ constraint:"noMarkdown", label:"*", group:"*" });
-  rows.push({ constraint:"maxWords", label:String(IFEVAL_RUBRIC.maxWords), group:String(IFEVAL_RUBRIC.maxWords) });
-  return rows;
+  return IFEVAL_CONSTRAINTS.flatMap(constraint=>constraint.terms().map(group=>({
+    constraint:constraint.id, group, label:groupTerms(group).join(" / ")
+  })));
 }
 
 function wordCount(answer){ return answer.trim().split(/\s+/).filter(Boolean).length; }
@@ -956,22 +964,53 @@ function evaluateIfeval(answer){
     strictPrompt:strictPassed===scored.length ? 1 : 0,
     looseInstr:scored.length ? loosePassed/scored.length : 1,
     loosePrompt:loosePassed===scored.length ? 1 : 0,
-    builtPrompt:buildIfevalPrompt()
+    annotation:ifevalAnnotation()
   };
 }
 
-function buildIfevalPrompt(){
-  const pl=state.lang==="pl";
-  const join=groups=>groups.map(group=>groupTerms(group).join(pl?" lub ":" or ")).join("; ");
-  const lines=[
-    `${pl?"Uwzględnij w odpowiedzi":"Include in the answer"}: ${join(IFEVAL_RUBRIC.include)}.`,
-    `${pl?"Zacytuj podstawę prawną":"Cite the legal basis"}: ${IFEVAL_RUBRIC.citations.join(", ")}.`,
-    `${pl?"Nie uwzględniaj":"Do not include"}: ${join(IFEVAL_RUBRIC.exclude)}.`,
-    pl?`Zacznij odpowiedź od frazy „${IFEVAL_RUBRIC.startsWith}”.`:`Start the answer with “${IFEVAL_RUBRIC.startsWith}”.`,
-    pl?"Nie używaj znaczników Markdown (gwiazdek).":"Do not use Markdown markers (asterisks).",
-    pl?`Użyj maksymalnie ${IFEVAL_RUBRIC.maxWords} słów.`:`Use at most ${IFEVAL_RUBRIC.maxWords} words.`
-  ];
-  return `${t("ifevalTask")}\n\n${lines.map((line,index)=>`${index+1}. ${line}`).join("\n")}`;
+// One line of the eval set, in the shape the IFEval release uses: the prompt as the
+// user typed it, plus a parallel instruction_id_list / kwargs pair the checker reads.
+// Built from IFEVAL_RUBRIC, so what the card shows is literally what gets checked.
+function ifevalAnnotation(){
+  const prompt=t("ifevalPrompt");
+  const kwargs=constraint=>{
+    const terms=constraint.terms();
+    if(constraint.id==="maxWords") return { num_words:IFEVAL_RUBRIC.maxWords, relation:"less than" };
+    if(constraint.id==="startsWith") return { phrase:IFEVAL_RUBRIC.startsWith };
+    if(constraint.id==="noMarkdown") return { markers:terms };
+    return { [constraint.kwarg]:terms.map(group=>{ const alts=groupTerms(group); return alts.length>1 ? alts : alts[0]; }) };
+  };
+  return {
+    key:IFEVAL_RECORD_KEY,
+    prompt:prompt.length>72 ? `${prompt.slice(0,72).trimEnd()}…` : prompt,
+    instruction_id_list:IFEVAL_CONSTRAINTS.map(constraint=>constraint.iid),
+    kwargs:IFEVAL_CONSTRAINTS.map(kwargs)
+  };
+}
+
+// Fill-style JSON printer: anything that fits on one line stays on one line, so the
+// term groups read as ["online", "przez internet"] instead of six lines each.
+function inlineJson(value){
+  if(Array.isArray(value)) return `[${value.map(inlineJson).join(", ")}]`;
+  if(value && typeof value === "object") return `{${Object.entries(value).map(([key,item])=>`${JSON.stringify(key)}: ${inlineJson(item)}`).join(", ")}}`;
+  return JSON.stringify(value);
+}
+function compactJson(value,indent=""){
+  const inline=inlineJson(value);
+  if(typeof value !== "object" || value === null || indent.length+inline.length <= 84) return inline;
+  const pad=`${indent}  `;
+  const body=Array.isArray(value)
+    ? value.map(item=>pad+compactJson(item,pad))
+    : Object.entries(value).map(([key,item])=>`${pad}${JSON.stringify(key)}: ${compactJson(item,pad)}`);
+  return `${Array.isArray(value)?"[":"{"}\n${body.join(",\n")}\n${indent}${Array.isArray(value)?"]":"}"}`;
+}
+
+// Minimal JSON colouring: keys first, then string values. Escaping runs before the
+// regexes, so the patterns match on &quot; and can never re-enter an inserted span.
+function highlightJson(value){
+  return escapeHtml(compactJson(value))
+    .replace(/&quot;((?:(?!&quot;)[\s\S])*?)&quot;(\s*:)/g,'<span class="json-key">&quot;$1&quot;</span>$2')
+    .replace(/([:[,]\s*)&quot;((?:(?!&quot;)[\s\S])*?)&quot;/g,'$1<span class="json-string">&quot;$2&quot;</span>');
 }
 
 // ─── QuestEval ───
@@ -1103,7 +1142,7 @@ function renderIfeval(){
   const values=state.values.ifeval; const result=state.results.ifeval || evaluateIfeval(values.answer);
   const rows=result.rows.map((row,index)=>{
     const chips=row.items.map(item=>`<span class="instr-chip ${item.strict.pass?"ok":"bad"}" data-instruction="${escapeHtml(item.label)}" data-strict="${item.strict.pass}" data-loose="${item.loose.pass}" title="${escapeHtml(item.strict.evidence)}">${item.strict.pass?"✓":"✗"} ${escapeHtml(item.label)}</span>`).join("");
-    return `<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strictPass}" data-loose="${row.loosePass}"><div class="constraint-name"><span class="category-dot ${row.dot}"></span><span>${index+1}. ${constraintLabel(row)}<em class="instr-count">${instructionCount(row.items.length)}</em></span></div><div class="constraint-evidence">${chips}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strictPass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loosePass)}</div></div>`;
+    return `<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strictPass}" data-loose="${row.loosePass}"><div class="constraint-name"><span class="category-dot ${row.dot}"></span><span>${index+1}. ${constraintLabel(row)}<em class="instr-count">${row.iid}${row.custom?` <b class="ext">${t("extension")}</b>`:""} · ${instructionCount(row.items.length)}</em></span></div><div class="constraint-evidence">${chips}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strictPass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loosePass)}</div></div>`;
   }).join("");
   const all=result.strictPrompt===1;
   const chain=result.rows.map((row,index)=>`<span class="gate-node ${row.strictPass?"":"fail"}" title="${escapeHtml(constraintLabel(row))}">${index+1}</span>${index<result.rows.length-1?`<span class="gate-arrow">∧</span>`:""}`).join("");
@@ -1116,7 +1155,7 @@ function renderIfeval(){
     `loose variants = strip "*" x drop first line x drop last line = 8 candidates`,
     `term matching is whole-word on normalised text, so "płatna" does not fire inside "bezpłatna"`
   ].join("\n");
-  const body=`<div class="ifeval-editor"><section><span class="input-label">${t("builtPrompt")}</span><pre class="prompt-card method-copy">${escapeHtml(result.builtPrompt)}</pre></section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="10">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><section class="overall-gate ${all?"pass":"fail"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${result.strictPassed}/${result.total}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([key,label,value])=>`<div class="mini-metric" data-metric="${key}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div>${note("",t("looseNote"))}${note("",fmt("scaleNote",{p:IFEVAL_ORIGINAL.prompts,t:IFEVAL_ORIGINAL.types,n:result.total}))}`;
+  const body=`<div class="ifeval-brief"><div class="brief-col"><section><span class="input-label">${t("userPrompt")}</span><p class="section-kicker">${t("userPromptSub")}</p><blockquote class="user-prompt">${escapeHtml(t("ifevalPrompt"))}</blockquote></section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="7">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><div class="brief-col"><section><span class="input-label">${t("annotationTitle")}</span><p class="section-kicker">${t("annotationSub")}</p><pre class="annotation-card method-copy">${highlightJson(result.annotation)}</pre></section>${note("",fmt("annotationNote",{ext:`<b class="ext">${t("extension")}</b>`}))}</div></div><section class="overall-gate ${all?"pass":"fail"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${result.strictPassed}/${result.total}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([key,label,value])=>`<div class="mini-metric" data-metric="${key}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div>${note("",t("looseNote"))}${note("",fmt("scaleNote",{p:IFEVAL_ORIGINAL.prompts,t:IFEVAL_ORIGINAL.types,n:result.total}))}`;
   return shell("ifeval",body,log,` data-prompt-pass="${all}"`);
 }
 
