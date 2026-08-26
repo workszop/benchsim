@@ -449,7 +449,7 @@ const T = {
     question:"Pytanie",context:"Kontekst",answer:"Odpowiedź",source:"Tekst źródłowy",target:"Tekst docelowy",
     ragasQuestion:"Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
     ragasGood:"Przykładowe pytanie",ragasNoise:"Szum w kontekście",ragasHalluc:"Halucynacja",
-    ragasGoodChange:"Twierdzenia odpowiedzi mają źródła, ale context recall ujawnia, że retriever nie znalazł faktu o bezpłatności z wzorcowej odpowiedzi.",ragasNoiseChange:"Dodatkowy fragment obniża trafność kontekstu, ale nie uziemienie odpowiedzi.",ragasHallucChange:"Zdanie złożone spójnikiem „i” rozbija się na dwa twierdzenia – oba bez źródła.",
+    ragasGoodChange:"Twierdzenia odpowiedzi mają źródła, ale context recall ujawnia, że retriever nie znalazł faktu o bezpłatności ze wzorcowej odpowiedzi.",ragasNoiseChange:"Dodatkowy fragment obniża trafność kontekstu, ale nie oparcie odpowiedzi w źródłach.",ragasHallucChange:"Zdanie złożone spójnikiem „i” rozbija się na dwa twierdzenia – oba bez źródła.",
     evidenceMap:"Mapa dowodów",evidenceSub:"Każde twierdzenie odpowiedzi wskazuje konkretne fragmenty, które je wspierają. To ocena generatora.",
     evidenceGoldSub:"Ile twierdzeń wzorcowej odpowiedzi ma pokrycie w wyszukanym kontekście? To ocena retrievera.",
     mapAnswer:"Kontekst ↔ odpowiedź",mapGold:"Kontekst ↔ wzorcowa odpowiedź",
@@ -461,7 +461,7 @@ const T = {
     originGold:"WZORZEC",originSys:"SYSTEM",
     useful:"użyteczny",redundant:"zbędny",coversGold:"wspiera wzorzec",unusedGold:"zbędny dla wzorca",supported:"wspierane",unsupported:"niewspierane",fragment:"Kontekst",claim:"Twierdzenie",gold:"Wzorcowa odpowiedź",
     contextRel:"Context relevance",contextRecall:"Context recall",faithfulness:"Faithfulness",usefulFragments:"użyteczne fragmenty",supportedClaims:"wspierane twierdzenia",goldClaimsInContext:"twierdzenia wzorca w kontekście",
-    clauseNote:"Twierdzenia rozbijamy na zdania, średniki i spójniki (i / oraz / ale), żeby zdanie mieszające prawdę z fałszem nie przeszło w całości.",
+    clauseNote:"Twierdzenia dzielimy na granicach zdań, średników i spójników (i / oraz / ale), żeby zdanie mieszające prawdę z fałszem nie przeszło w całości.",
     ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
     ifevalPrompt:"Odpowiedz na pytanie: Jak założyć profil zaufany?",
     ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalMarkdown:"Pogrubienie w słowie",ifevalTail:"Dopisek na końcu",
@@ -469,7 +469,7 @@ const T = {
     ifevalMissChange:"Brak jednego wymaganego terminu oblewa prompt mimo wysokiego wyniku instruction-level.",
     ifevalMarkdownChange:"„bez**płatna**” rozpada się na „bez platna”: wymagany termin znika, a zakazany „płatna” się pojawia. Loose usuwa gwiazdki i odzyskuje wynik – naprawiony false negative.",
     ifevalTailChange:"Zakazane twierdzenie stoi w ostatniej linii, którą loose usuwa. Odpowiedź nadal je zawiera, więc loose zalicza ją fałszywie – to false positive.",
-    userPrompt:"Prompt użytkownika",userPromptSub:"Samo pytanie użytkownika — bez żadnych warunków.",annotationTitle:"Karta anotatora",annotationSub:"Rekord zbioru ewaluacyjnego: wszystko, czego anotator wymaga od dobrej odpowiedzi.",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    userPrompt:"Prompt użytkownika",userPromptSub:"Samo pytanie użytkownika – bez żadnych warunków.",annotationTitle:"Karta anotatora",annotationSub:"Rekord zbioru ewaluacyjnego: wszystko, czego anotator wymaga od dobrej odpowiedzi.",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Wszystkie instrukcje muszą przejść jednocześnie.",
     cInclude:"Uwzględnij wymagane terminy",cExclude:"Nie używaj zakazanych terminów",cCitations:"Zacytuj obie podstawy prawne",
     instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
@@ -477,7 +477,7 @@ const T = {
     looseNote:"Wariant loose sprawdza 8 przekształceń odpowiedzi (usunięcie gwiazdek × pierwszej linii × ostatniej linii) i zalicza warunek, jeśli spełnia go którekolwiek z nich – tak jak oficjalna implementacja IFEval.",
     scaleNote:"Oryginalny IFEval: {p} promptów i {t} typów instrukcji. Tutaj: {n} instrukcji w jednym prompcie.",
     questQuestion:"Czy tekst docelowy zachowuje informacje źródła bez dodawania nowych twierdzeń?",questFull:"Pełne pokrycie",questMissing:"Pominięty fakt",questHalluc:"Dodana halucynacja",
-    questFullChange:"Oba kierunki QA przechodzą: treść jest kompletna i uziemiona.",questMissingChange:"Kierunek źródło → cel ujawnia utraconą informację.",questHallucChange:"Kierunek cel → źródło ujawnia twierdzenie bez pokrycia.",
+    questFullChange:"Oba kierunki QA przechodzą: treść jest kompletna i osadzona w źródle.",questMissingChange:"Kierunek źródło → cel ujawnia utraconą informację.",questHallucChange:"Kierunek cel → źródło ujawnia twierdzenie bez pokrycia.",
     scope:"Zakres proxy: zamknięty zestaw 5 faktów źródłowych i 1 kontrolowanej halucynacji – tyle pytań na tekst generuje PLainBench.",
     forward:"Źródło → cel",forwardSub:"Czy ważne informacje zostały zachowane?",backward:"Cel → źródło",backwardSub:"Czy każde rozpoznane twierdzenie ma pokrycie?",
     qaQuestion:"Pytanie QA",sourceAnswer:"W tekście źródłowym",targetAnswer:"W tekście docelowym",outcome:"Wynik",
@@ -517,7 +517,7 @@ const T = {
     ifevalMissChange:"One missing term fails the prompt despite a high instruction-level score.",
     ifevalMarkdownChange:"“bez**płatna**” normalises to “bez platna”: the required term disappears and the forbidden “płatna” appears. Loose strips the asterisks and recovers – a repaired false negative.",
     ifevalTailChange:"The forbidden claim sits on the last line, which loose drops. The answer still contains it, so loose passes it wrongly – a false positive.",
-    userPrompt:"User prompt",userPromptSub:"The user's question on its own — it carries no constraints.",annotationTitle:"Annotator record",annotationSub:"One line of the evaluation set: everything the annotator requires of a good answer.",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    userPrompt:"User prompt",userPromptSub:"The user's question on its own – it carries no constraints.",annotationTitle:"Annotator record",annotationSub:"One line of the evaluation set: everything the annotator requires of a good answer.",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Every instruction must pass at the same time.",
     cInclude:"Include the required terms",cExclude:"Do not use the forbidden terms",cCitations:"Cite both legal acts",
     instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
@@ -599,7 +599,7 @@ const IFEVAL_CONSTRAINTS = [
   { id:"exclude",   label:"cExclude",   dot:"forbid",   iid:"keywords:forbidden_words", kwarg:"forbidden_words", terms:()=>IFEVAL_RUBRIC.exclude }
 ];
 
-const IFEVAL_ANSWER_GOOD = "Profil Zaufany założysz online, przez internet — wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub w urzędzie skarbowym, albo zdalnie przez bankowość elektroniczną. Usługa jest bezpłatna. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194.";
+const IFEVAL_ANSWER_GOOD = "Profil Zaufany założysz online, przez internet – wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub w urzędzie skarbowym, albo zdalnie przez bankowość elektroniczną. Usługa jest bezpłatna. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194.";
 const IFEVAL_ANSWER_MISS = IFEVAL_ANSWER_GOOD.replace(" Usługa jest bezpłatna.","");
 // Emphasis inside a word splits it: "bez**płatna**" normalises to "bez platna", so the
 // required term disappears AND the forbidden term "płatna" appears. Stripping the
