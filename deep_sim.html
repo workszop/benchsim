@@ -1,0 +1,2440 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BenchSim — symulator benchmarków RAG</title>
+<link rel="icon" type="image/png" href="quantica-q-mark-black.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="quantica-q-mark-white.png" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --c-page:#eeedf2; --c-page-deep:#e4e1e8;
+  --c-surface:#ffffff; --c-surface-soft:#faf8fb; --c-surface-raised:#f2eef3;
+  --c-border:#ddd6df; --c-border-strong:#c7bcc9;
+  --c-text:#18131a; --c-text-soft:#4c434e; --c-muted:#776c79;
+  --c-accent:#d20757; --c-accent-hover:#a9064a; --c-accent-soft:#fdebf3;
+  --c-positive:#15845f; --c-positive-soft:#e8f6f0;
+  --c-negative:#b84450; --c-negative-soft:#fbecef;
+  --c-warning:#a86c18; --c-warning-soft:#fff3dd;
+  --c-info:#286f94; --c-info-soft:#eaf5fb;
+  --c-violet:#6f56a6; --c-violet-soft:#f1ecfb;
+  --c-amber:#a86c18; --c-amber-soft:#fff4df;
+  --c-ink:#10151c; --c-ink-soft:#1a222d;
+  --c-terminal-text:#d6dde7; --c-terminal-muted:#8290a2; --c-terminal-accent:#ff669e;
+  --c-white:#ffffff; --c-overlay:rgba(24,19,26,.16); --c-shadow:rgba(24,19,26,.08);
+  --font-display:'Raleway','Poppins',system-ui,sans-serif;
+  --font-sans:'Poppins',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --fs-xs:.72rem; --fs-sm:.84rem; --fs-base:.96rem; --fs-md:1.05rem;
+  --fs-lg:1.28rem; --fs-xl:1.7rem; --fs-2xl:2.15rem;
+  --lh-tight:1.2; --lh-base:1.55;
+  --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem;
+  --space-5:1.5rem; --space-6:2rem; --space-7:3rem;
+  --radius-sm:.5rem; --radius:.75rem; --radius-lg:1rem; --radius-pill:999px;
+  --shadow-sm:0 1px 2px var(--c-shadow); --shadow-md:0 12px 32px var(--c-shadow);
+  --content-max:1600px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{margin:0;padding:0}
+button,input,select,textarea{font:inherit}
+button{color:inherit}
+body{background:linear-gradient(180deg,var(--c-page),var(--c-page-deep));color:var(--c-text);font-family:var(--font-sans);font-size:var(--fs-base);line-height:var(--lh-base);min-height:100vh}
+.app{width:100%;max-width:var(--content-max);margin:0 auto;padding:var(--space-5)}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);margin-bottom:var(--space-5);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.brand img{width:34px;height:34px;flex:0 0 auto}
+.brand-copy{min-width:0}
+.brand h1{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin:0;display:flex;align-items:center;gap:8px}
+.brand p{color:var(--c-muted);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.top-actions{display:flex;align-items:center;gap:var(--space-2)}
+.model-chip,.lang-group,.icon-button{border:1px solid var(--c-border);background:var(--c-surface);box-shadow:var(--shadow-sm)}
+.model-chip{border-radius:var(--radius);padding:var(--space-2) var(--space-3);display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
+.model-chip:hover{border-color:var(--c-accent)}
+.model-dot{width:8px;height:8px;border-radius:50%;background:var(--c-positive);box-shadow:0 0 0 3px var(--c-positive-soft)}
+.lang-group{display:flex;border-radius:var(--radius);padding:3px}
+.lang-group button{border:0;background:transparent;border-radius:calc(var(--radius) - 3px);padding:var(--space-2) var(--space-3);cursor:pointer;font-size:var(--fs-sm);font-weight:700}
+.lang-group button.active{background:var(--c-accent);color:var(--c-white)}
+
+/* Tabs */
+.tabs-wrap{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--c-page) 76%,transparent);padding:0 0 var(--space-4);margin:0 calc(var(--space-5) * -1);padding-left:var(--space-5);padding-right:var(--space-5)}
+.tabs{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none;margin-bottom:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-2);cursor:pointer;white-space:nowrap;font-family:var(--font-display);font-weight:700;box-shadow:var(--shadow-sm)}
+.tab:hover{border-color:var(--c-accent)}
+.tab.active{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.tab-number{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--radius-sm);background:var(--c-surface-raised);color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)}
+.tab.active .tab-number{background:var(--c-overlay);color:var(--c-white)}
+
+/* Method shell */
+.method-shell{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden;margin-bottom:var(--space-4)}
+.method-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-5);align-items:start;padding:var(--space-6);border-bottom:1px solid var(--c-border)}
+.eyebrow{display:flex;align-items:center;gap:var(--space-2);color:var(--c-accent);font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.eyebrow-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.method-title{font-family:var(--font-display);font-size:var(--fs-2xl);line-height:var(--lh-tight);margin:0}
+.method-answer{color:var(--c-text-soft);font-size:var(--fs-md);max-width:780px;margin:var(--space-3) 0 0}
+.mode-note{min-width:260px;max-width:340px;background:var(--c-warning-soft);border:1px solid var(--c-warning);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm)}
+.mode-note strong{display:block;margin-bottom:var(--space-1)}
+
+/* Preset bar */
+.preset-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-6);background:var(--c-surface-soft);border-bottom:1px solid var(--c-border)}
+.preset-set{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
+.preset-set::-webkit-scrollbar{display:none}
+.preset{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-pill);padding:var(--space-2) var(--space-3);white-space:nowrap;cursor:pointer;font-size:var(--fs-sm);font-weight:600}
+.preset.active{border-color:var(--c-accent);background:var(--c-accent-soft);color:var(--c-accent)}
+.change-note{font-size:var(--fs-sm);color:var(--c-muted);text-align:left}
+.change-note strong{color:var(--c-text)}
+
+/* Canvas + shared */
+.canvas{padding:var(--space-6)}
+.section-title{font-family:var(--font-display);font-size:var(--fs-lg);margin:0 0 var(--space-4)}
+.section-kicker{color:var(--c-muted);font-size:var(--fs-sm);margin:-.6rem 0 var(--space-4)}
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4)}
+.soft-card{background:var(--c-surface-soft)}
+.label{display:block;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.status{display:inline-flex;align-items:center;gap:var(--space-1);border-radius:var(--radius-pill);padding:.22rem .55rem;font-size:var(--fs-xs);font-weight:700;white-space:nowrap}
+.status.pass{background:var(--c-positive-soft);color:var(--c-positive)}
+.status.fail{background:var(--c-negative-soft);color:var(--c-negative)}
+.status.info{background:var(--c-info-soft);color:var(--c-info)}
+.status.warn{background:var(--c-warning-soft);color:var(--c-warning)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:.22rem .55rem;border-radius:var(--radius-pill);font-size:var(--fs-xs);font-weight:700;background:var(--c-warning-soft);color:var(--c-warning);border:1px solid var(--c-warning)}
+
+/* Reusable metric (neutral accent bar + ratio) */
+.summary-rail{display:grid;gap:var(--space-3);position:sticky;top:78px;align-content:start}
+.summary-card{border:1px solid var(--c-border);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4)}
+.summary-card h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.metric-value{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin-top:var(--space-2)}
+.ratio{font-family:var(--font-mono);color:var(--c-muted);font-size:var(--fs-xs);margin-top:var(--space-1)}
+.neutral-track{height:8px;border-radius:var(--radius-pill);background:var(--c-surface-raised);overflow:hidden;margin-top:var(--space-3)}
+.neutral-fill{height:100%;border-radius:inherit;background:var(--c-accent)}
+.metric-group-label{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin:var(--space-2) 0 0}
+
+/* Inputs */
+.field-input,input[type=text],textarea,select{
+  width:100%;padding:var(--space-3) var(--space-3);border:1px solid var(--c-border-strong);border-radius:var(--radius-sm);
+  font-family:var(--font-mono);font-size:var(--fs-sm);line-height:var(--lh-base);background:var(--c-white);color:var(--c-text);
+}
+textarea{min-height:64px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--c-accent);outline-offset:1px;border-color:var(--c-accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-4);border:1px solid var(--c-border-strong);background:var(--c-surface);border-radius:var(--radius);cursor:pointer;font-size:var(--fs-sm);font-weight:600;transition:background .12s}
+.btn:hover{border-color:var(--c-accent);background:var(--c-accent-soft)}
+.btn.primary{background:var(--c-accent);color:var(--c-white);border-color:var(--c-accent)}
+.btn.primary:hover{background:var(--c-accent-hover)}
+.btn.sm{padding:var(--space-1) var(--space-3);font-size:var(--fs-sm)}
+.btn-row{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-3)}
+
+/* Log (collapsed) */
+.log-details{border-top:1px solid var(--c-border);background:var(--c-surface-soft)}
+.log-details summary{cursor:pointer;padding:var(--space-4) var(--space-6);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);list-style:none}
+.log-details summary::-webkit-details-marker{display:none}
+.log-details summary::after{content:'+';font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--c-accent)}
+.log-details[open] summary::after{content:'−'}
+.terminal{margin:0 var(--space-6) var(--space-6);background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);white-space:pre-wrap}
+.terminal .muted{color:var(--c-terminal-muted)}
+.terminal .accent{color:var(--c-terminal-accent)}
+.terminal .ok{color:#3fb950}
+.terminal .warn{color:#d29922}
+.terminal .err{color:#f85149}
+.terminal .hl{color:var(--c-terminal-accent)}
+.terminal .ln{white-space:pre-wrap;word-break:break-word}
+
+/* RAGAS evidence map */
+.ragas-inputs{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-5)}
+.ragas-inputs .wide{grid-column:1 / -1}
+.method-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.7fr);gap:var(--space-5);align-items:start}
+.evidence-map{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:var(--space-3);align-items:stretch}
+.evidence-column,.claims-column{display:grid;gap:var(--space-3)}
+.fragment{position:relative;border:1px solid var(--c-border);border-left:4px solid var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3)}
+.fragment.dimmed{border-left-color:var(--c-border-strong);background:var(--c-surface-soft);opacity:.72}
+.fragment-head,.claim-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2);flex-wrap:wrap}
+.fragment p,.claim p{font-size:var(--fs-sm);margin:0}
+.match-words{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info);margin-top:var(--space-2)}
+.connectors{display:grid;align-content:space-around;color:var(--c-accent)}
+.connector{display:flex;align-items:center}
+.connector::before{content:'';height:2px;background:currentColor;flex:1}
+.connector::after{content:'›';font-family:var(--font-display);font-size:var(--fs-xl);line-height:1}
+.claim{border:1px solid var(--c-positive);background:var(--c-positive-soft);border-radius:var(--radius);padding:var(--space-3)}
+.claim.unsupported{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.evidence-ref{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2)}
+.evidence-ref span{border-radius:var(--radius-pill);background:var(--c-white);padding:.18rem .45rem;font-size:var(--fs-xs);font-family:var(--font-mono)}
+.evidence-ref .none{color:var(--c-muted);background:var(--c-surface-raised);font-style:italic}
+
+/* ARES */
+.ares-workspace{display:grid;grid-template-columns:minmax(290px,.75fr) minmax(0,1.25fr);gap:var(--space-5);align-items:start}
+.control-groups{display:grid;gap:var(--space-3)}
+.control-group{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.control-group h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-1)}
+.control-group>p{color:var(--c-muted);font-size:var(--fs-xs);margin:0 0 var(--space-2)}
+.slider-row{margin-top:var(--space-3)}
+.slider-head{display:flex;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-sm);font-weight:600}
+.slider-head output,.slider-head .val{font-family:var(--font-mono);color:var(--c-accent)}
+input[type=range]{width:100%;accent-color:var(--c-accent)}
+.pool-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4)}
+.pool-head{display:flex;justify-content:space-between;gap:var(--space-3);align-items:start;margin-bottom:var(--space-4)}
+.pool-head h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.pool-head p{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-1) 0 0}
+.pool-dots{display:grid;grid-template-columns:repeat(20,1fr);gap:5px;margin-bottom:var(--space-4)}
+.pool-dot{aspect-ratio:1;border-radius:50%;background:var(--c-info)}
+.pool-dot.negative{background:var(--c-border-strong)}
+.pool-dot.audited{box-shadow:0 0 0 2px var(--c-accent)}
+.disagreement{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2)}
+.disagreement div{border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);font-size:var(--fs-xs);text-align:center}
+.disagreement b{display:block;font-family:var(--font-display);font-size:var(--fs-lg)}
+.numberline-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);margin-top:var(--space-3)}
+.numberline-card h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-5)}
+.numberline{position:relative;height:110px;margin:0 var(--space-3)}
+.axis{position:absolute;left:0;right:0;top:48px;height:2px;background:var(--c-border-strong)}
+.axis-tick{position:absolute;top:41px;width:1px;height:14px;background:var(--c-border-strong)}
+.axis-label{position:absolute;top:64px;transform:translateX(-50%);font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted)}
+.ci-band{position:absolute;top:34px;height:20px;border-radius:var(--radius-pill);background:var(--c-accent-soft);border:1px solid var(--c-accent)}
+.point{position:absolute;top:31px;width:10px;height:28px;transform:translateX(-50%);border-radius:var(--radius-pill);background:var(--c-text)}
+.point.raw{background:var(--c-amber)}
+.point.ppi{background:var(--c-accent)}
+.point.truth{background:var(--c-text)}
+.point-label{position:absolute;transform:translateX(-50%);font-size:var(--fs-xs);font-weight:700;white-space:nowrap}
+.point-label.truth{top:0;color:var(--c-text)}
+.point-label.raw{top:84px;color:var(--c-amber)}
+.point-label.ppi{top:18px;color:var(--c-accent)}
+.correction-callout{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);background:var(--c-accent-soft);border-radius:var(--radius);padding:var(--space-3);margin-top:var(--space-3)}
+.correction-callout b{font-family:var(--font-display);font-size:var(--fs-lg);color:var(--c-accent);white-space:nowrap}
+
+/* IFEval */
+.prompt-card{background:var(--c-ink-soft);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);margin-bottom:var(--space-5);white-space:pre-wrap}
+.prompt-card .prompt-label{color:var(--c-terminal-accent);display:block;margin-bottom:var(--space-2);font-weight:600}
+.overall-gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-4);align-items:center;border:1px solid var(--c-negative);background:var(--c-negative-soft);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-4)}
+.overall-gate h3{font-family:var(--font-display);font-size:var(--fs-lg);margin:0}
+.overall-gate p{color:var(--c-text-soft);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.gate-chain{display:flex;align-items:center;gap:var(--space-1);flex-wrap:wrap;justify-content:flex-end}
+.gate-node{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--c-positive);color:var(--c-white);font-size:var(--fs-xs);font-weight:700}
+.gate-node.fail{background:var(--c-negative)}
+.gate-arrow{color:var(--c-muted)}
+.constraint-table{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.constraint-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(150px,1fr) 90px 90px;align-items:center}
+.constraint-row>div{padding:var(--space-3);border-top:1px solid var(--c-border);font-size:var(--fs-sm)}
+.constraint-row.header{background:var(--c-surface-raised);font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.constraint-row.header>div{border-top:0}
+.constraint-name{display:flex;align-items:start;gap:var(--space-2);font-weight:600}
+.category-dot{width:9px;height:9px;border-radius:50%;margin-top:.38rem;flex:0 0 auto;background:var(--c-info)}
+.category-dot.forbid{background:var(--c-amber)}
+.category-dot.citation{background:var(--c-violet)}
+.constraint-evidence{color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)}
+.result-cell{text-align:center}
+.four-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-top:var(--space-4)}
+.mini-metric{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-3);background:var(--c-surface-soft)}
+.mini-metric span{color:var(--c-muted);font-size:var(--fs-xs)}
+.mini-metric b{display:block;font-family:var(--font-display);font-size:var(--fs-lg);margin-top:var(--space-1)}
+
+/* QuestEval */
+.text-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-5)}
+.text-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.text-card p{font-family:var(--font-mono);font-size:var(--fs-sm);margin:0;white-space:pre-wrap}
+.scope-note{display:flex;align-items:center;gap:var(--space-2);color:var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm);margin-bottom:var(--space-4)}
+.qa-lanes{display:grid;gap:var(--space-4)}
+.qa-lane{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.lane-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--c-surface-raised)}
+.lane-head h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.lane-head span{font-size:var(--fs-xs);color:var(--c-muted)}
+.qa-row{display:grid;grid-template-columns:minmax(200px,1.3fr) minmax(110px,.7fr) 34px minmax(110px,.7fr) 86px;align-items:center;padding:var(--space-3) var(--space-4);border-top:1px solid var(--c-border);gap:var(--space-2);font-size:var(--fs-sm)}
+.qa-question{font-weight:600}
+.qa-answer{font-family:var(--font-mono);font-size:var(--fs-xs);padding:var(--space-2);background:var(--c-surface-soft);border-radius:var(--radius-sm)}
+.qa-arrow{text-align:center;color:var(--c-accent);font-size:var(--fs-lg)}
+.issue-row{background:var(--c-warning-soft)}
+.quest-summary{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:var(--space-3);margin-top:var(--space-4)}
+.balance-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.balance-card.combined{border-color:var(--c-accent);background:var(--c-accent-soft)}
+.balance-card span{color:var(--c-muted);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.balance-card b{display:block;font-family:var(--font-display);font-size:var(--fs-xl);margin-top:var(--space-1)}
+.balance-card p{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-1) 0 0}
+
+/* AI dialog */
+#ai-dialog{border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:var(--space-4);max-width:420px;width:calc(100vw - 2rem);background:var(--c-surface);color:var(--c-text);font-family:var(--font-sans)}
+#ai-dialog::backdrop{background:rgba(0,0,0,.45)}
+#ai-dialog h2{margin:0 0 var(--space-3);font-size:20px;font-family:var(--font-display)}
+.ai-providers{display:flex;gap:6px;margin-bottom:var(--space-3)}
+.ai-providers button{flex:1;padding:8px 0;border:1px solid var(--c-border-strong);border-radius:var(--radius);background:var(--c-surface);cursor:pointer;font-weight:600;font-size:15px}
+.ai-providers button.active{background:var(--c-accent);color:#fff;border-color:var(--c-accent)}
+.ai-field{display:block;margin-bottom:var(--space-3);font-size:15px;font-weight:600}
+.ai-field select,.ai-field input{width:100%;padding:8px 10px;margin-top:4px;border:1px solid var(--c-border-strong);border-radius:var(--radius);font-size:16px;background:var(--c-surface);color:var(--c-text)}
+.ai-note{font-size:14px;color:var(--c-muted);margin:0 0 var(--space-2)}
+.ai-actions{display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-3)}
+#q-results .ai-result,#r-results .ai-result{margin-top:var(--space-3)}
+.panel-disclaimer{margin-top:var(--space-4);padding:var(--space-3);border-left:4px solid var(--c-warning);background:var(--c-warning-soft);border-radius:var(--radius);font-size:var(--fs-sm);color:#7a6124}
+
+/* Footer + QA */
+.footer{display:flex;justify-content:space-between;gap:var(--space-4);color:var(--c-muted);font-size:var(--fs-xs);padding:var(--space-4) var(--space-1)}
+.qa-panel{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-top:var(--space-4)}
+.qa-item{display:flex;align-items:center;gap:var(--space-2);padding:6px 0;font-size:var(--fs-sm);border-bottom:1px dashed var(--c-border)}
+.qa-item .st{font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px}
+.qa-item.pass .st{background:var(--c-positive);color:var(--c-white)}
+.qa-item.fail .st{background:var(--c-negative);color:var(--c-white)}
+.fact{padding:10px 12px;border-radius:var(--radius);margin-bottom:var(--space-2);border:1px solid var(--c-border);font-size:var(--fs-sm)}
+.fact .q{font-style:italic;color:var(--c-muted);margin-top:4px}
+.claim.supported,.claim.unsupported{margin-bottom:4px}
+
+@media(max-width:1050px){
+  .method-layout,.ares-workspace{grid-template-columns:1fr}
+  .summary-rail{position:static;grid-template-columns:repeat(3,1fr)}
+  .constraint-row{grid-template-columns:minmax(170px,1.2fr) minmax(130px,1fr) 80px 80px}
+}
+@media(max-width:768px){
+  :root{--fs-2xl:1.65rem;--fs-xl:1.4rem}
+  .app{padding:var(--space-4)}
+  .topbar{align-items:flex-start;margin-bottom:var(--space-4)}
+  .brand img{width:28px;height:28px}
+  .brand p{display:none}
+  .model-chip{width:40px;height:40px;padding:0;justify-content:center}
+  .model-chip .model-text{display:none}
+  .tabs-wrap{margin:0 calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
+  .method-head{grid-template-columns:1fr;padding:var(--space-4)}
+  .mode-note{min-width:0;max-width:none}
+  .preset-bar{display:block;padding:var(--space-3) var(--space-4)}
+  .change-note{margin-top:var(--space-2)}
+  .canvas{padding:var(--space-4)}
+  .ragas-inputs,.text-pair{grid-template-columns:1fr}
+  .ragas-inputs .wide{grid-column:auto}
+  .evidence-map{grid-template-columns:1fr}
+  .connectors{display:none}
+  .summary-rail{grid-template-columns:1fr}
+  .pool-dots{grid-template-columns:repeat(10,1fr)}
+  .disagreement{grid-template-columns:1fr 1fr 1fr}
+  .constraint-table{overflow:visible;border:0}
+  .constraint-row.header{display:none}
+  .constraint-row{grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--c-border);border-radius:var(--radius);margin-bottom:var(--space-2);overflow:hidden}
+  .constraint-row>div{border-top:0}
+  .constraint-name,.constraint-evidence{grid-column:1 / -1}
+  .constraint-evidence{border-top:1px solid var(--c-border)}
+  .result-cell{border-top:1px solid var(--c-border);background:var(--c-surface-soft)}
+  .four-metrics{grid-template-columns:1fr 1fr}
+  .overall-gate{grid-template-columns:1fr}
+  .gate-chain{justify-content:flex-start}
+  .qa-row{grid-template-columns:1fr 34px 1fr 78px}
+  .qa-question{grid-column:1 / -1}
+  .quest-summary{grid-template-columns:1fr 1fr}
+  .balance-card.combined{grid-column:1 / -1}
+  .log-details summary{padding:var(--space-4)}
+  .terminal{margin:0 var(--space-4) var(--space-4)}
+  .footer{display:block}
+  .footer>*{margin-bottom:var(--space-2)}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .tab,.btn,.preset{transition:none!important}
+  .neutral-fill{transition:none!important}
+}
+</style>
+</head>
+<body>
+<main class="app" id="app"
+  data-active-bench="ragas" data-lang="pl" data-run-state="idle">
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="quantica-q-mark-black.png" alt="Quantica Lab" width="34" height="34">
+      <div class="brand-copy">
+        <h1 class="app-title" id="app-title">BenchSim</h1>
+        <p id="app-sub"></p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="ai-chip" data-action="ai-settings" class="model-chip" type="button" aria-label="AI model">
+        <span class="model-dot"></span>
+        <span class="model-text">AI</span>
+      </button>
+      <div class="lang-group" role="group" aria-label="Language">
+        <button type="button" id="lang-pl" data-action="lang" data-lang="pl">PL</button>
+        <button type="button" id="lang-en" data-action="lang" data-lang="en">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs-wrap">
+    <nav class="tabs" id="tabs" aria-label="Evaluation methods" role="tablist"></nav>
+  </div>
+
+  <div id="sim" role="tabpanel"></div>
+
+  <div id="qa-root"></div>
+
+  <footer class="footer">
+    <span id="footer-note"></span>
+    <span id="footer-meta"></span>
+  </footer>
+
+  <div aria-live="polite" class="visually-hidden" id="live"></div>
+</main>
+
+<dialog id="ai-dialog"></dialog>
+
+<script>
+"use strict";
+
+/* ============================ CONSTANTS ============================ */
+
+const BENCHES = [
+  { id: "ragas",     key: "1", nameKey: "benchRagas" },
+  { id: "ares",      key: "2", nameKey: "benchAres" },
+  { id: "ifeval",    key: "3", nameKey: "benchIfeval" },
+  { id: "questeval", key: "4", nameKey: "benchQuestEval" }
+];
+
+const STOPWORDS = new Set(("i w na czy to jest ale oraz że dla od do z się nie tak jak a o co po za u pod nad przed " +
+  "przez między przy ponad który która które którego która aby by będzie został zostali").split(" "));
+
+const ARES_DIMENSIONS = [
+  { id: "context",      nameKey: "dimContext" },
+  { id: "faithfulness", nameKey: "dimFaithfulness" },
+  { id: "relevance",    nameKey: "dimRelevance" }
+];
+
+// per-bench process stages (Lucide icons) for the pipeline stepper
+const BENCH_STAGES = {
+  ragas: [
+    { icon: "message-circle-question", labelKey: "stQuestion" },
+    { icon: "library",                 labelKey: "stContext" },
+    { icon: "scissors",                labelKey: "stClaims" },
+    { icon: "search-check",            labelKey: "stVerify" },
+    { icon: "gauge",                   labelKey: "stResult" }
+  ],
+  ares: [
+    { icon: "database",     labelKey: "stSynthetic" },
+    { icon: "scale",        labelKey: "stJudge" },
+    { icon: "users",        labelKey: "stHuman" },
+    { icon: "trending-up",  labelKey: "stPPI" }
+  ],
+  ifeval: [
+    { icon: "list-checks",   labelKey: "stInstructions" },
+    { icon: "type",          labelKey: "stAnswer" },
+    { icon: "shield-check",  labelKey: "stStrict" },
+    { icon: "shield-alert",  labelKey: "stLoose" }
+  ],
+  questeval: [
+    { icon: "file-text",      labelKey: "stSource" },
+    { icon: "messages-square", labelKey: "stQuestions" },
+    { icon: "search-check",   labelKey: "stQA" },
+    { icon: "scale",          labelKey: "stFidelity" }
+  ]
+};
+
+/* ============================ i18n ============================ */
+
+const T = {
+  pl: {
+    benchRagas: "RAGAS", benchAres: "ARES", benchIfeval: "IFEval", benchQuestEval: "QuestEval",
+    appSub: "komplementarne metody ewaluacji RAG (symulator)",
+    stepInput: "Dane wejściowe", stepProcess: "Proces", stepResult: "Wynik", stepInterpret: "Interpretacja",
+    run: "Oceń", reset: "Resetuj", goodExample: "Dobry przykład", problematic: "Przypadek problematyczny",
+    footnote: "Wszystkie wyniki są edukacyjną symulacją. Tryb deterministyczny liczy się lokalnie w przeglądarce; tryb AI wywołuje wybranego dostawcę (klucz pozostaje u Ciebie).",
+    qaToggle: "Pokaż testy demonstracji",
+    dimContext: "Context Relevance", dimFaithfulness: "Answer Faithfulness", dimRelevance: "Answer Relevance",
+
+    /* RAGAS */
+    rTitle: "RAGAS — ocena bez odpowiedzi wzorcowej",
+    rIntro: "RAGAS nie porównuje odpowiedzi z gold answer. Rozbija ocenę na pytania: czy kontekst jest użyteczny, czy twierdzenia odpowiedzi mają oparcie w kontekście, czy odpowiedź odpowiada na pytanie.",
+    rQuestion: "Pytanie użytkownika", rContext: "Wyszukany fragment dokumentu", rAnswer: "Odpowiedź systemu RAG",
+    rClaims: "Wykryte twierdzenia odpowiedzi", rSupported: "wspierane", rUnsupported: "niewspierane",
+    rContextRel: "Context relevance", rFaithfulness: "Faithfulness", rAnswerRel: "Answer relevance",
+    rContextRelD: "odsetek użytecznych fragmentów kontekstu względem pytania",
+    rFaithD: "odsetek twierdzeń odpowiedzi mających oparcie w kontekście",
+    rAnswerRelD: "odsetek ważnych pojęć z pytania obecnych w odpowiedzi",
+    rPresetGood: "Dobry przykład", rPresetNoise: "Szum w kontekście", rPresetHalluc: "Halucynacja",
+    rDisclaimer: "Pełny RAGAS może używać modelu jako evaluator. Ta demonstracja stosuje prostą i jawną heurystykę dopasowania słów, aby pokazać logikę metryk bez kosztu API. Wyniki są przybliżeniem (proxy): twierdzenia rozbijamy na zdania i spójniki, nie na świadome stwierdzenia, a dopasowanie liczy wspólne słowa, nie znaczenie.",
+    rNoData: "Wpisz pytanie, kontekst i odpowiedź, aby uruchomić ocenę.",
+
+    /* ARES */
+    aTitle: "ARES — judge skorygowany ocenami ludzi",
+    aIntro: "ARES łączy automatyczną ocenę dużej puli z małym zbiorem ocen ludzkich. Judge daje skalę, a human labels pozwalają oszacować jego błąd i skorygować wynik (PPI).",
+    aN: "Liczba automatycznie ocenionych przykładów", an: "Liczba human labels",
+    aBias: "Bias judge'a (prawd. podniesienia %)", aNoise: "Losowy błąd judge'a (%)",
+    aDim: "Wymiar oceny", aTrueRate: "Ukryta proporcja pozytywnych (populacja)",
+    aGenerate: "Generuj eksperyment", aShowCalc: "Pokaż obliczenia",
+    aStage1: "1. Dane syntetyczne", aStage2: "2. Judge", aStage3: "3. Human labels + PPI",
+    aStage1D: "generacja przykładów pozytywnych i negatywnych z domeny",
+    aStage2D: "automatyczna klasyfikacja całej puli przez judge'a",
+    aStage3D: "korekta wyniku i przedział ufności na małym zbiorze ocen",
+    aTruth: "Ukryty wynik populacji", aRaw: "Surowa średnia judge'a", aPpi: "Wynik po korekcie PPI",
+    aCI: "95% przedział ufności", aNLabel: "n =", aCorrection: "średnia korekta (human − judge)",
+    aDisclaimer: "To edukacyjna ilustracja korekty PPI. Pełny ARES obejmuje generację danych syntetycznych, trening osobnych judge'ów i formalne wnioskowanie statystyczne.",
+    aFormulaTitle: "Składniki wzoru",
+
+    /* IFEval */
+    iTitle: "IFEval — sprawdzanie jawnych ograniczeń",
+    iIntro: "IFEval zamienia wykonywanie instrukcji w deterministyczne testy. Każdy warunek jest sprawdzany osobno, a prompt zalicza się tylko, gdy odpowiedź spełnia wszystkie warunki.",
+    iConstraints: "Instrukcje (warunki)", iBuiltPrompt: "Zbudowany prompt", iAnswer: "Odpowiedź modelu",
+    iPresetAll: "Spełnia wszystko", iPresetMiss: "Pomija jeden warunek", iPresetPreamble: "Poprawny wynik z wstępem",
+    iRequiredWord: "użyj wymaganego słowa", iForbiddenWord: "nie używaj zakazanego słowa",
+    iMaxWords: "maksymalnie N słów", iExactItems: "dokładnie N punktów listy",
+    iNoComma: "bez przecinków", iValidJson: "zwróć poprawny JSON", iExactEnding: "zakończ dokładną frazą",
+    iWord: "słowo", iMax: "max słów", iItems: "liczba punktów", iEnding: "fraza końcowa",
+    iStrict: "strict", iLoose: "loose", iInstrLevel: "Instruction-level accuracy", iPromptLevel: "Prompt-level accuracy",
+    iPass: "PASS", iFail: "FAIL",
+    iFour: "Strict / Loose — 4 odmiany oficjalnego wskaźnika",
+    iDisclaimer: "IFEval sprawdza zgodność z formatem i innymi jawnymi warunkami. Nie potwierdza, że treść odpowiedzi jest prawdziwa, trafna ani użyteczna.",
+    iAnswerNote: "Wariant loose usuwa znaczniki Markdown, pierwszą lub ostatnią linię, aby ograniczyć false negatives.",
+
+    /* QuestEval */
+    qTitle: "QuestEval — pytania jako test zachowania informacji",
+    qIntro: "QuestEval porównuje dwa teksty przez pytania i odpowiedzi. Pytania ze źródła sprawdzają kompletność tekstu docelowego; pytania z tekstu docelowego sprawdzają pokrycie w źródle (faithfulness).",
+    qSource: "Tekst źródłowy", qTarget: "Tekst uproszczony / wygenerowany",
+    qForward: "Źródło → tekst docelowy (kompletność)", qBackward: "Tekst docelowy → źródło (faithfulness)",
+    qCompleteness: "Completeness", qFaithfulness: "Faithfulness", qCombined: "Wynik łączny (śr. harmoniczna)",
+    qMatch: "zgodne", qNoMatch: "niezgodne", qFacts: "Fakty",
+    qPresetFull: "Pełne pokrycie", qPresetMissing: "Pominięty fakt", qPresetHalluc: "Dodana halucynacja",
+    qGold: "wzorzec", qFound: "znaleziono w tekście",
+    qDisclaimer: "Pełen QuestEval generuje pytania i korzysta z modeli QA. Ta demonstracja używa przygotowanych par pytanie-odpowiedź oraz jawnego dopasowania fraz. Dla języka polskiego produkcyjna implementacja wymaga lematyzacji lub semantycznego porównania odpowiedzi.",
+    qProxyNote: "To jest zamknięty zbiór wykrywanych halucynacji (closed-set proxy): sprawdzane są wyłącznie twierdzenia z listy poniżej. Dowolna treść niezgodna z listą (np. 'profil jest różowy') nie zostanie wykryta. Puste odpowiedzi zwracają n/d zamiast mylącego 100%.",
+    qFactOn: "włącz fakt w tekście docelowym", qHallucFact: "halucynacja (kontrolowana)",
+    qBalanceExplain: "Średnia harmoniczna premiuje równowagę kompletności i wierności.",
+    qKnownScope: "Tryb deterministyczny rozpoznaje {src} faktów źródłowych i {hg} kontrolowaną halucynację. Wartości oznaczono jako „gold answer”/„dopasowana fraza”, a nie odpowiedź modelu.",
+
+    /* Visual system labels */
+    visualMockup: "Metoda ewaluacji",
+    proxyTitle: "Tryb edukacyjny",
+    proxyText: "Najpierw pokazujemy zależności i dowody. Szczegóły techniczne są dostępne na żądanie.",
+    presets: "Scenariusze",
+    changeTab: "Co się zmieniło:",
+    calculationLog: "Dziennik obliczeń",
+    evidenceMap: "Mapa dowodów", evidenceMapSub: "Fragmenty po lewej wspierają konkretne twierdzenia po prawej.",
+    fragment: "Fragment", relevant: "użyteczny", redundant: "zbędny", claim: "Twierdzenie",
+    supported: "wspierane", unsupported: "niewspierane", noSupport: "brak wspierającego fragmentu",
+    retriever: "Retriever", generator: "Generator",
+    fragmentsUseful: "{ok} / {n} fragmentów użytecznych", claimsSupported: "{n} / {n} twierdzeń wspieranych", conceptsCovered: "{n} / {n} pojęć pokrytych",
+    ragasChange: "Każde twierdzenie ma wskazane źródło; fragment bez pokrycia jest oznaczony.",
+    ragasNoiseChange: "Wprowadzono fragmenty bez związku z pytaniem — retriever uwzględnia je jako zbędne.",
+    ragasHallucChange: "Dodano zdanie „wymaga aplikacji mObywatel” bez oparcia w kontekście — twierdzenie jest niewspierane.",
+    ragasLq: "Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
+
+    population: "Populacja", populationHelp: "Duża pula oceniana automatycznie",
+    automaticExamples: "Przykłady automatyczne (N)", hiddenRate: "Ukryta proporcja pozytywna",
+    judgeBehavior: "Zachowanie judge'a", judgeHelp: "Kontrolowana jakość automatycznych predykcji",
+    overrating: "Prawdopodobieństwo zawyżenia", randomError: "Losowy błąd",
+    humanAudit: "Audyt ludzi", humanHelp: "Mała próba do kalibracji",
+    humanLabels: "Etykiety ludzkie (n)",
+    automaticPool: "Automatycznie oceniona pula", auditedDots: "Różowa obwódka oznacza próbę sprawdzoną przez ludzi.",
+    agreement: "Zgodność", falsePositive: "Fałszywie dodatnie", falseNegative: "Fałszywie ujemne",
+    calibratedResult: "Wynik po kalibracji", truth: "Prawda", raw: "Raw", ppi: "PPI",
+    correctionAudit: "Korekta audytu", uncertainty: "95% CI: {lo}–{hi}%",
+    ppiNote: "To jest edukacyjna ilustracja prostego estymatora PPI (toy), a nie pełny ARES.",
+    aresChange: "Oceny ludzi wykrywają zawyżanie judge'a i przesuwają estymatę w stronę prawdy.",
+    aresBaseChange: "Próba bazowa — niewielka korekta od surowego wyniku.",
+    aresMoreChange: "Więcej etykiet ludzkich zawęża przedział ufności.",
+    aresLq: "Jak mała próba ocen ludzkich koryguje automatycznego judge'a?",
+
+    promptSent: "Prompt wysłany do modelu",
+    overallPass: "Prompt: PASS", overallFail: "Prompt: FAIL",
+    overallPassExpl: "Wszystkie ograniczenia spełnione jednocześnie.",
+    overallFailExpl: "{p} warunków spełnionych. Prompt zalicza się tylko, gdy spełnione są wszystkie.",
+    constraint: "Warunek", evidence: "Dowód w odpowiedzi", strictC: "Strict", looseC: "Loose",
+    instStrict: "Instruction strict", promptStrict: "Prompt strict", instLoose: "Instruction loose", promptLoose: "Prompt loose",
+    evidenceFound: "znaleziono", evidenceNotFound: "nie znaleziono",
+    ifevalChange: "Brak potwierdzenia jednego wymogu wyklucza cały prompt.",
+    ifevalGoodChange: "Wszystkie jawne wymogi są spełnione (strict = loose = PASS).",
+    ifevalMissChange: "Jeden wymóg nie jest spełniony — prompt nie przechodzi.",
+    ifevalPreambleChange: "Wariant loose usuwa wstęp i poprawnie parsuje JSON; strict go nie akceptuje.",
+    ifevalLq: "Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
+
+    source: "Tekst źródłowy", target: "Tekst docelowy",
+    determinScope: "Tryb deterministyczny nie uruchamia modelu QA — porównuje przygotowane pary pytanie–odpowiedź.",
+    sourceToTarget: "Źródło → tekst docelowy", s2tSub: "Czy ważne informacje zostały zachowane?",
+    targetToSource: "Tekst docelowy → źródło", t2sSub: "Czy każde twierdzenie ma pokrycie w źródle?",
+    qaQuestion: "Pytanie QA", srcAnswer: "Odp. źródła", tgtAnswer: "Odp. celu", outcome: "Wynik",
+    balanceCompleteness: "Completeness", balanceGrounded: "Faithfulness", balanceCombined: "Wynik łączny",
+    retainedLabel: "{n} / {n} zachowanych", groundedLabel: "{n} / {n} ugruntowanych",
+    qMissingLabel: "brak informacji", qMatchLabel: "dopasowano",
+    questevalChange: "Dwa kierunki QA rozdzielają brakujące informacje od twierdzeń bez pokrycia.",
+    qsFullChange: "Wszystkie fakty źródła zachowane i każdy twarzeń zakotwiczony.",
+    qsMissingChange: "„Usługa jest bezpłatna” nie zostało zachowane w tekście docelowym.",
+    qsHallucChange: "Dodano twierdzenie o aplikacji mObywatel bez pokrycia w źródle.",
+    qsLq: "Czy tekst docelowy zachowuje informacje źródła bez dodawania niepopartych twierdzeń?",
+
+    deterministicScope: "Zakres deterministyczny",
+
+    /* QA */
+    qaTitle: "Testy demonstracji", qaRun: "Uruchom testy", qaAllPass: "Wszystkie testy przeszły.", qaFail: "Wystąpiły błędy.",
+    aiTitle: "Model AI", aiModel: "Model", aiCustom: "Własny model", aiCustomPh: "identyfikator modelu",
+    aiKey: "Klucz API", aiKeyHelp: "Klucz zostaje w Twojej przeglądarce (localStorage) i jest wysyłany wyłącznie do wybranego dostawcy.",
+    aiSave: "Zapisz", aiCancel: "Zamknij", aiJudge: "Ocena AI (LLM-as-judge)",
+    aiThinking: "AI myśli", aiError: "Błąd AI:", aiBadJson: "Model nie zwrócił poprawnego JSON:",
+    aiRun: "Oceń AI", aiGen: "Wygeneruj AI", chars: "znaków",
+    qMissing: "Brakujące fakty", qHalluc: "Halucynacje", aiNoKey: "Ustaw klucz API, aby użyć AI.",
+    na: "n/d",
+    stQuestion: "Pytanie", stContext: "Kontekst", stClaims: "Twierdzenia", stVerify: "Weryfikacja", stResult: "Wynik",
+    stSynthetic: "Dane syntetyczne", stJudge: "Judge", stHuman: "Human labels", stPPI: "Korekta PPI",
+    stInstructions: "Instrukcje", stAnswer: "Odpowiedź", stStrict: "Strict", stLoose: "Loose",
+    stSource: "Źródło", stQuestions: "Pytania", stQA: "QA", stFidelity: "Wierność",
+    termTitle: "dziennik oceny", termIdle: "Uruchom ocenę, aby zobaczyć szczegóły.", termDone: "zakończono",
+    iTask: "Zadanie", iInclude: "Wymagane (include)", iExclude: "Zabronione (exclude)", iCitations: "Cytowania (podstawa prawna)", iGood: "Dobry przykład", iBad: "Zły przykład"
+  },
+  en: {
+    benchRagas: "RAGAS", benchAres: "ARES", benchIfeval: "IFEval", benchQuestEval: "QuestEval",
+    appSub: "complementary RAG evaluation methods (simulator)",
+    stepInput: "Inputs", stepProcess: "Process", stepResult: "Result", stepInterpret: "Interpretation",
+    run: "Evaluate", reset: "Reset", goodExample: "Good example", problematic: "Problematic case",
+    footnote: "All results are an educational simulation. Deterministic mode computes locally in the browser; AI mode calls the selected provider (key stays yours).",
+    qaToggle: "Show demo tests",
+    dimContext: "Context Relevance", dimFaithfulness: "Answer Faithfulness", dimRelevance: "Answer Relevance",
+
+    rTitle: "RAGAS — reference-free evaluation",
+    rIntro: "RAGAS does not compare the answer to a gold answer. It splits evaluation into simpler questions: is the context useful, are the answer's claims grounded in context, does the answer address the question.",
+    rQuestion: "User question", rContext: "Retrieved document fragment", rAnswer: "RAG system answer",
+    rClaims: "Detected answer claims", rSupported: "supported", rUnsupported: "unsupported",
+    rContextRel: "Context relevance", rFaithfulness: "Faithfulness", rAnswerRel: "Answer relevance",
+    rContextRelD: "fraction of context fragments useful for the question",
+    rFaithD: "fraction of answer claims grounded in the context",
+    rAnswerRelD: "fraction of key question concepts present in the answer",
+    rPresetGood: "Good example", rPresetNoise: "Noise in context", rPresetHalluc: "Hallucination",
+    rProxy: "keyword proxy — not full RAGAS",
+    rDisclaimer: "Full RAGAS may use a model as evaluator. This demo uses a simple, explicit word-match heuristic to show the logic of the metrics without API cost. Scores are approximate proxies: claims are split on sentences and conjunctions rather than into intended statements, and matching counts shared words, not meaning.",
+    rNoData: "Enter a question, context and answer to run the evaluation.",
+
+    aTitle: "ARES — judge corrected by human labels",
+    aIntro: "ARES combines automatic scoring of a large pool with a small set of human labels. The judge provides scale; human labels estimate its bias and correct the result (PPI).",
+    aN: "Automatically scored examples", an: "Human labels",
+    aBias: "Judge bias (prob. of upgrade %)", aNoise: "Judge random error (%)",
+    aDim: "Evaluation dimension", aTrueRate: "Hidden positive rate (population)",
+    aGenerate: "Generate experiment", aShowCalc: "Show calculation",
+    aStage1: "1. Synthetic data", aStage2: "2. Judge", aStage3: "3. Human labels + PPI",
+    aStage1D: "generate positive and negative examples from the domain",
+    aStage2D: "automatic classification of the whole pool by the judge",
+    aStage3D: "result correction and confidence interval on a small label set",
+    aTruth: "Hidden population result", aRaw: "Raw judge mean", aPpi: "PPI-corrected result",
+    aCI: "95% confidence interval", aNLabel: "n =", aCorrection: "mean correction (human − judge)",
+    aDisclaimer: "This is an educational illustration of PPI correction. Full ARES includes synthetic data generation, training of separate judges, and formal statistical inference.",
+    aFormulaTitle: "Formula components",
+
+    iTitle: "IFEval — checking explicit constraints",
+    iIntro: "IFEval turns instruction following into deterministic tests. Each constraint is checked separately; a prompt passes only if the answer satisfies every constraint.",
+    iConstraints: "Instructions (constraints)", iBuiltPrompt: "Built prompt", iAnswer: "Model answer",
+    iPresetAll: "Satisfies all", iPresetMiss: "Misses one constraint", iPresetPreamble: "Correct result with preamble",
+    iRequiredWord: "use the required word", iForbiddenWord: "do not use the forbidden word",
+    iMaxWords: "at most N words", iExactItems: "exactly N list items",
+    iNoComma: "no commas", iValidJson: "return valid JSON", iExactEnding: "end with the exact phrase",
+    iWord: "word", iMax: "max words", iItems: "item count", iEnding: "ending phrase",
+    iStrict: "strict", iLoose: "loose", iInstrLevel: "Instruction-level accuracy", iPromptLevel: "Prompt-level accuracy",
+    iPass: "PASS", iFail: "FAIL",
+    iFour: "Strict / Loose — 4 variants of the official metric",
+    iDisclaimer: "IFEval checks format and other explicit constraints. It does not confirm the answer is true, relevant or useful.",
+    iAnswerNote: "The loose variant strips Markdown markers and drops the first or last line to reduce false negatives.",
+
+    qTitle: "QuestEval — questions as an information-retention test",
+    qIntro: "QuestEval compares two texts via questions and answers. Questions from the source check the completeness of the target; questions from the target check grounding in the source (faithfulness).",
+    qSource: "Source text", qTarget: "Simplified / generated text",
+    qForward: "Source → target (completeness)", qBackward: "Target → source (faithfulness)",
+    qCompleteness: "Completeness", qFaithfulness: "Faithfulness", qCombined: "Combined (harmonic mean)",
+    qMatch: "matched", qNoMatch: "not matched", qFacts: "Facts",
+    qPresetFull: "Full coverage", qPresetMissing: "Missing fact", qPresetHalluc: "Added hallucination",
+    qGold: "gold", qFound: "found in text",
+    qDisclaimer: "Full QuestEval generates questions and uses QA models. This demo uses prepared question-answer pairs and explicit phrase matching. For Polish, a production implementation needs lemmatization or semantic answer comparison.",
+    qProxyNote: "This is a closed-set hallucination detector (proxy): only the claims listed below are ever checked. Any content not on the list (e.g. 'the profile is pink') goes undetected. Empty answers return N/A instead of a misleading 100%.",
+    qFactOn: "enable this fact in the target", qHallucFact: "hallucination (controlled)",
+    qBalanceExplain: "The harmonic mean rewards a balance of completeness and groundedness.",
+    qKnownScope: "Deterministic mode recognizes {src} source facts and {hg} controlled hallucination. Values are labelled \"gold answer\"/\"matched phrase\", not a model answer.",
+
+    /* Visual system labels */
+    visualMockup: "Evaluation method",
+    proxyTitle: "Learning mode",
+    proxyText: "Relationships and evidence come first. Technical details are available on demand.",
+    presets: "Scenarios",
+    changeTab: "What changed:",
+    calculationLog: "Calculation log",
+    evidenceMap: "Evidence map", evidenceMapSub: "Fragments on the left support specific claims on the right.",
+    fragment: "Fragment", relevant: "useful", redundant: "redundant", claim: "Claim",
+    supported: "supported", unsupported: "unsupported", noSupport: "no supporting fragment",
+    retriever: "Retriever", generator: "Generator",
+    fragmentsUseful: "{ok} / {n} useful fragments", claimsSupported: "{n} / {n} supported claims", conceptsCovered: "{n} / {n} concepts covered",
+    ragasChange: "Every claim points to its source; an ungrounded fragment is marked redundant.",
+    ragasNoiseChange: "Added fragments unrelated to the question — the retriever marks them redundant.",
+    ragasHallucChange: "Added \"requires the mObywatel app\" with no grounding in the context — the claim is unsupported.",
+    ragasLq: "Are the answer's claims grounded in the retrieved sources?",
+
+    population: "Population", populationHelp: "Large automatically evaluated pool",
+    automaticExamples: "Automatic examples (N)", hiddenRate: "Hidden positive rate",
+    judgeBehavior: "Judge behavior", judgeHelp: "Controlled automatic prediction quality",
+    overrating: "Overrating probability", randomError: "Random error",
+    humanAudit: "Human audit", humanHelp: "Small calibration sample",
+    humanLabels: "Human labels (n)",
+    automaticPool: "Automatically scored pool", auditedDots: "Pink outlines mark the human-audited sample.",
+    agreement: "Agreement", falsePositive: "False positives", falseNegative: "False negatives",
+    calibratedResult: "Calibrated result", truth: "Truth", raw: "Raw", ppi: "PPI",
+    correctionAudit: "Audit correction", uncertainty: "95% CI: {lo}–{hi}%",
+    ppiNote: "This is an educational illustration of a simple PPI mean estimator (toy), not full ARES.",
+    aresChange: "Human labels detect judge overrating and shift the estimate toward truth.",
+    aresBaseChange: "Baseline sample — a small correction from the raw score.",
+    aresMoreChange: "More human labels narrow the confidence interval.",
+    aresLq: "How can a small human audit correct an automatic judge?",
+
+    promptSent: "Prompt sent to the model",
+    overallPass: "Prompt: PASS", overallFail: "Prompt: FAIL",
+    overallPassExpl: "All constraints satisfied at once.",
+    overallFailExpl: "{p} constraints passed. A prompt passes only when all constraints pass at once.",
+    constraint: "Constraint", evidence: "Evidence in answer", strictC: "Strict", looseC: "Loose",
+    instStrict: "Instruction strict", promptStrict: "Prompt strict", instLoose: "Instruction loose", promptLoose: "Prompt loose",
+    evidenceFound: "found", evidenceNotFound: "not found",
+    ifevalChange: "One unconfirmed requirement disqualifies the entire prompt.",
+    ifevalGoodChange: "All explicit requirements satisfied (strict = loose = PASS).",
+    ifevalMissChange: "One requirement is unmet — the prompt fails.",
+    ifevalPreambleChange: "The loose variant strips the preamble and parses JSON correctly; strict rejects it.",
+    ifevalLq: "Does the response satisfy every explicit and automatically verifiable constraint?",
+
+    source: "Source text", target: "Target text",
+    determinScope: "Deterministic mode does not run a QA model — it compares prepared question/answer pairs.",
+    sourceToTarget: "Source → target", s2tSub: "Were important facts retained?",
+    targetToSource: "Target → source", t2sSub: "Is every target claim grounded in the source?",
+    qaQuestion: "QA question", srcAnswer: "Src answer", tgtAnswer: "Tgt answer", outcome: "Outcome",
+    balanceCompleteness: "Completeness", balanceGrounded: "Faithfulness", balanceCombined: "Combined",
+    retainedLabel: "{n} / {n} retained", groundedLabel: "{n} / {n} grounded",
+    qMissingLabel: "no information", qMatchLabel: "matched",
+    questevalChange: "Two QA directions separate missing information from unsupported target claims.",
+    qsFullChange: "All source facts retained and every target claim grounded.",
+    qsMissingChange: "\"The service is free\" was not retained in the target text.",
+    qsHallucChange: "Added an mObywatel claim with no grounding in the source.",
+    qsLq: "Does the target retain source information without adding unsupported claims?",
+
+    deterministicScope: "Deterministic scope",
+
+    qaTitle: "Demo tests", qaRun: "Run tests", qaAllPass: "All tests passed.", qaFail: "Some tests failed.",
+    aiTitle: "AI model", aiModel: "Model", aiCustom: "Custom model", aiCustomPh: "model ID",
+    aiKey: "API key", aiKeyHelp: "The key stays in your browser (localStorage) and is sent only to the selected provider.",
+    aiSave: "Save", aiCancel: "Close", aiJudge: "AI judge (LLM-as-judge)",
+    aiThinking: "AI is thinking", aiError: "AI error:", aiBadJson: "Model did not return valid JSON:",
+    aiRun: "Run AI", aiGen: "AI generate", chars: "chars",
+    qMissing: "Missing facts", qHalluc: "Hallucinations", aiNoKey: "Set an API key to use AI.",
+    na: "N/A",
+    stQuestion: "Question", stContext: "Context", stClaims: "Claims", stVerify: "Verify", stResult: "Result",
+    stSynthetic: "Synthetic data", stJudge: "Judge", stHuman: "Human labels", stPPI: "PPI correction",
+    stInstructions: "Instructions", stAnswer: "Answer", stStrict: "Strict", stLoose: "Loose",
+    stSource: "Source", stQuestions: "Questions", stQA: "QA", stFidelity: "Fidelity",
+    termTitle: "evaluation log", termIdle: "Run an evaluation to see the details.", termDone: "complete",
+    iTask: "Task", iInclude: "Required (include)", iExclude: "Forbidden (exclude)", iCitations: "Citations (legal basis)", iGood: "Good example", iBad: "Bad example"
+  }
+};
+
+/* ============================ MODEL (fixtures) ============================ */
+
+const MODEL = {
+  ragas: {
+    fixtures: {
+      good: {
+        question: "Jak założyć profil zaufany?",
+        context: [
+          "Profil zaufany można założyć online, przez internet, bez wychodzenia z domu.",
+          "Aby założyć profil zaufany, należy złożyć wniosek.",
+          "Tożsamość potwierdza się w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym."
+        ],
+        answer: "Profil zaufany zakłada się online, przez internet. Należy złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym."
+      },
+      noise: {
+        question: "Jak założyć profil zaufany?",
+        context: [
+          "Najnowszy raport o stanie polskiej gospodarki wskazuje na wzrost PKB.",
+          "Przepis na sernik wiedeński wymaga kilograma twarogu i pięciu jajek.",
+          "W weekend zapowiadane są burze i silny wiatr w całym kraju."
+        ],
+        answer: "Profil zaufany zakłada się online, przez internet. Należy złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym."
+      },
+      halluc: {
+        question: "Jak założyć profil zaufany?",
+        context: [
+          "Profil zaufany można założyć online, przez internet, bez wychodzenia z domu.",
+          "Aby założyć profil zaufany, należy złożyć wniosek.",
+          "Tożsamość potwierdza się w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym."
+        ],
+        answer: "Profil zaufany zakłada się online, przez internet. Należy złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym. Cały proces trwa do 14 dni i wymaga aplikacji mObywatel."
+      }
+    },
+    instructions: []
+  },
+
+  ares: {
+    task: "Jak założyć profil zaufany?",
+    defaults: { N: 500, n: 60, bias: 10, noise: 15, trueRate: 0.70, seed: 42, dimension: "faithfulness" },
+    dimensions: ARES_DIMENSIONS
+  },
+
+  ifeval: {
+    task: "Jak założyć profil zaufany?",
+    include: [
+      "online|przez internet",
+      "wniosek|wniosku",
+      "potwierdzenie|potwierdzenia",
+      "urząd miasta|urzędzie miasta",
+      "ZUS|zus",
+      "urząd skarbowy|urzędzie skarbowym",
+      "bez opłat|bezpłatnie|bezpłatna"
+    ],
+    exclude: [
+      "bankowość elektroniczna|e-dowód|mObywatel",
+      "14 dni|czternaście dni"
+    ],
+    citations: [
+      "ustawa z dnia 5 lipca 2018 r.",
+      "rozporządzenie w sprawie profilu zaufanego z 2021 r."
+    ],
+    fixtures: {
+      good: "Profil zaufany zakłada się online, przez internet. Należy złożyć wniosek i uzyskać potwierdzenie tożsamości. Można to zrobić w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym. Usługa jest bezpłatna. Podstawa prawna: ujednolicona ustawa z dnia 5 lipca 2018 r., rozporządzenie w sprawie profilu zaufanego z 2021 r.",
+      bad: "Profil zaufany można założyć przez internet. Wystarczy wypełnić wniosek, a potwierdzenie odbywa się w urzędzie miasta. Cały proces trwa do 14 dni, a do tego potrzebna jest aplikacja mObywatel.",
+      preamble: "Oto odpowiedź:\n{\"online\": true, \"wniosek\": \"złożony\", \"koszt\": \"bezpłatnie\"}"
+    }
+  },
+
+  questeval: {
+    source: "Profil zaufany można założyć online, przez internet. Należy złożyć wniosek. Tożsamość potwierdza się w urzędzie miasta, w placówce ZUS albo w urzędzie skarbowym. Usługa jest bezpłatna.",
+    facts: [
+      { id: "f1", origin: "src", sentence: "Profil zaufany można założyć online, przez internet.",
+        question: "Czy profil zaufany można założyć przez internet?", gold: "online",
+        accepted: ["online", "przez internet", "internet"] },
+      { id: "f2", origin: "src", sentence: "Należy złożyć wniosek.",
+        question: "Co należy złożyć?", gold: "wniosek",
+        accepted: ["wniosek", "wniosku"] },
+      { id: "f3", origin: "src", sentence: "Tożsamość potwierdza się w urzędzie miasta.",
+        question: "Gdzie potwierdza się tożsamość?", gold: "urząd miasta",
+        accepted: ["urząd miasta", "urzędzie miasta", "urzędu miasta"] },
+      { id: "f4", origin: "src", sentence: "Tożsamość potwierdza się też w placówce ZUS.",
+        question: "W jakiej placówce można potwierdzić tożsamość?", gold: "ZUS",
+        accepted: ["zus", "zus-ie", "zusie"] },
+      { id: "f5", origin: "src", sentence: "Tożsamość potwierdza się też w urzędzie skarbowym.",
+        question: "Gdzie jeszcze potwierdza się tożsamość?", gold: "urząd skarbowy",
+        accepted: ["urząd skarbowy", "urzędzie skarbowym"] },
+      { id: "f6", origin: "src", sentence: "Usługa jest bezpłatna.",
+        question: "Ile kosztuje usługa?", gold: "bezpłatna",
+        accepted: ["bezpłatna", "bezpłatnie", "bez opłat"] },
+      { id: "h1", origin: "tgt", sentence: "Do założenia profilu potrzebna jest aplikacja mObywatel.",
+        question: "Czego wymaga założenie profilu?", gold: "aplikacja mObywatel",
+        accepted: ["mobywatel"] }
+    ],
+    targets: {
+      full: "Profil zaufany zakłada się online, przez internet. Trzeba złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w ZUS-ie albo w urzędzie skarbowym. Usługa jest bezpłatna.",
+      missing: "Profil zaufany zakłada się online, przez internet. Trzeba złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w ZUS-ie albo w urzędzie skarbowym.",
+      halluc: "Profil zaufany zakłada się online, przez internet. Trzeba złożyć wniosek i potwierdzić tożsamość w urzędzie miasta, w ZUS-ie albo w urzędzie skarbowym. Usługa jest bezpłatna. Do założenia profilu potrzebna jest aplikacja mObywatel."
+    }
+  }
+};
+
+/* ============================ STATE ============================ */
+
+const state = {
+  lang: localStorage.getItem("deepSimLang") || "pl",
+  activeBench: "ragas",
+  runState: "idle",         // idle | running | complete | error
+  showCalc: false,
+  showQa: false,
+  activePreset: { ragas: "good", ares: "baseline", ifeval: "good", questeval: "full" },
+  results: {}
+};
+
+/* ============================ HELPERS ============================ */
+
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+const t = (key) => T[state.lang][key] || T.pl[key] || key;
+const pct = (x) => Math.round(clamp01(x) * 100);
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+function normalize(s){
+  return String(s).toLowerCase()
+    .replace(/[^a-ząćęłńóśźż0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w && !STOPWORDS.has(w));
+}
+function overlap(a, b){ const s = new Set(b); return a.filter(w => s.has(w)); }
+function sentences(text){ return String(text).split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean); }
+// split an answer into individual claims at sentence ends, semicolons, and coordinate
+// conjunctions (i / oraz / ale). Prevents a mixed true+false sentence from passing whole:
+// "jest płatny i wymaga wniosku" -> two independent claims instead of one lump.
+function claimClauses(text){
+  return String(text)
+    .replace(/([.!?])\s+/g, "$1\u0000")
+    .replace(/;\s*/g, ";\u0000")
+    .replace(/\s+(?:i|oraz|ale)\s+/g, "\u0000")
+    .split("\u0000")
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+function variance(arr){
+  if(!arr.length) return 0;
+  const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+  return arr.reduce((s,x)=>s+(x-m)*(x-m),0)/arr.length;
+}
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function announce(msg){
+  const el = $("#live"); el.textContent = ""; el.textContent = msg;
+}
+
+/* ============================ AI LAYER (mirrors slidegen) ============================ */
+
+const AI_CATALOG = {
+  defaultProvider: "gemini",
+  providers: {
+    gemini: {
+      label: "Gemini",
+      models: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite-preview"],
+      samplingSupported: ["gemini-3.5-flash", "gemini-3.1-flash-lite-preview"],
+      keyUrl: "https://aistudio.google.com/apikey"
+    },
+    openai: {
+      label: "OpenAI",
+      models: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+      samplingSupported: [],
+      keyUrl: "https://platform.openai.com/api-keys"
+    },
+    claude: {
+      label: "Claude",
+      models: ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
+      thinkingOptional: ["claude-opus-4-8", "claude-sonnet-5"],
+      keyUrl: "https://console.anthropic.com/settings/keys"
+    }
+  }
+};
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const SUPPORTED_PROVIDER_IDS = ["gemini", "openai", "claude"];
+const AI_LS_KEY = "deep_sim_ai";
+const AI_TIMEOUT_MS = 120000;
+
+// settings — key stays in localStorage, sent only to the chosen provider
+function loadAiSettings(){
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(AI_LS_KEY)) ?? {}; } catch {}
+  if(typeof s !== "object" || Array.isArray(s)) s = {};
+  const provider = AI_CATALOG.providers[s.provider] ? s.provider : AI_CATALOG.defaultProvider;
+  const keys = { gemini: "", openai: "", claude: "" };
+  if(s.keys && typeof s.keys === "object"){ for(const p of Object.keys(keys)) if(typeof s.keys[p] === "string") keys[p] = s.keys[p]; }
+  let model = typeof s.model === "string" && s.model.trim() ? s.model.trim() : "";
+  if(!model) model = AI_CATALOG.providers[provider].models[0];
+  return { provider, model, keys };
+}
+function saveAiSettings(s){ localStorage.setItem(AI_LS_KEY, JSON.stringify(s)); }
+
+// request builders
+function geminiGenerationConfig(model){
+  const supported = AI_CATALOG.providers.gemini.samplingSupported ?? [];
+  return supported.includes(model) ? { temperature: 0.4 } : null;
+}
+function buildGeminiRequest({ key, model, prompt }){
+  const generationConfig = geminiGenerationConfig(model);
+  return {
+    url: `${GEMINI_BASE}/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: { contents: [{ parts: [{ text: prompt }] }], ...(generationConfig ? { generationConfig } : {}) }
+  };
+}
+function buildOpenAIRequest({ key, model, prompt }){
+  return {
+    url: "https://api.openai.com/v1/responses",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+    body: { model, input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }], stream: true }
+  };
+}
+function claudeThinking(model){
+  const optional = AI_CATALOG.providers.claude.thinkingOptional ?? [];
+  return optional.includes(model) ? { type: "disabled" } : null;
+}
+function buildClaudeRequest({ key, model, prompt }){
+  return {
+    url: "https://api.anthropic.com/v1/messages",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: {
+      model, max_tokens: 64000, stream: true,
+      ...(claudeThinking(model) ? { thinking: claudeThinking(model) } : {}),
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }] }]
+    }
+  };
+}
+
+// chunk extractors
+function geminiChunk(data){ return (data.candidates?.[0]?.content?.parts ?? []).map(p => p.text ?? "").join(""); }
+function openaiChunk(data){ return data.type === "response.output_text.delta" ? (data.delta ?? "") : ""; }
+function claudeChunk(data){ return data.type === "content_block_delta" && data.delta?.type === "text_delta" ? (data.delta.text ?? "") : ""; }
+
+const AI_STREAMS = {
+  gemini: [buildGeminiRequest, geminiChunk],
+  openai: [buildOpenAIRequest, openaiChunk],
+  claude: [buildClaudeRequest, claudeChunk]
+};
+
+function providerStopReason(data){
+  const raw = data?.type === "message_delta" ? data.delta?.stop_reason
+    : data?.type === "response.incomplete" ? data.response?.incomplete_details?.reason
+      : data?.candidates?.[0]?.finishReason;
+  switch(String(raw ?? "").toLowerCase()){
+    case "max_tokens": case "max_output_tokens": return "truncated";
+    case "refusal": case "safety": case "recitation": case "blocklist":
+    case "prohibited_content": case "content_filter": return "blocked";
+    default: return "";
+  }
+}
+
+function parseSseFrames(input, { final = false } = {}){
+  const events = [];
+  const buffer = String(input ?? "");
+  const separator = /\r?\n\r?\n/g;
+  let end = 0, match;
+  const addFrame = frame => {
+    const dataLines = [];
+    let event = "message";
+    for(const line of frame.split(/\r?\n/)){
+      if(!line || line.startsWith(":")) continue;
+      const colon = line.indexOf(":");
+      const field = colon < 0 ? line : line.slice(0, colon);
+      let value = colon < 0 ? "" : line.slice(colon + 1);
+      if(value.startsWith(" ")) value = value.slice(1);
+      if(field === "event") event = value || "message";
+      if(field === "data") dataLines.push(value);
+    }
+    if(dataLines.length) events.push({ event, data: dataLines.join("\n") });
+  };
+  while((match = separator.exec(buffer))){ addFrame(buffer.slice(end, match.index)); end = match.index + match[0].length; }
+  const remainder = buffer.slice(end);
+  if(final && remainder){ addFrame(remainder); return { events, remainder: "" }; }
+  return { events, remainder };
+}
+
+// transport — never retries POST (billing risk); bounded timeout
+function makeNetworkError(url, cause){ const e = new Error("network_error", { cause }); e.code = "network_error"; try { e.host = new URL(url).host; } catch { e.host = url; } return e; }
+function makeTimeoutError(ms){ const e = new Error(`Request timed out after ${Math.ceil(ms/1000)} seconds`); e.code = "timeout"; return e; }
+function isAbortError(c){ return c?.name === "AbortError" || c?.name === "TimeoutError"; }
+function transportError(url, cause, signal){ if(signal?.aborted) return signal.reason ?? cause; if(isAbortError(cause)) return cause; return makeNetworkError(url, cause); }
+function createRequestSignal(externalSignal, timeoutMs){
+  const controller = new AbortController();
+  const safe = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : AI_TIMEOUT_MS;
+  const forwardAbort = () => controller.abort(externalSignal?.reason);
+  if(externalSignal?.aborted) forwardAbort();
+  else externalSignal?.addEventListener("abort", forwardAbort, { once: true });
+  const timeoutId = setTimeout(() => controller.abort(makeTimeoutError(safe)), safe);
+  return { signal: controller.signal, cleanup(){ clearTimeout(timeoutId); externalSignal?.removeEventListener("abort", forwardAbort); } };
+}
+async function responseError(res){
+  let message = res.statusText;
+  try { const p = JSON.parse(await res.text()); message = p?.error?.message ?? p?.message ?? message; } catch {}
+  const e = new Error(`${res.status}: ${message}`); e.isResponseError = true; return e;
+}
+function makeProviderError(message, { code = "api_error" } = {}){ const e = new Error(message || "stream error"); e.code = code; return e; }
+function providerErrorMessage(data, eventName = ""){
+  if(eventName === "error" || data?.type === "error" || data?.type === "response.failed" || data?.error)
+    return data?.error?.message ?? data?.response?.error?.message ?? data?.message ?? "stream error";
+  return "";
+}
+
+async function streamSseRequest({ url, headers, body }, extractChunk, onChunk, { signal, timeoutMs = AI_TIMEOUT_MS } = {}){
+  const request = createRequestSignal(signal, timeoutMs);
+  let stopReason = "";
+  try {
+    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: request.signal });
+    if(!res.ok) throw await responseError(res);
+    if(!res.body) throw makeProviderError("Provider returned no response stream");
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "", acc = "";
+    const handleFrames = frames => {
+      for(const frame of frames){
+        const payload = frame.data.trim();
+        if(!payload || payload === "[DONE]") continue;
+        let data; try { data = JSON.parse(payload); } catch { continue; }
+        const msg = providerErrorMessage(data, frame.event);
+        if(msg) throw makeProviderError(msg);
+        stopReason = providerStopReason(data) || stopReason;
+        const chunk = extractChunk(data);
+        if(!chunk) continue;
+        acc += chunk;
+        onChunk?.(acc);
+      }
+    };
+    for(;;){
+      const { done, value } = await reader.read();
+      if(done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parsed = parseSseFrames(buf);
+      buf = parsed.remainder;
+      handleFrames(parsed.events);
+    }
+    buf += decoder.decode();
+    handleFrames(parseSseFrames(buf, { final: true }).events);
+    if(stopReason === "blocked") throw makeProviderError("blocked", { code: "blocked" });
+    return acc;
+  } catch(cause){
+    if(cause?.isResponseError || cause?.code === "api_error" || cause?.code === "blocked" || cause?.code === "timeout") throw cause;
+    if(request.signal.aborted) throw transportError(url, cause, request.signal);
+    if(isAbortError(cause)) throw cause;
+    throw transportError(url, cause, request.signal);
+  } finally {
+    request.cleanup();
+  }
+}
+
+async function runAi(prompt, onChunk){
+  const s = loadAiSettings();
+  const [build, extract] = AI_STREAMS[s.provider] ?? AI_STREAMS.gemini;
+  return streamSseRequest(build({ key: s.keys[s.provider], model: s.model, prompt }), extract, onChunk, {});
+}
+
+// strip a wrapping fence and extract the first JSON object/array, tolerant of prose
+function extractJson(text){
+  const stripped = String(text).replace(/^```[a-zA-Z]*\s*/, "").replace(/```\s*$/, "").trim();
+  const opens = [stripped.indexOf("{"), stripped.indexOf("[")].filter(i => i >= 0);
+  if(!opens.length) return null;
+  const start = Math.min(...opens);
+  const open = stripped[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0, inStr = false, esc = false;
+  for(let i = start; i < stripped.length; i++){
+    const ch = stripped[i];
+    if(inStr){ if(esc) esc = false; else if(ch === "\\") esc = true; else if(ch === '"') inStr = false; continue; }
+    if(ch === '"') inStr = true;
+    else if(ch === open) depth++;
+    else if(ch === close){ depth--; if(depth === 0){ try { return JSON.parse(stripped.slice(start, i+1)); } catch { return null; } } }
+  }
+  return null;
+}
+
+// AI prompts
+function ragasAiPrompt(q, ctx, answer){
+  const ctxBlock = ctx.map((c,i) => `[${i+1}] ${c}`).join("\n");
+  return `You are a RAGAS-style evaluator for a Retrieval-Augmented Generation system.
+Given a user question, retrieved context fragments, and the system's answer, evaluate quality.
+
+Return ONLY a JSON object (no markdown fence, no commentary) with exactly this shape:
+{
+  "claims": [ { "text": "<one factual claim from the answer>", "supported": true } ],
+  "context_relevance": <0..100>,
+  "faithfulness": <0..100>,
+  "answer_relevance": <0..100>
+}
+
+Rules:
+- "claims" lists every distinct factual claim in the answer; "supported" is true ONLY if that claim is grounded in the context below.
+- context_relevance: how much of the retrieved context is actually useful for the question.
+- faithfulness: percentage of claims grounded in the context.
+- answer_relevance: how directly and completely the answer addresses the question.
+
+QUESTION:
+${q}
+
+CONTEXT:
+${ctxBlock}
+
+ANSWER:
+${answer}`;
+}
+
+function questevalAiPrompt(src, tgt){
+  return `You evaluate whether a target text faithfully and completely conveys a source text (QuestEval-style, question-answering based fidelity).
+
+Return ONLY a JSON object (no markdown fence, no commentary) with exactly this shape:
+{
+  "completeness": <0..100>,
+  "faithfulness": <0..100>,
+  "missing": ["<fact in the source dropped or lost in the target>"],
+  "hallucinations": ["<claim in the target not supported by the source>"]
+}
+
+completeness: how much of the source's information is retained in the target.
+faithfulness: how much of the target is grounded in the source (100% = no hallucinations).
+
+SOURCE:
+${src}
+
+TARGET:
+${tgt}`;
+}
+
+function ifevalAiPrompt(builtPrompt){
+  return `Follow these instructions exactly and return ONLY the answer (no preamble, no explanation, no markdown):\n\n${builtPrompt}`;
+}
+
+function renderRagasAi(j){
+  if(!j) return "";
+  const claims = (j.claims||[]).map(c => `<div class="claim ${c.supported?'supported':'unsupported'}"><span class="tag">${c.supported?t("rSupported"):t("rUnsupported")}</span><span>${esc(c.text)}</span></div>`).join("");
+  return `
+    <h3>${t("aiJudge")}</h3>
+    ${claims}
+    ${metric("ai-contextRel", (j.context_relevance??0)/100, t("rContextRel"), "")}
+    ${metric("ai-faithfulness", (j.faithfulness??0)/100, t("rFaithfulness"), "")}
+    ${metric("ai-answerRel", (j.answer_relevance??0)/100, t("rAnswerRel"), "")}`;
+}
+
+function renderQuestAi(j){
+  if(!j) return "";
+  const missing = (j.missing||[]).map(m => `<li>${esc(m)}</li>`).join("");
+  const hall = (j.hallucinations||[]).map(m => `<li>${esc(m)}</li>`).join("");
+  return `
+    <h3>${t("aiJudge")}</h3>
+    ${metric("ai-completeness", (j.completeness??0)/100, t("qCompleteness"), "")}
+    ${metric("ai-faithfulness", (j.faithfulness??0)/100, t("qFaithfulness"), "")}
+    ${(j.missing||[]).length ? `<div class="fact nomatch"><b>${t("qMissing")}</b><ul style="margin:4px 0 0">${missing}</ul></div>` : ""}
+    ${(j.hallucinations||[]).length ? `<div class="fact nomatch"><b>${t("qHalluc")}</b><ul style="margin:4px 0 0">${hall}</ul></div>` : ""}`;
+}
+
+function aiErrorHtml(err){
+  const msg = err?.message || String(err);
+  return `<div class="fact nomatch"><b>${t("aiError")}</b> ${esc(msg)}</div>`;
+}
+
+async function handleAi(){
+  const s = loadAiSettings();
+  if(!s.keys[s.provider]){ openAiDialog(); announce(t("aiNoKey")); return; }
+
+  // IFEval: generate an answer obeying the task + include/exclude rubric, then score deterministically
+  if(state.activeBench === "ifeval"){
+    const built = buildIfevalPrompt();
+    const box = $("#i-ai");
+    if(box) box.innerHTML = `<div class="chip">${t("aiThinking")}</div>`;
+    try {
+      const text = await runAi(ifevalAiPrompt(built), () => {});
+      const clean = String(text).replace(/^```[a-zA-Z]*\s*/, "").replace(/```\s*$/, "").trim();
+      $("#i-answer").value = clean;
+      if(box) box.innerHTML = "";
+      evaluate();
+    } catch(err){ if(box) box.innerHTML = aiErrorHtml(err); }
+    return;
+  }
+
+  // RAGAS / QuestEval: LLM-as-judge
+  const containerId = state.activeBench === "ragas" ? "#r-ai" : "#q-ai";
+  const box = $(containerId);
+  if(!box) return;
+  box.innerHTML = `<div class="chip">${t("aiThinking")}…</div>`;
+  const prompt = state.activeBench === "ragas"
+    ? ragasAiPrompt($("#r-question").value, [0,1,2].map(i => $("#r-ctx-"+i).value), $("#r-answer").value)
+    : questevalAiPrompt($("#q-source").value, $("#q-target").value);
+  try {
+    const text = await runAi(prompt, acc => { box.innerHTML = `<div class="chip">${t("aiThinking")}… ${acc.length} ${t("chars")}</div>`; });
+    const j = extractJson(text);
+    if(!j){ box.innerHTML = `<div class="fact nomatch">${t("aiBadJson")}<pre style="white-space:pre-wrap;font-size:12px">${esc(text)}</pre></div>`; return; }
+    box.innerHTML = state.activeBench === "ragas" ? renderRagasAi(j) : renderQuestAi(j);
+  } catch(err){ box.innerHTML = aiErrorHtml(err); }
+}
+
+/* ============================ RAGAS ENGINE ============================ */
+
+function renderAiChip(){
+  const s = loadAiSettings();
+  const el = $("#ai-chip");
+  if(el) el.textContent = AI_CATALOG.providers[s.provider].label + " · " + s.model + (s.keys[s.provider] ? "" : " ⚠");
+}
+
+function openAiDialog(){
+  const d = $("#ai-dialog");
+  if(!d) return;
+  const s = loadAiSettings();
+  const curated = AI_CATALOG.providers[s.provider].models;
+  d.innerHTML = `
+    <h2>${t("aiTitle")}</h2>
+    <div class="ai-providers" role="group">
+      ${SUPPORTED_PROVIDER_IDS.map(p => `<button type="button" data-ap="${p}" class="${p===s.provider?'active':''}">${AI_CATALOG.providers[p].label}</button>`).join("")}
+    </div>
+    <label class="ai-field">${t("aiModel")}
+      <select id="ai-model">${curated.map(m => `<option value="${m}" ${m===s.model?'selected':''}>${m}</option>`).join("")}</select></label>
+    <label class="ai-field">${t("aiCustom")}
+      <input type="text" id="ai-custom" placeholder="${t("aiCustomPh")}" value="${curated.includes(s.model) ? "" : esc(s.model)}"></label>
+    <label class="ai-field">${t("aiKey")}
+      <input type="password" id="ai-key" placeholder="••••" value="${esc(s.keys[s.provider])}"></label>
+    <p class="ai-note">${t("aiKeyHelp")}</p>
+    <div class="ai-actions">
+      <button type="button" id="ai-cancel" class="btn">${t("aiCancel")}</button>
+      <button type="button" id="ai-save" class="btn primary">${t("aiSave")}</button>
+    </div>`;
+  d.showModal();
+
+  const providerBtns = $$("#ai-dialog .ai-providers button");
+  providerBtns.forEach(b => b.addEventListener("click", () => {
+    const p = b.dataset.ap;
+    providerBtns.forEach(x => x.classList.toggle("active", x === b));
+    $("#ai-model").innerHTML = AI_CATALOG.providers[p].models.map(m => `<option value="${m}">${m}</option>`).join("");
+    $("#ai-custom").value = "";
+  }));
+
+  $("#ai-cancel").addEventListener("click", () => d.close());
+  $("#ai-save").addEventListener("click", () => {
+    const active = $("#ai-dialog .ai-providers button.active");
+    const provider = active ? active.dataset.ap : s.provider;
+    const custom = $("#ai-custom").value.trim();
+    const model = custom || $("#ai-model").value;
+    const key = $("#ai-key").value.trim();
+    const keys = Object.assign({}, s.keys, { [provider]: key });
+    saveAiSettings({ provider, model, keys });
+    d.close();
+    renderAiChip();
+  });
+}
+
+function ragasEval(inputs){
+  if(!inputs || !inputs.question || !inputs.answer){
+    return { empty: true };
+  }
+  const qWords = normalize(inputs.question);
+  const rawContext = (inputs.context || []).map(c => c || "");
+  const context = rawContext.map(c => normalize(c));
+  const claims = claimClauses(inputs.answer).map(text => {
+    const cw = normalize(text);
+    // matched fragment indices (which fragments share >=2 words with the claim)
+    let matched = [];
+    if(cw.length){
+      context.forEach((c, i) => { if(overlap(cw, c).length >= Math.min(2, cw.length)) matched.push(i); });
+    }
+    const supported = matched.length > 0;
+    // matched terms shared between claim and its first supporting fragment
+    const matchTerms = supported ? overlap(cw, context[matched[0]]) : [];
+    return { text, supported, fragments: matched, matchTerms };
+  });
+  const supportedCount = claims.filter(c => c.supported).length;
+  const faithfulness = claims.length ? supportedCount / claims.length : 0;
+
+  // per-fragment usefulness + which claims each fragment supports
+  const fragments = context.map((cw, i) => {
+    const supporting = claims.filter(c => c.fragments.includes(i));
+    const useful = overlap(cw, qWords).length > 0;
+    return { index: i, text: rawContext[i], useful, connected: supporting.length > 0 };
+  });
+  const usefulFrags = fragments.filter(f => f.useful).length;
+  const contextRelevance = fragments.length ? usefulFrags / fragments.length : 0;
+
+  const ansWords = normalize(inputs.answer);
+  const relevantConcepts = qWords.filter(w => ansWords.includes(w));
+  const answerRelevance = qWords.length ? relevantConcepts.length / qWords.length : 0;
+
+  return {
+    empty: false, claims, faithfulness, contextRelevance, answerRelevance,
+    fragments, usefulFrags, relevantConcepts, qWords, ansWords
+  };
+}
+
+/* ============================ ARES ENGINE ============================ */
+
+function aresExperiment(cfg){
+  const N = +cfg.N;
+  // n must never exceed the labeled pool size (the population of scored examples)
+  const n = Math.min(N, +cfg.n);
+  const bias = +cfg.bias, noise = +cfg.noise;
+  const trueRate = +cfg.trueRate, seed = +cfg.seed;
+  const dimension = cfg.dimension || "faithfulness";
+  const rnd = mulberry32(seed);
+
+  // Each evaluation dimension has its own (imagined) judge reliability. This makes the
+  // dimension control real: choosing context vs faithfulness vs relevance changes the
+  // judge's error profile, instead of an identical simulation every time.
+  const PROFILE = {
+    context:      { biasFactor: 0.3,  noiseFactor: 0.5 },  // judge reads the whole passage — stable
+    faithfulness: { biasFactor: 1.0,  noiseFactor: 1.0 },  // strict claim check
+    relevance:    { biasFactor: 2.2,  noiseFactor: 1.6 }   // subjective fit — noisier, more personal
+  }[dimension] || { bias: 1.0, noise: 1.0 };
+  const biasRate = Math.min(1, Math.max(-1, bias / 100 * PROFILE.biasFactor));
+  const noiseRate = Math.min(1, Math.max(0, noise / 100 * PROFILE.noiseFactor));
+
+  const truth = Array.from({length: N}, () => rnd() < trueRate ? 1 : 0);
+  const judge = truth.map(t => {
+    let j = t;
+    if(rnd() < noiseRate) j = 1 - j;                       // random error
+    if(t === 0 && biasRate > 0 && rnd() < biasRate) j = 1;     // over-rating
+    if(t === 1 && biasRate < 0 && rnd() < -biasRate) j = 0;  // under-rating
+    return j;
+  });
+
+  // deterministic-ish subset selection using seeded shuffle
+  const idx = Array.from({length: N}, (_, i) => i);
+  for(let i = N - 1; i > 0; i--){
+    const j = Math.floor(rnd() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  const labeled = idx.slice(0, n);
+
+  const raw = judge.reduce((a,b)=>a+b,0) / N;
+  const correction = labeled.length
+    ? labeled.reduce((s,i)=> s + (truth[i]-judge[i]), 0) / labeled.length : 0;
+  const ppi = clamp01(raw + correction);
+
+  const varJudge = variance(judge);
+  const varDiff = labeled.length ? variance(labeled.map(i => truth[i]-judge[i])) : 0;
+  const se = Math.sqrt(varJudge/N + (labeled.length ? varDiff/labeled.length : 0));
+  const ci = { lo: clamp01(ppi - 1.96*se), hi: clamp01(ppi + 1.96*se) };
+
+  // representative dot sample for the pool visual: truth class + audited membership
+  const sampleSize = 120;
+  const every = Math.max(1, Math.floor(N / sampleSize));
+  const auditedSet = new Set(labeled);
+  const sample = [];
+  for(let i = 0; i < N; i += every) sample.push({ truth: truth[i], audited: auditedSet.has(i) });
+
+  // agreement / false-positive / false-negative over the human-audited label set
+  let agreementCount = 0, fp = 0, fn = 0;
+  labeled.forEach(i => {
+    if(truth[i] === judge[i]) agreementCount++;
+    else if(judge[i] === 1) fp++;
+    else fn++;
+  });
+  const disagreement = { agreement: agreementCount, falsePositive: fp, falseNegative: fn };
+
+  return {
+    N, n, bias, noise, trueRate, seed, dimension, raw, correction, ppi, ci, se, varJudge, varDiff,
+    sample, disagreement, truthRate: trueRate
+  };
+}
+
+/* ============================ IFEVAL ENGINE ============================ */
+
+const IFEVAL_CONSTRAINTS = [
+  { id: "requiredWord",  labelKey: "iRequiredWord",  hasValue: true,  valueKey: "iWord" },
+  { id: "forbiddenWord", labelKey: "iForbiddenWord", hasValue: true,  valueKey: "iWord" },
+  { id: "maxWords",      labelKey: "iMaxWords",      hasValue: true,  valueKey: "iMax" },
+  { id: "exactItems",    labelKey: "iExactItems",    hasValue: true,  valueKey: "iItems" },
+  { id: "noComma",       labelKey: "iNoComma",       hasValue: false, valueKey: "" },
+  { id: "validJson",     labelKey: "iValidJson",     hasValue: false, valueKey: "" },
+  { id: "exactEnding",   labelKey: "iExactEnding",   hasValue: true,  valueKey: "iEnding" },
+  { id: "includeTerms",  labelKey: "iInclude",       hasValue: true,  valueKey: "" },
+  { id: "excludeTerms",  labelKey: "iExclude",       hasValue: true,  valueKey: "" },
+  { id: "citeTerms",     labelKey: "iCitations",     hasValue: true,  valueKey: "" }
+];
+
+function ifevalCheck(id, answer, param){
+  switch(id){
+    case "requiredWord":  return answer.toLowerCase().split(/\s+/).includes(String(param).toLowerCase());
+    case "forbiddenWord": return !answer.toLowerCase().split(/\s+/).includes(String(param).toLowerCase());
+    case "maxWords":      return answer.split(/\s+/).filter(Boolean).length <= (+param);
+    case "exactItems":    return answer.split("\n").filter(l => /^[-*]\s/.test(l.trim())).length === (+param);
+    case "noComma":       return !answer.includes(",");
+    case "validJson":     { try { JSON.parse(answer); return true; } catch(e){ return false; } }
+    case "exactEnding":   return answer.trimEnd().endsWith(String(param));
+    default: return false;
+  }
+}
+
+function answerVariants(answer){
+  const stripMd = a => a.replace(/\*/g, "");
+  const dropFirst = a => a.split("\n").slice(1).join("\n");
+  const dropLast = a => { const l = a.split("\n"); return l.slice(0, -1).join("\n"); };
+  const variants = [];
+  for(let a = 0; a < 2; a++){
+    for(let b = 0; b < 2; b++){
+      for(let c = 0; c < 2; c++){
+        let v = answer;
+        if(a) v = stripMd(v);
+        if(b) v = dropFirst(v);
+        if(c) v = dropLast(v);
+        variants.push(v);
+      }
+    }
+  }
+  return variants;
+}
+
+function normPl(s){
+  const m = { "ą":"a","ć":"c","ę":"e","ł":"l","ń":"n","ó":"o","ś":"s","ź":"z","ż":"z" };
+  return String(s).toLowerCase().replace(/[ąćęłńóśźż]/g, ch => m[ch] || ch);
+}
+function evalIncludeTerms(answer, param){
+  const a = normPl(answer);
+  const groups = param.split(";").map(g => g.trim()).filter(Boolean);
+  const items = groups.map(g => {
+    const alts = g.split("|").map(x => x.trim()).filter(Boolean);
+    return { label: g, pass: alts.some(alt => a.includes(normPl(alt))) };
+  });
+  return { pass: items.every(i => i.pass), items };
+}
+function evalExcludeTerms(answer, param){
+  const a = normPl(answer);
+  const groups = param.split(";").map(g => g.trim()).filter(Boolean);
+  const items = groups.map(g => {
+    const alts = g.split("|").map(x => x.trim()).filter(Boolean);
+    return { label: g, pass: alts.every(alt => !a.includes(normPl(alt))) };
+  });
+  return { pass: items.every(i => i.pass), items };
+}
+
+function ifevalEval(constraints, answer){
+  const active = constraints.filter(c => c.enabled);
+  const variants = answerVariants(answer);
+  const check = (c, text) => {
+    if(c.id === "includeTerms") return evalIncludeTerms(text, c.value);
+    if(c.id === "excludeTerms") return evalExcludeTerms(text, c.value);
+    if(c.id === "citeTerms") return evalIncludeTerms(text, c.value);
+    return { pass: ifevalCheck(c.id, text, c.value), items: null };
+  };
+  const strict = active.map(c => ({ id: c.id, value: c.value, ...check(c, answer) }));
+  const loose = active.map(c => {
+    const anyPass = variants.some(v => check(c, v).pass);
+    const base = check(c, answer);
+    return { id: c.id, value: c.value, pass: anyPass, items: base.items };
+  });
+  // instruction-level counts sub-items (each include/exclude term) for granularity
+  const tally = arr => {
+    let total = 0, passed = 0;
+    arr.forEach(r => {
+      if(r.items && r.items.length){ total += r.items.length; passed += r.items.filter(i => i.pass).length; }
+      else { total += 1; passed += r.pass ? 1 : 0; }
+    });
+    return { total, passed };
+  };
+  const s = tally(strict), l = tally(loose);
+  return {
+    strict, loose,
+    strictInstr: s.total ? s.passed / s.total : 1,
+    strictPrompt: strict.every(c => c.pass) ? 1 : 0,
+    looseInstr: l.total ? l.passed / l.total : 1,
+    loosePrompt: loose.every(c => c.pass) ? 1 : 0,
+    activeCount: active.length
+  };
+}
+
+/* ============================ QUESTEVAL ENGINE ============================ */
+
+function questevalEval(source, target, facts){
+  const norm = s => String(s).toLowerCase().replace(/[^a-ząćęłńóśźż0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  const src = norm(source), tgt = norm(target);
+  const inTarget = f => f.accepted.some(a => tgt.includes(norm(a)));
+  const inSource = f => f.accepted.some(a => src.includes(norm(a)));
+
+  // forward: source facts retained in the target -> completeness
+  const forward = facts.filter(f => f.origin === "src").map(f => ({ ...f, found: inTarget(f) }));
+  const completeness = forward.length ? forward.filter(f=>f.found).length / forward.length : 0;
+
+  // backward: EVERY claim present in the target, grounded in the source -> faithfulness
+  // A claim is "present" when any accepted term occurs. Free-text additions (e.g. a made-up
+  // colour) are not matched, so this is an explicit closed-set proxy rather than full QA.
+  const present = facts.filter(f => inTarget(f));
+  const backward = present.map(f => ({ ...f, found: inSource(f) }));
+  // empty/short target: no claims to ground -> an INVALID score (N/A), never a silent 100%
+  const faithfulness = backward.length ? backward.filter(f=>f.found).length / backward.length : null;
+
+  // combined: undefined when either side is invalid
+  const combined = (faithfulness === null || completeness === 0 && faithfulness === 0) ? null
+    : 2 * completeness * faithfulness / (completeness + faithfulness);
+
+  return { forward, backward, completeness, faithfulness, combined };
+}
+
+/* ============================ RENDER: SHELL ============================ */
+
+/* ============================ SHARED METHOD-SHELL HELPERS ============================ */
+
+// simple {token} substitution into an i18n template
+function fmt(key, vars){
+  let s = t(key);
+  if(typeof s !== "string") return s;
+  for(const k in (vars||{})) s = s.split("{"+k+"}").join(vars[k]);
+  return s;
+}
+function statusHtml(pass, label){
+  return `<span class="status ${pass?'pass':'fail'}">${label || t(pass?'pass':'fail')}</span>`;
+}
+function methodShell(name, lqKey, body, logLines){
+  return `<article class="method-shell" data-method="${state.activeBench}" data-preset="${state.activePreset[state.activeBench]}" data-sim-state="${state.runState}">
+    ${methodHeader(name, lqKey)}
+    ${presetBar()}
+    <div class="canvas">
+      ${body}
+    </div>
+    ${renderLog()}
+  </article>`;
+}
+function methodHeader(title, lqKey){
+  return `<div class="method-head">
+    <div>
+      <div class="eyebrow"><span class="eyebrow-dot"></span>${t("visualMockup")}</div>
+      <h2 class="method-title">${title}</h2>
+      <p class="method-answer">${t(lqKey)}</p>
+    </div>
+    <div class="mode-note"><strong>${t("proxyTitle")}</strong>${t("proxyText")}</div>
+  </div>`;
+}
+const PRESET_SPECS = {
+  ragas: [
+    { id:"good",      label:"rPresetGood",     change:"ragasChange" },
+    { id:"noise",     label:"rPresetNoise",    change:"ragasNoiseChange" },
+    { id:"halluc",    label:"rPresetHalluc",   change:"ragasHallucChange" }
+  ],
+  ares: [
+    { id:"baseline",  label:"aPresetBaseline", change:"aresBaseChange" },
+    { id:"biased",    label:"aPresetBiased",   change:"aresChange" },
+    { id:"moreLabels", label:"aPresetMore",    change:"aresMoreChange" }
+  ],
+  ifeval: [
+    { id:"good",      label:"iPresetGood",     change:"ifevalGoodChange" },
+    { id:"miss",      label:"iPresetMiss",     change:"ifevalMissChange" },
+    { id:"preamble",  label:"iPresetPreamble", change:"ifevalPreambleChange" }
+  ],
+  questeval: [
+    { id:"full",      label:"qPresetFull",     change:"qsFullChange" },
+    { id:"missing",   label:"qPresetMissing",  change:"qsMissingChange" },
+    { id:"halluc",    label:"qPresetHalluc",   change:"qsHallucChange" }
+  ]
+};
+function presetBar(){
+  const specs = PRESET_SPECS[state.activeBench] || [];
+  const active = state.activePreset[state.activeBench];
+  const changeKey = (specs.find(s => s.id === active) || {}).change || "";
+  return `<div class="preset-bar">
+    <div class="preset-set" aria-label="${t("presets")}">
+      ${specs.map(s => `<button class="preset ${s.id===active?'active':''}" data-action="preset" data-preset="${s.id}" type="button">${t(s.label)}</button>`).join("")}
+    </div>
+    <div class="change-note"><strong>${t("changeTab")}</strong> ${changeKey ? t(changeKey) : ""}</div>
+  </div>`;
+}
+function section(titleKey, subKey){
+  return `<h3 class="section-title">${t(titleKey)}</h3>${subKey ? `<p class="section-kicker">${t(subKey)}</p>` : ""}`;
+}
+function renderLog(){
+  return `<details class="log-details" data-calculation-log><summary>${t("calculationLog")}</summary>
+    <div class="terminal" id="term-log"><span class="muted">${t("termIdle")}</span></div>
+  </details>`;
+}
+
+/* ============================ RENDER: SHELL ============================ */
+
+function renderShell(){
+  $("#app").dataset.lang = state.lang;
+  $("#app").dataset.activeBench = state.activeBench;
+  $("#app-sub").textContent = t("appSub");
+  document.documentElement.lang = state.lang;
+
+  $("#lang-pl").classList.toggle("active", state.lang === "pl");
+  $("#lang-en").classList.toggle("active", state.lang === "en");
+
+  $("#tabs").innerHTML = BENCHES.map(b => `
+    <button class="tab${b.id===state.activeBench?' active':''}" role="tab" data-bench="${b.id}" data-action="bench"
+      aria-current="${b.id===state.activeBench?'page':'false'}">
+      ${t(b.nameKey)}<span class="tab-number">${b.key||"1"}</span></button>`).join("");
+
+  $("#footer-note").textContent = t("footnote");
+  $("#footer-meta").innerHTML = `<span>${t("shortcuts")}</span>
+    <button class="btn sm" id="qa-toggle" data-action="qa-toggle" type="button">${state.showQa ? t("qaToggle")+" (—)" : t("qaToggle")}</button>`;
+}
+
+// log writer lives inside the collapsed <details>.renderLog
+function termReset(){
+  state.runId = (state.runId||0)+1;
+  const det = document.querySelector(".method-shell .log-details, .log-details");
+  if(det) det.open = true;
+  const l = $("#term-log"); if(l) l.innerHTML = "";
+  return state.runId;
+}
+function termWrite(text, cls){
+  const l = $("#term-log"); if(!l) return;
+  const el = document.createElement("div");
+  el.className = "ln " + (cls||"");
+  el.textContent = text || "\u00A0";
+  l.appendChild(el);
+  l.scrollTop = l.scrollHeight;
+}
+function runProcess(lines, animate){
+  const runId = termReset();
+  const arr = lines || [];
+  if(!animate){
+    arr.forEach(([txt,cls]) => termWrite(txt, cls));
+    return;
+  }
+  arr.forEach(([txt,cls],i) => setTimeout(() => { if(runId===state.runId) termWrite(txt, cls); }, 160*(i+1)));
+  setTimeout(() => { if(runId===state.runId) termWrite("✓ " + t("termDone"), "hl"); }, 160*(arr.length+1));
+}
+
+// per-bench terminal log builders — derived from the real evaluation result
+function ragasLog(r){
+  if(!r || r.empty) return [["! " + t("rNoData"), "err"]];
+  const L = [["$ ragas evaluate --reference-free", "accent"], ["", "dim"]];
+  r.claims.forEach((c,i) => {
+    L.push([`claim ${i+1}: ${c.text}`, "ok"]);
+    L.push([`   ${c.supported ? "supported ✔ "+c.fragments.map(f=>"frag"+(f+1)).join(",") : "NOT supported ✗ ("+t("noSupport")+")"}`, c.supported ? "ok" : "err"]);
+  });
+  L.push([`context_relevance = ${pct(r.contextRelevance)}%  (${r.usefulFrags}/${r.fragments.length} useful)`, "dim"]);
+  L.push([`faithfulness      = ${pct(r.faithfulness)}%`, r.faithfulness >= 0.8 ? "ok" : "warn"]);
+  L.push([`answer_relevance  = ${pct(r.answerRelevance)}%`, r.answerRelevance >= 0.8 ? "ok" : "warn"]);
+  return L;
+}
+function aresLog(r){
+  if(!r) return [["! error", "err"]];
+  return [
+    [`$ ares experiment --seed=${r.seed}`, "accent"], ["", "dim"],
+    [`[1/${t("stSynthetic")}] ${r.N} examples (positive + negative)`, "dim"],
+    [`[2/${t("stJudge")}] scored pool → raw mean = ${(r.raw*100).toFixed(1)}% (dim: ${r.dimension})`, "ok"],
+    [`[3/${t("stHuman")}] ${r.n} labels → disagreement ${r.disagreement.falsePositive}/${r.disagreement.falseNegative} (fp/fn)`, r.disagreement.falsePositive+r.disagreement.falseNegative ? "warn" : "ok"],
+    [`PPI = raw + correction = ${(r.ppi*100).toFixed(1)}%`, "hl"],
+    [`95% CI = [${(r.ci.lo*100).toFixed(1)}%, ${(r.ci.hi*100).toFixed(1)}%]`, "dim"]
+  ];
+}
+function ifevalLog(r){
+  if(!r || r.activeCount === 0) return [["! no active instructions", "err"]];
+  const L = [["$ ifeval check", "accent"], ["", "dim"]];
+  r.strict.forEach(c => {
+    const nameKey = c.id === "includeTerms" ? "iInclude" : c.id === "excludeTerms" ? "iExclude" : "iCitations";
+    L.push([`${t(nameKey)}:`, "dim"]);
+    L.push([`  strict → ${c.pass ? "PASS" : "FAIL"}   loose → ${r.loose.find(x=>x.id===c.id).pass ? "PASS" : "FAIL"}`, c.pass ? "ok" : "err"]);
+  });
+  L.push([`strict instr = ${pct(r.strictInstr)}% · prompt = ${r.strictPrompt?t("pass"):t("fail")}`, "dim"]);
+  L.push([`loose  instr = ${pct(r.looseInstr)}% · prompt = ${r.loosePrompt?t("pass"):t("fail")}`, r.loosePrompt?"ok":"warn"]);
+  return L;
+}
+function questLog(r){
+  if(!r) return [["! error", "err"]];
+  const L = [["$ questeval compare --bidirectional", "accent"], ["", "dim"]];
+  L.push(["forward: source questions → target text", "dim"]);
+  r.forward.forEach(f => L.push([`  ${f.id}: ${f.found ? "retained ✔" : "MISSING ✗"}`, f.found ? "ok" : "warn"]));
+  L.push([`  completeness = ${pct(r.completeness)}%`, "hl"]);
+  L.push(["backward: target claims → source", "dim"]);
+  (r.backward||[]).forEach(f => L.push([`  ${f.id}: ${f.found ? "grounded ✔" : "hallucination ✗"}`, f.found ? "ok" : "err"]));
+  L.push([`  faithfulness = ${r.faithfulness === null ? t("na") : pct(r.faithfulness)+"%"}`, r.faithfulness === null ? "warn" : "hl"]);
+  L.push([`combined (harmonic mean) = ${r.combined === null ? t("na") : pct(r.combined)+"%"}`, "dim"]);
+  return L;
+}
+
+// compact neutral metric used by the AI-judge result panels
+function metric(key, val, name, desc){
+  if(val === null || typeof val !== "number" || !isFinite(val)){
+    return `<div class="summary-card" data-metric="${key}" data-value="null" data-status="na">
+      <h3>${name}</h3><div class="metric-value">${t("na")}</div>${desc?`<p>${desc}</p>`:""}
+      <div class="neutral-track"><div class="neutral-fill" style="width:0%"></div></div></div>`;
+  }
+  const p = pct(val);
+  return `<div class="summary-card" data-metric="${key}" data-value="${val.toFixed(3)}">
+    <h3>${name}</h3><div class="metric-value">${p}%</div>${desc?`<p>${desc}</p>`:""}
+    <div class="neutral-track"><div class="neutral-fill" style="width:${p}%"></div></div></div>`;
+}
+
+/* ============================ RENDER: RAGAS ============================ */
+
+function renderRagas(){
+  const body = `
+    <div class="ragas-inputs">
+      <label class="card soft-card wide"><span class="label">${t("rQuestion")}</span>
+        <input type="text" class="field-input" id="r-question" data-field="question"></label>
+      <div class="card soft-card wide">
+        <span class="label">${t("rContext")}</span>
+        <div style="display:grid;gap:var(--space-2)">
+          ${[0,1,2].map(i => `<input type="text" class="field-input" id="r-ctx-${i}" data-field="context-${i}" placeholder="${t("rContext")} ${i+1}">`).join("")}
+        </div>
+      </div>
+      <label class="card soft-card wide"><span class="label">${t("rAnswer")}</span>
+        <textarea class="field-input" id="r-answer" data-field="answer" rows="3"></textarea></label>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" data-action="evaluate">${t("run")}</button>
+      <button class="btn sm" data-action="ai">${t("aiRun")}</button>
+    </div>
+    <div id="r-results"><p class="metric-group-label">${t("rNoData")}</p></div>
+    <div id="r-ai"></div>
+    <div class="panel-disclaimer">${t("rDisclaimer")}</div>`;
+  return methodShell("RAGAS", "ragasLq", body);
+}
+
+function renderRagasResults(r){
+  if(!r || r.empty) return `<p class="metric-group-label">${t("rNoData")}</p>`;
+  const ctxHeaders = [t("rContext")+" 1", t("rContext")+" 2", t("rContext")+" 3"];
+
+  // fragments column
+  const fragmentCards = r.fragments.map((f, i) => `
+    <div class="fragment ${f.useful?'':'dimmed'}" data-fragment-id="${i}" data-useful="${f.useful}">
+      <div class="fragment-head"><b>${t("fragment")} ${i+1}</b>
+        <span class="status ${f.useful?'info':'warn'}">${f.useful?t("relevant"):t("redundant")}</span></div>
+      <p>${esc(f.text)}</p>
+    </div>`).join("");
+
+  // claims column — each with explicit supporting-fragment references + matched terms
+  const claimCards = r.claims.map((c, i) => {
+    const refs = c.fragments.length
+      ? c.fragments.map(fi => `<span>${t("fragment")} ${fi+1}</span>`).join("")
+      : `<span class="none">${t("noSupport")}</span>`;
+    const match = c.matchTerms.length ? `<div class="match-words">${c.matchTerms.join(" · ")}</div>` : "";
+    return `<div class="claim ${c.supported?'':'unsupported'}" data-claim-id="${i}" data-supported="${c.supported}" data-source-fragments="${c.fragments.join(",")}">
+      <div class="claim-head"><b>${t("claim")} ${i+1}</b>${statusHtml(c.supported, t(c.supported?"supported":"unsupported"))}</div>
+      <p>${esc(c.text)}</p>${match}
+      <div class="evidence-ref">${refs}</div>
+    </div>`;
+  }).join("");
+
+  // summary rail: Retriever (context relevance) + Generator (faithfulness, answer relevance)
+  const nF = r.fragments.length, nC = r.claims.length;
+  const rail = `
+    <div class="metric-group-label">${t("retriever")}</div>
+    <div class="summary-card"><h3>${t("rContextRel")}</h3>
+      <div class="metric-value">${pct(r.contextRelevance)}%</div>
+      <div class="ratio">${fmt("fragmentsUseful", {ok:r.usefulFrags, n:nF})}</div>
+      <div class="neutral-track"><div class="neutral-fill" style="width:${pct(r.contextRelevance)}%"></div></div></div>
+    <div class="metric-group-label">${t("generator")}</div>
+    <div class="summary-card" data-metric="faithfulness" data-value="${r.faithfulness.toFixed(3)}"><h3>${t("rFaithfulness")}</h3>
+      <div class="metric-value">${pct(r.faithfulness)}%</div>
+      <div class="ratio">${fmt("claimsSupported", {n: r.claims.filter(c=>c.supported).length, total: nC})}</div>
+      <div class="neutral-track"><div class="neutral-fill" style="width:${pct(r.faithfulness)}%"></div></div></div>
+    <div class="summary-card" data-metric="answerRel" data-value="${r.answerRelevance.toFixed(3)}"><h3>${t("rAnswerRel")}</h3>
+      <div class="metric-value">${pct(r.answerRelevance)}%</div>
+      <div class="ratio">${fmt("conceptsCovered", {n:r.relevantConcepts.length, total:r.qWords.length})}</div>
+      <div class="neutral-track"><div class="neutral-fill" style="width:${pct(r.answerRelevance)}%"></div></div></div>`;
+
+  return `<div class="method-layout">
+    <div>
+      ${section("evidenceMap","evidenceMapSub")}
+      <div class="evidence-map">
+        <div class="evidence-column">${fragmentCards}</div>
+        <div class="connectors" aria-hidden="true">${r.claims.filter(c=>c.supported).map(()=>'<div class="connector"></div>').join("")}</div>
+        <div class="claims-column">${claimCards}</div>
+      </div>
+    </div>
+    <aside class="summary-rail" style="position:static">${rail}</aside>
+  </div>`;
+}
+
+/* ============================ RENDER: ARES ============================ */
+
+function renderAres(){
+  const d = MODEL.ares.defaults;
+  const sliderRow = (labelKey, id, val, unit, min, max, step) => `
+    <div class="slider-row"><div class="slider-head"><span>${labelKey}</span><span class="val" id="${id}-v">${val}${unit||""}</span></div>
+      <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}" data-field="${id}"></div>`;
+  const body = `
+    <div class="ares-workspace">
+      <div class="control-groups">
+        <section class="control-group"><h3>${t("automaticExamples")}</h3><p>${t("populationHelp")}</p>${sliderRow(t("automaticExamples"),"a-N",d.N,"",100,2000,50)}</section>
+        <section class="control-group"><h3>${t("hiddenRate")}</h3><p>${t("populationHelp")}</p>${sliderRow("", "a-true", Math.round(d.trueRate*100), "%", 10, 90, 5)}</section>
+        <section class="control-group"><h3>${t("judgeBehavior")}</h3><p>${t("judgeHelp")}</p>${sliderRow(t("overrating"),"a-bias",d.bias,"",-25,25,1)}${sliderRow(t("randomError"),"a-noise",d.noise,"%",0,30,1)}</section>
+        <section class="control-group"><h3>${t("humanAudit")}</h3><p>${t("humanHelp")}</p>${sliderRow(t("humanLabels"),"a-n",d.n,"",10,300,10)}</section>
+        <label class="control-group"><span class="label">${t("aDim")}</span>
+          <select id="a-dim" data-field="a-dim">${ARES_DIMENSIONS.map(dm => `<option value="${dm.id}" ${dm.id===d.dimension?'selected':''}>${t(dm.nameKey)}</option>`).join("")}</select></label>
+        <div class="btn-row">
+          <button class="btn primary" data-action="evaluate">${t("aGenerate")}</button>
+          <button class="btn sm" data-action="toggle-calc">${t("aShowCalc")}</button>
+        </div>
+      </div>
+      <div id="a-results"><p class="metric-group-label">${t("aGenerate")}…</p></div>
+    </div>
+    <div class="panel-disclaimer">${t("aDisclaimer")}<br><small>${t("ppiNote")}</small></div>`;
+  return methodShell("ARES", "aresLq", body);
+}
+
+function poolDotsHtml(r){
+  return (r.sample||[]).map(d => `<span class="pool-dot ${d.truth?'':'negative'} ${d.audited?'audited':''}"></span>`).join("");
+}
+function renderAresResults(r){
+  if(!r) return `<p class="metric-group-label">${t("rNoData")}</p>`;
+  const pos = (pctv)=>`${(clamp01(pctv)*100).toFixed(1)}`;
+  const li = (v)=>`${(v*100).toFixed(1)}%`;
+  const truth = r.truthRate || r.trueRate;
+  const d = r;
+  const ciLeft = d.ci.lo*100, ciW = (d.ci.hi - d.ci.lo)*100;
+  const ppiPct = d.ppi*100, rawPct = d.raw*100, truthPct = truth*100;
+
+  const follows = `
+    <section class="pool-card">
+      <div class="pool-head"><div><h3>${t("automaticPool")}</h3><p>${t("auditedDots")}</p></div>
+        <span class="status info">N = ${d.N} · n = ${d.n}</span></div>
+      <div class="pool-dots">${poolDotsHtml(d)}</div>
+      <div class="disagreement">
+        <div><b>${d.disagreement.agreement}</b>${t("agreement")}</div>
+        <div><b>${d.disagreement.falsePositive}</b>${t("falsePositive")}</div>
+        <div><b>${d.disagreement.falseNegative}</b>${t("falseNegative")}</div>
+      </div>
+    </section>
+    <section class="numberline-card">
+      <h3>${t("calibratedResult")}</h3>
+      <div class="numberline">
+        <div class="axis"></div>
+        ${[0,25,50,75,100].map(v => `<span class="axis-tick" style="left:${v}%"></span><span class="axis-label" style="left:${v}%">${v}</span>`).join("")}
+        <div class="ci-band" data-ci-low="${d.ci.lo.toFixed(3)}" data-ci-high="${d.ci.hi.toFixed(3)}" style="left:${ciLeft}%;width:${ciW}%"></div>
+                <span class="point truth" data-truth="${truth.toFixed(3)}" style="left:${truthPct}%"></span>
+                <span class="point raw" data-raw="${d.raw.toFixed(3)}" style="left:${rawPct}%"></span>
+                <span class="point ppi" data-ppi="${d.ppi.toFixed(3)}" style="left:${ppiPct}%"></span>
+                <span class="point-label truth">${t("truth")} ${li(truth)}</span>
+                <span class="point-label raw">${t("raw")} ${li(d.raw)}</span>
+                <span class="point-label ppi">${t("ppi")} ${li(d.ppi)}</span>
+              </div>
+              <div class="correction-callout"><span>${t("correctionAudit")}<br><small>${fmt("uncertainty",{lo:li(d.ci.lo),hi:li(d.ci.hi)})}</small></span><b>${(d.correction*100).toFixed(1)} pp</b></div>
+    </section>`;
+  return `
+    <div class="equiv">${follows}</div>
+    ${state.showCalc ? formulaHtml(d) : ""}`;
+}
+function ciLeft(ci){ return ci.lo*100; }
+
+function formulaHtml(r){
+  return `<div class="formula">${t("aFormulaTitle")}
+raw          = ${r.raw.toFixed(2)}%  (średnia judge'a, N = ${r.N})
+korekta      = ${r.correction.toFixed(2)}%  (śr. human − judge, n = ${r.n})
+var(judge)   = ${r.varJudge.toFixed(4)}
+var(różnica) = ${r.varDiff.toFixed(4)}
+SE = sqrt(${r.varJudge.toFixed(4)}/${r.N} + ${r.varDiff.toFixed(4)}/${r.n}) = ${r.se.toFixed(4)}
+95% CI = PPI ± 1.96 × SE = [${(r.ci.lo*100).toFixed(1)}%, ${(r.ci.hi*100).toFixed(1)}%]</div>`;
+}
+
+/* ============================ RENDER: IFEVAL ============================ */
+
+function ifevalConstraints(){
+  return [
+    { id: "includeTerms", enabled: true, value: MODEL.ifeval.include.join(";") },
+    { id: "excludeTerms", enabled: true, value: MODEL.ifeval.exclude.join(";") },
+    { id: "citeTerms",    enabled: true, value: MODEL.ifeval.citations.join(";") }
+  ];
+}
+function buildIfevalPrompt(){
+  const inc = MODEL.ifeval.include.map(g => g.split("|").join(" lub ")).join("; ");
+  const exc = MODEL.ifeval.exclude.map(g => g.split("|").join(" lub ")).join("; ");
+  const cit = MODEL.ifeval.citations.join(", ");
+  return `Odpowiedz na pytanie: ${MODEL.ifeval.task}\n\nUwzględnij w odpowiedzi: ${inc}.\nZacytuj podstawę prawną: ${cit}.\nNie uwzględniaj: ${exc}.`;
+}
+
+function renderIfeval(){
+  const body = `
+    <div class="prompt-card"><span class="prompt-label">${t("promptSent")}</span>${esc(buildIfevalPrompt())}</div>
+    <label class="field"><span class="label">${t("iAnswer")}</span>
+      <textarea class="field-input" id="i-answer" data-field="answer" rows="5"></textarea></label>
+    <div class="btn-row">
+      <button class="btn primary" data-action="evaluate">${t("run")}</button>
+      <button class="btn sm" data-action="ai">${t("aiGen")}</button>
+    </div>
+    <div id="i-ai"></div>
+    <div id="i-results"><p class="metric-group-label">${t("iIntro")}</p></div>
+    <div class="panel-disclaimer">${t("iDisclaimer")}</div>`;
+  return methodShell("IFEval", "ifevalLq", body);
+}
+
+function renderIfevalResults(r){
+  if(r.activeCount === 0) return `<p class="metric-group-label">${t("iIntro")}</p>`;
+  const overall = r.strictPrompt ? "overallPass" : "overallFail";
+  const overallCls = r.strictPrompt ? "pass" : "fail";
+  const explain = r.strictPrompt ? t("overallPassExpl") : fmt("overallFailExpl", { p: r.strictInstr<1 ? r.strictInstr.toFixed(0) : 0 });
+
+  // gate chain of constraint pass/fail
+  const chain = r.strict.map((c, i) => `<span class="gate-node ${c.pass?'':'fail'}">${c.pass?'✓':'×'}</span>`).join('<span class="gate-arrow">+</span>');
+  const gateChain = `<span class="gate-arrow">→</span>${statusHtml(r.strictPrompt)}`;
+
+  // evidence matrix: constraint | evidence | strict | loose
+  const matrixRows = r.strict.map((c, i) => {
+    const loose = r.loose[i];
+    const nameKey = c.id === "includeTerms" ? "iInclude" : c.id === "excludeTerms" ? "iExclude" : "iCitations";
+    const category = c.id === "excludeTerms" ? "forbid" : c.id === "citeTerms" ? "citation" : "";
+    // evidence — expose matched text or "not found"
+    let evidence = esc(c.id) + ":";
+    if(c.items && c.items.length){
+      const detail = c.items.filter(it => it.pass).map(it => it.label.split("|").join(" / ")).join(", ")
+        || t("evidenceNotFound");
+      evidence = detail;
+    } else {
+      evidence = c.pass ? t("evidenceFound") : t("evidenceNotFound");
+    }
+    return `<div class="constraint-row" data-constraint-id="${c.id}" data-strict-pass="${c.pass}" data-loose-pass="${loose.pass}">
+      <div class="constraint-name"><span class="category-dot ${category}"></span><span>${t(name)}</span></div>
+      <div class="constraint-evidence">${evidence}</div>
+      <div class="result-cell">${statusHtml(c.pass)}</div>
+      <div class="result-cell">${statusHtml(loose.pass)}</div>
+    </div>`;
+  }).join("");
+
+  const four = [
+    { k: t("instStrict"), v: r.strictInstr, m: "strict-instr" },
+    { k: t("promptStrict"), v: r.strictPrompt, m: "strict-prompt" },
+    { k: t("instLoose"), v: r.looseInstr, m: "loose-instr" },
+    { k: t("promptLoose"), v: r.loosePrompt, m: "loose-prompt" }
+  ].map(x => `<div class="mini-metric" data-metric="${x.m}" data-value="${x.v.toFixed(3)}"><span>${x.k}</span><b>${pct(x.v)}%</b></div>`).join("");
+
+  return `
+    <div class="overall-gate ${overallCls}">
+      <div><h3>${t(overall)}</h3><p>${explain}</p></div>
+      <div class="gate-chain" aria-label="constraint chain">${chain}${gateChain}</div>
+    </div>
+    <div class="constraint-table">
+      <div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strictC")}</div><div>${t("looseC")}</div></div>
+      ${matrixRows}
+    </div>
+    <div class="four-metrics">${four}</div>`;
+}
+
+/* ============================ RENDER: QUESTEVAL ============================ */
+
+function renderQuestEval(){
+  const srcFacts = MODEL.questeval.facts.filter(f => f.origin === "src").length;
+  const body = `
+    <div class="text-pair">
+      <section class="text-card"><span class="label">${t("source")}</span><p>${esc(MODEL.questeval.source)}</p></section>
+      <label class="text-card"><span class="label">${t("target")}</span><textarea class="field-input" id="q-target" data-field="target" rows="4"></textarea></label>
+    </div>
+    <div class="scope-note"><span>ⓘ</span><span>${fmt("qKnownScope",{src:srcFacts, hg: MODEL.questeval.facts.filter(f=>f.origin==="tgt").length})}</span></div>
+    <div class="btn-row">
+      <button class="btn primary" data-action="evaluate">${t("run")}</button>
+      <button class="btn sm" data-action="ai">${t("aiRun")}</button>
+    </div>
+    <div id="q-results"><p class="metric-group-label">${t("qIntro")}</p></div>
+    <div id="q-ai"></div>
+    <div class="panel-disclaimer">${t("qDisclaimer")}</div>`;
+  return methodShell("QuestEval", "qsLq", body);
+}
+
+function qaRowHtml(factId, question, srcMatch, tgtMatch, pass, issue){
+  return `<div class="qa-row ${issue?'issue-row':''}" data-direction="b" data-fact-id="${factId}" data-match="${pass}">
+    <div class="qa-question">${esc(question)}</div>
+    <div class="qa-answer">${esc(srcMatch)}</div>
+    <div class="qa-arrow">↔</div>
+    <div class="qa-answer">${esc(tgtMatch)}</div>
+    <div>${statusHtml(pass, t(pass?"pass":"fail"))}</div>
+  </div>`;
+}
+function qaLaneHtml(titleKey, subKey, rows){
+  return `<section class="qa-lane">
+    <div class="lane-head"><div><h3>${t(titleKey)}</h3><span>${t(subKey)}</span></div><span>${t("nonEmpty")||""}</span></div>
+    <div class="qa-row constraint-row header"><div>${t("qaQuestion")}</div><div>${t("srcAnswer")}</div><div></div><div>${t("tgtAnswer")}</div><div>${t("outcome")}</div></div>
+    ${rows}
+  </section>`;
+}
+
+function renderQuestResults(r){
+  if(!r) return `<p class="metric-group-label">${t("qIntro")}</p>`;
+  const qa = (f) => {
+    const issue = !f.found;
+    // forward (src origin): src shows gold, target shows found-fragment or "no info"
+    // backward (tgt origin): target shows the claim's gold, source shows whether grounded
+    return qaRowHtml(f.id, f.question, f.gold, f.found ? f.gold : t("qMissingLabel"), f.found, issue);
+  };
+  const completeness = pct(r.completeness);
+  const grounded = (r.faithfulness === null) ? t("na") : `${pct(r.faithfulness)}%`;
+  const combined = (r.combined === null) ? t("na") : `${pct(r.combined)}%`;
+  const fwdOk = r.forward.filter(f=>f.found).length;
+  const bwdArr = r.backward || [];
+  const bwdOk = bwdArr.filter(f=>f.found).length;
+
+  return `
+    <div class="scope-note"><span>ⓘ</span><span>${t("determinScope")}</span></div>
+    <div class="qa-lanes">
+      ${qaLaneHtml("sourceToTarget","s2tSub", r.forward.map(f => qa(f)).join(""))}
+      ${qaLaneHtml("targetToSource","t2sSub", bwdArr.map(f => qa(f)).join(""))}
+    </div>
+    <div class="quest-summary">
+      <div class="balance-card"><span>${t("balanceCompleteness")}</span><b>${completeness}%</b><p>${fwdOk} / ${r.forward.length} ${t("retainedCount")||""}</p></div>
+      <div class="balance-card"><span>${t("balanceGrounded")}</span><b>${grounded}</b><p>${bwdArr.length?`${bwdOk} / ${bwdArr.length}`:t("na")}</p></div>
+      <div class="balance-card combined"><span>${t("balanceCombined")}</span><b>${combined}</b><p>${t("qBalanceExplain")}</p></div>
+    </div>`;
+}
+function emptyHtml(){ return ""; }
+
+/* ============================ RENDER DISPATCH ============================ */
+
+function renderSim(){
+  state.runId = (state.runId||0)+1;  // cancel stale animations
+  const s = $("#sim"); if(!s) return;
+  let html = "";
+  if(state.activeBench === "ragas") html = renderRagas();
+  else if(state.activeBench === "ares") html = renderAres();
+  else if(state.activeBench === "ifeval") html = renderIfeval();
+  else if(state.activeBench === "questeval") html = renderQuestEval();
+  s.innerHTML = html;
+}
+
+
+/* ============================ EVALUATE ============================ */
+
+function evaluate(animate){
+  if(animate === undefined) animate = true;
+  state.runState = "running";
+  syncContract();
+  let result = null, lines = [];
+
+  if(state.activeBench === "ragas"){
+    const inputs = {
+      question: $("#r-question").value,
+      context: [0,1,2].map(i => $("#r-ctx-"+i).value),
+      answer: $("#r-answer").value
+    };
+    result = ragasEval(inputs);
+    state.results.ragas = result;
+    lines = ragasLog(result);
+  }
+  else if(state.activeBench === "ares"){
+    const cfg = {
+      N: +$("#a-N").value, n: +$("#a-n").value,
+      bias: +$("#a-bias").value, noise: +$("#a-noise").value,
+      trueRate: (+$("#a-true").value)/100, seed: MODEL.ares.defaults.seed,
+      dimension: $("#a-dim").value
+    };
+    result = aresExperiment(cfg);
+    state.results.ares = result;
+    lines = aresLog(result);
+  }
+  else if(state.activeBench === "ifeval"){
+    const answer = $("#i-answer").value;
+    result = ifevalEval(ifevalConstraints(), answer);
+    state.results.ifeval = result;
+    lines = ifevalLog(result);
+  }
+  else if(state.activeBench === "questeval"){
+    const source = MODEL.questeval.source;          // source text is a fixed reference card
+    const target = $("q-target") ? $("#q-target").value : "";
+    result = questevalEval(source, target, MODEL.questeval.facts);
+    state.results.questeval = result;
+    lines = questLog(result);
+  }
+
+  state.runState = "complete";
+  renderShell();
+  updateResults();
+  runProcess(lines, animate);
+  syncContract();
+  announce(t("stepResult"));
+}
+
+function updateResults(){
+  if(state.activeBench === "ragas" && state.results.ragas && $("#r-results"))
+    $("#r-results").innerHTML = renderRagasResults(state.results.ragas);
+  else if(state.activeBench === "ares" && state.results.ares && $("#a-results"))
+    $("#a-results").innerHTML = renderAresResults(state.results.ares);
+  else if(state.activeBench === "ifeval" && state.results.ifeval && $("#i-results"))
+    $("#i-results").innerHTML = renderIfevalResults(state.results.ifeval);
+  else if(state.activeBench === "questeval" && state.results.questeval && $("#q-results"))
+    $("#q-results").innerHTML = renderQuestResults(state.results.questeval);
+}
+
+function loadDefault(){
+  const id = state.activeBench;
+  const start = {
+    ragas: "good",
+    ares: "baseline",
+    ifeval: "good",
+    questeval: "full"
+  };
+  // use the stored active preset (falls back to the per-bench default)
+  const preset = state.activePreset[id] || start[id];
+  applyPreset(preset);
+  syncLabels();
+}
+
+function captureInputs(){
+  const snap = {};
+  $$("#sim input, #sim textarea, #sim select").forEach(el => {
+    if(!el.id) return;
+    snap[el.id] = el.type === "checkbox" ? el.checked : el.value;
+  });
+  return snap;
+}
+function restoreInputs(snap){
+  $$("#sim input, #sim textarea, #sim select").forEach(el => {
+    if(!(el.id in snap)) return;
+    if(el.type === "checkbox") el.checked = snap[el.id];
+    else el.value = snap[el.id];
+  });
+}
+
+function syncLabels(){
+  if(state.activeBench === "ares"){
+    ["a-N","a-n","a-bias","a-noise","a-true"].forEach(id => {
+      const v = $("#"+id+"-v");
+      if(!v) return;
+      if(id === "a-noise") v.textContent = $("#"+id).value + "%";
+      else if(id === "a-true") v.textContent = $("#"+id).value + "%";
+      else v.textContent = $("#"+id).value;
+    });
+  }
+}
+
+function syncContract(){
+  const app = $("#app");
+  app.dataset.activeBench = state.activeBench;
+  app.dataset.lang = state.lang;
+  app.dataset.runState = state.runState;
+}
+
+/* ============================ PRESETS ============================ */
+
+function applyPreset(preset){
+  state.activePreset[state.activeBench] = preset;
+
+  if(state.activeBench === "ragas"){
+    const f = MODEL.ragas.fixtures[preset] || MODEL.ragas.fixtures.good;
+    $("#r-question").value = f.question;
+    (f.context||[]).forEach((c,i) => { const el = $("#r-ctx-"+i); if(el) el.value = c; });
+    $("#r-answer").value = f.answer;
+    evaluate();
+  }
+  else if(state.activeBench === "ares"){
+    // preset adjusts judge/human settings relative to defaults
+    const ADJ = {
+      baseline:  { bias: 0,  noise: 0,  n: 80 },
+      biased:    { bias: 18, noise: 5,  n: 80 },
+      moreLabels:{ n: 300 }
+    }[preset] || {};
+    if('bias' in ADJ && $("#a-bias")) $("#a-bias").value = ADJ.bias;
+        if('noise' in ADJ && $("#a-noise")) $("#a-noise").value = ADJ.noise;
+        if('n' in ADJ && $("#a-n")) $("#a-n").value = ADJ.n;
+    syncLabels(); evaluate();
+  }
+  else if(state.activeBench === "ifeval"){
+    // map preset id -> fixture: good | miss(bad) | preamble
+    const map = { good: "good", miss: "bad", preamble: "preamble" };
+    const ans = MODEL.ifeval.fixtures[map[preset] || preset];
+    const box = $("#i-answer");
+    if(ans && box){ box.value = ans; }
+    evaluate();
+  }
+  else if(state.activeBench === "questeval"){
+    const tgt = MODEL.questeval.targets[preset] || MODEL.questeval.targets.full;
+    const b = $("#q-target");
+    if(b) b.value = tgt;   // source is a fixed reference card (not editable)
+    evaluate();
+  }
+}
+
+/* ============================ INPUT LISTENERS ============================ */
+
+function bindDelegation(){
+  $("#app").addEventListener("input", (e) => {
+    const el = e.target;
+    if(!el.dataset.field) return;
+    if(state.activeBench === "ares"){
+      const id = el.id;
+      const v = $("#"+id+"-v");
+      if(v) v.textContent = (el.id === "a-noise" || el.id === "a-true") ? el.value+"%" : el.value;
+    }
+    // live re-evaluate (cheap, deterministic) — instant, no animation
+    evaluate(false);
+  });
+
+  $("#app").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    const action = btn.dataset.action;
+    if(action === "bench"){
+      state.activeBench = btn.dataset.bench;
+      state.runState = "idle";
+      renderShell(); renderSim(); syncContract();
+      loadDefault();
+      announce(t("stepInput"));
+    }
+    else if(action === "lang"){
+      const snap = captureInputs();
+      state.lang = btn.dataset.lang;
+      localStorage.setItem("deepSimLang", state.lang);
+      renderShell(); renderSim(); syncContract();
+      restoreInputs(snap);
+      syncLabels();
+      updateResults();
+    }
+    else if(action === "evaluate"){ evaluate(); }
+    else if(action === "preset"){
+      applyPreset(btn.dataset.preset);
+      // refresh active highlight + change note without wiping inputs
+      const specs = PRESET_SPECS[state.activeBench] || [];
+      const active = state.activePreset[state.activeBench];
+      $$(".preset").forEach(p => p.classList.toggle("active", p.dataset.preset === active));
+      const note = $(".change-note");
+      if(note){ const k = (specs.find(s=>s.id===active)||{}).change; note.innerHTML = `<strong>${t("changeTab")}</strong> ${k?t(k):""}`; }
+    }
+    else if(action === "toggle-calc"){ state.showCalc = !state.showCalc; evaluate(false); }
+    else if(action === "term-clear"){ termReset(); }
+    else if(action === "qa-toggle"){ state.showQa = !state.showQa; renderQa(); }
+    else if(action === "ai"){ handleAi(); }
+    else if(action === "ai-settings"){ openAiDialog(); }
+  });
+}
+
+/* ============================ QA TESTS ============================ */
+
+function runQaTests(){
+  const tests = [];
+  const pass = (name, ok, detail) => tests.push({ name, ok, detail: detail || "" });
+
+  // 1. RAGAS: unsupported claim lowers faithfulness
+  (() => {
+    const f = MODEL.ragas.fixtures;
+    const good = ragasEval({ question: f.good.question, context: f.good.context, answer: f.good.answer });
+    const bad  = ragasEval({ question: f.halluc.question, context: f.halluc.context, answer: f.halluc.answer });
+    pass("RAGAS: halucynacja obniża faithfulness",
+      bad.faithfulness < good.faithfulness,
+      `good=${good.faithfulness.toFixed(2)} bad=${bad.faithfulness.toFixed(2)}`);
+  })();
+
+  // 2. ARES: more human labels narrows CI
+  (() => {
+    const base = MODEL.ares.defaults;
+    const low  = aresExperiment({ ...base, n: 30 });
+    const high = aresExperiment({ ...base, n: 300 });
+    const wLow = low.ci.hi - low.ci.lo, wHigh = high.ci.hi - high.ci.lo;
+    pass("ARES: więcej human labels zwęża CI", wHigh < wLow,
+      `w(n=30)=${wLow.toFixed(3)} w(n=300)=${wHigh.toFixed(3)}`);
+  })();
+
+  // 3. IFEval: good example scores higher instruction-level than bad example
+  (() => {
+    const cons = [
+      { id: "includeTerms", enabled: true, value: MODEL.ifeval.include.join(";") },
+      { id: "excludeTerms", enabled: true, value: MODEL.ifeval.exclude.join(";") }
+    ];
+    const good = ifevalEval(cons, MODEL.ifeval.fixtures.good);
+    const bad  = ifevalEval(cons, MODEL.ifeval.fixtures.bad);
+    pass("IFEval: dobry przykład wypada lepiej niż zły",
+      good.strictInstr > bad.strictInstr,
+      `good=${good.strictInstr.toFixed(2)} bad=${bad.strictInstr.toFixed(2)}`);
+  })();
+
+  // 4. IFEval: preamble before JSON distinguishes strict vs loose
+  (() => {
+    const cons = [{ id: "validJson", enabled: true, value: "" }];
+    const r = ifevalEval(cons, MODEL.ifeval.fixtures.preamble);
+    pass("IFEval: wstęp przed JSON rozróżnia strict i loose",
+      r.strict[0].pass === false && r.loose[0].pass === true,
+      `strict=${r.strict[0].pass} loose=${r.loose[0].pass}`);
+  })();
+
+  // 5. QuestEval: removing a fact lowers completeness
+  (() => {
+    const f = MODEL.questeval;
+    const full = questevalEval(f.source, f.targets.full, f.facts);
+    const miss = questevalEval(f.source, f.targets.missing, f.facts);
+    pass("QuestEval: pominięty fakt obniża completeness",
+      miss.completeness < full.completeness,
+      `full=${full.completeness.toFixed(2)} miss=${miss.completeness.toFixed(2)}`);
+  })();
+
+  // 6. QuestEval: adding hallucination lowers faithfulness
+  (() => {
+    const f = MODEL.questeval;
+    const full = questevalEval(f.source, f.targets.full, f.facts);
+    const hall = questevalEval(f.source, f.targets.halluc, f.facts);
+    pass("QuestEval: halucynacja obniża faithfulness",
+      hall.faithfulness !== null && hall.faithfulness < full.faithfulness,
+      `full=${full.faithfulness} hall=${hall.faithfulness}`);
+  })();
+
+  // 7. QuestEval: empty target must NOT silently pass with 100% faithfulness
+  (() => {
+    const f = MODEL.questeval;
+    const empty = questevalEval(f.source, "", f.facts);
+    pass("QuestEval: pusta odpowiedź zwraca n/d, nie 100%",
+      empty.faithfulness === null,
+      `faithfulness=${empty.faithfulness}`);
+  })();
+
+  // 8. QuestEval: unpaid claim "wymaga opłat" is NOT detected as the free-of-charge fact
+  (() => {
+    const f = MODEL.questeval;
+    const r = questevalEval(f.source, "Usługa wymaga opłat.", f.facts);
+    const f6 = r.backward.find(x => x.id === "f6");
+    // f6 must NOT be present-match when the target says the service costs money
+    const present = f6 !== undefined;
+    pass("QuestEval: 'wymaga opłat' nie jest uznawane za fakt bezpłatności",
+      !present,
+      `f6 present=${present}`);
+  })();
+
+  // 9. ARES: human labels must never exceed the scored pool (n <= N)
+  (() => {
+    const r = aresExperiment({ ...MODEL.ares.defaults, N: 120, n: 300 });
+    pass("ARES: liczba human labels nie przekracza puli (n<=N)",
+      r.n <= r.N,
+      `N=${r.N} n=${r.n}`);
+  })();
+
+  // 10. ARES: the dimension control must actually change the result (not be inert)
+  (() => {
+    const base = MODEL.ares.defaults;
+    const cntx = aresExperiment({ ...base, dimension: "context" });
+    const rel  = aresExperiment({ ...base, dimension: "relevance" });
+    const same = aresExperiment({ ...base, dimension: "relevance" });
+    pass("ARES: zmiana wymiaru zmienia wynik (kontrola nie jest martwa)",
+      cntx.ppi !== rel.ppi && rel.ppi === same.ppi,
+      `context=${cntx.ppi.toFixed(3)} relevance=${rel.ppi.toFixed(3)}`);
+  })();
+
+  // 11. RAGAS: mixed true+false claim in ONE sentence is decomposed into separate claims
+  (() => {
+    const r = ragasEval({
+      question: "Jak założyć profil zaufany?",
+      context: ["Profil zaufany wymaga wniosku."],
+      answer: "Profil jest płatny i wymaga wniosku."
+    });
+    const unsupported = r.claims.filter(c => !c.supported);
+    pass("RAGAS: prawda+falsz w jednym zdaniu dzieli się na twierdzenia",
+      r.claims.length >= 2 && unsupported.length >= 1 && r.faithfulness < 0.99,
+      `claims=${r.claims.length} faith=${r.faithfulness.toFixed(2)}`);
+  })();
+
+  // 12. IFEval: the good example now satisfies the full rubric, incl. free-of-charge term
+  (() => {
+    const cons = [
+      { id: "includeTerms", enabled: true, value: MODEL.ifeval.include.join(";") },
+      { id: "excludeTerms", enabled: true, value: MODEL.ifeval.exclude.join(";") }
+    ];
+    const good = ifevalEval(cons, MODEL.ifeval.fixtures.good);
+    pass("IFEval: dobry przykład spełnia wszystkie warunki (w tym 'bez opłat')",
+      good.strictInstr === 1,
+      `strictInstr=${good.strictInstr.toFixed(2)}`);
+  })();
+
+  return tests;
+}
+
+function renderQa(){
+  const root = $("#qa-root");
+  if(!state.showQa){ root.innerHTML = ""; return; }
+  const tests = runQaTests();
+  const allPass = tests.every(x => x.ok);
+  root.innerHTML = `
+    <div class="qa-panel" data-qa-status="${allPass?'pass':'fail'}">
+      <h2>${t("qaTitle")}</h2>
+      ${tests.map(x => `
+        <div class="qa-item ${x.ok?'pass':'fail'}">
+          <span class="st">${x.ok?'PASS':'FAIL'}</span>
+          <span>${esc(x.name)}</span>
+          ${x.detail ? `<span style="color:var(--c-muted);font-size:11px">${esc(x.detail)}</span>` : ""}
+        </div>`).join("")}
+      <div style="margin-top:12px;font-weight:700;color:${allPass?'var(--c-pass)':'var(--c-fail)'}">
+        ${allPass ? "✓ " + t("qaAllPass") : "✗ " + t("qaFail")}
+      </div>
+    </div>`;
+}
+
+/* ============================ KEYBOARD ============================ */
+
+function bindKeyboard(){
+  document.addEventListener("keydown", (e) => {
+    if(e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT"){
+      // allow Ctrl/Cmd+Enter to run
+      if((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); evaluate(); }
+      return;
+    }
+    const num = ["1","2","3","4"].indexOf(e.key);
+    if(num >= 0){
+      state.activeBench = BENCHES[num].id;
+      state.runState = "idle";
+      renderShell(); renderSim(); syncContract();
+      loadDefault();
+      announce(t("stepInput"));
+    }
+    else if(e.key === "Enter"){ e.preventDefault(); evaluate(); }
+    else if(e.key === "r" || e.key === "R"){ applyPreset("good"); }
+  });
+}
+
+/* ============================ INIT ============================ */
+
+function init(){
+  renderShell();
+  renderSim();
+  bindDelegation();
+  bindKeyboard();
+  syncContract();
+
+  // seed initial inputs + results
+  loadDefault();
+  renderAiChip();
+
+  // QA panel auto-open via ?qa=1
+  if(new URLSearchParams(location.search).get("qa") === "1"){
+    state.showQa = true;
+    renderQa();
+    $("#qa-toggle").textContent = t("qaToggle") + " (—)";
+  }
+}
+
+init();
+</script>
+</body>
+</html>

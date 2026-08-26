@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BenchSim – symulatory ewaluacji RAG</title>
+<link rel="icon" type="image/png" href="quantica-q-mark-black.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="quantica-q-mark-white.png" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500;600&family=Poppins:wght@400;500;600&family=Raleway:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-page:#eeedf2;
+  --c-page-deep:#e4e1e8;
+  --c-surface:#ffffff;
+  --c-border:#ddd6df;
+  --c-text:#18131a;
+  --c-muted:#776c79;
+  --c-accent:#d20757;
+  --c-accent-hover:#a9064a;
+  --c-shadow:rgba(24,19,26,.08);
+  --font-display:'Raleway','Poppins',system-ui,sans-serif;
+  --font-sans:'Poppins',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(180deg,var(--c-page),var(--c-page-deep));color:var(--c-text);font-family:var(--font-sans)}
+main{width:min(760px,100% - 3rem);padding:3rem 0}
+.brand{display:flex;align-items:center;gap:.9rem;margin-bottom:2rem}
+.brand img{width:38px;height:38px}
+h1{font-family:var(--font-display);font-size:1.65rem;margin:0}
+.brand p{color:var(--c-muted);font-size:.84rem;margin:.2rem 0 0}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.tile{display:block;background:var(--c-surface);border:1px solid var(--c-border);border-radius:14px;padding:1.5rem;text-decoration:none;color:inherit;box-shadow:0 1px 3px var(--c-shadow);transition:border-color .15s,transform .15s}
+.tile:hover{border-color:var(--c-accent);transform:translateY(-2px)}
+.tile .tag{font-family:var(--font-mono);font-size:.72rem;color:var(--c-accent);text-transform:uppercase;letter-spacing:.08em}
+.tile h2{font-family:var(--font-display);font-size:1.2rem;margin:.5rem 0 .4rem}
+.tile p{color:var(--c-muted);font-size:.84rem;line-height:1.5;margin:0}
+.tile span{display:inline-block;margin-top:1rem;color:var(--c-accent);font-weight:600;font-size:.84rem}
+.tile:hover span{color:var(--c-accent-hover)}
+@media (max-width:768px){.tiles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">
+    <img src="quantica-q-mark-black.png" alt="Quantica Lab">
+    <div>
+      <h1>BenchSim</h1>
+      <p>symulatory ewaluacji RAG · Quantica Lab</p>
+    </div>
+  </div>
+  <div class="tiles">
+    <a class="tile" href="co_sim.html">
+      <div class="tag">co_sim</div>
+      <h2>Symulator ewaluacji</h2>
+      <p>Wizualny kierunek symulatora ewaluacji RAG – RAGAS, IFEval i tryb AI.</p>
+      <span>Otwórz &rarr;</span>
+    </a>
+    <a class="tile" href="deep_sim.html">
+      <div class="tag">deep_sim</div>
+      <h2>Metody komplementarne</h2>
+      <p>Komplementarne metody ewaluacji RAG w formie interaktywnego symulatora.</p>
+      <span>Otwórz &rarr;</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BenchSim – interaktywny symulator ewaluacji RAG</title>
+<link rel="icon" type="image/png" href="quantica-q-mark-black.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="quantica-q-mark-white.png" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500;600&amp;family=Poppins:wght@400;500;600;700&amp;family=Raleway:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-page:#eeedf2;
+  --c-page-deep:#e4e1e8;
+  --c-surface:#ffffff;
+  --c-surface-soft:#faf8fb;
+  --c-surface-raised:#f6f2f6;
+  --c-border:#ddd6df;
+  --c-border-strong:#c7bcc9;
+  --c-text:#18131a;
+  --c-text-soft:#4c434e;
+  --c-muted:#776c79;
+  --c-accent:#d20757;
+  --c-accent-hover:#a9064a;
+  --c-accent-soft:#fdebf3;
+  --c-positive:#15845f;
+  --c-positive-soft:#e8f6f0;
+  --c-negative:#b84450;
+  --c-negative-soft:#fbecef;
+  --c-warning:#a86c18;
+  --c-warning-soft:#fff3dd;
+  --c-info:#286f94;
+  --c-info-soft:#eaf5fb;
+  --c-violet:#6f56a6;
+  --c-violet-soft:#f1ecfb;
+  --c-amber:#a86c18;
+  --c-amber-soft:#fff4df;
+  --c-ink:#10151c;
+  --c-ink-soft:#1a222d;
+  --c-terminal-text:#d6dde7;
+  --c-terminal-muted:#8290a2;
+  --c-terminal-accent:#ff669e;
+  --c-white:#ffffff;
+  --c-overlay:rgba(24,19,26,.14);
+  --c-backdrop:rgba(24,19,26,.5);
+  --c-shadow:rgba(24,19,26,.08);
+  --font-display:'Raleway','Poppins',system-ui,sans-serif;
+  --font-sans:'Poppins',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --fs-xs:.72rem;
+  --fs-sm:.84rem;
+  --fs-base:.96rem;
+  --fs-md:1.05rem;
+  --fs-lg:1.28rem;
+  --fs-xl:1.7rem;
+  --fs-2xl:2.15rem;
+  --lh-tight:1.2;
+  --lh-base:1.55;
+  --align-start:left;
+  --align-center:center;
+  --space-1:.25rem;
+  --space-2:.5rem;
+  --space-3:.75rem;
+  --space-4:1rem;
+  --space-5:1.5rem;
+  --space-6:2rem;
+  --space-7:3rem;
+  --radius-sm:.5rem;
+  --radius:.75rem;
+  --radius-lg:1rem;
+  --radius-pill:999px;
+  --shadow-sm:0 1px 2px var(--c-shadow);
+  --shadow-md:0 12px 32px var(--c-shadow);
+  --content-max:1600px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,var(--c-page),var(--c-page-deep));color:var(--c-text);font-family:var(--font-sans);font-size:var(--fs-base);line-height:var(--lh-base);min-height:100vh}
+button,input{font:inherit}
+button{color:inherit}
+.app{width:100%;max-width:var(--content-max);margin:0 auto;padding:var(--space-5)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);margin-bottom:var(--space-5)}
+.brand{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.brand img{width:34px;height:34px;flex:0 0 auto}
+.brand-copy{min-width:0}
+.brand h1{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin:0}
+.brand p{color:var(--c-muted);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.top-actions{display:flex;align-items:center;gap:var(--space-2)}
+.model-chip,.lang-group,.icon-button{border:1px solid var(--c-border);background:var(--c-surface);box-shadow:var(--shadow-sm)}
+.model-chip{border-radius:var(--radius);padding:var(--space-2) var(--space-3);display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);font-weight:600}
+.model-dot{width:8px;height:8px;border-radius:50%;background:var(--c-positive);box-shadow:0 0 0 3px var(--c-positive-soft)}
+.lang-group{display:flex;border-radius:var(--radius);padding:3px}
+.lang-group button{border:0;background:transparent;border-radius:calc(var(--radius) - 3px);padding:var(--space-2) var(--space-3);cursor:pointer;font-size:var(--fs-sm);font-weight:700}
+.lang-group button.active{background:var(--c-accent);color:var(--c-white)}
+
+.tabs-wrap{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--c-page) 76%,transparent);padding:0 0 var(--space-4)}
+.tabs{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius);padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-2);cursor:pointer;white-space:nowrap;font-family:var(--font-display);font-weight:700;box-shadow:var(--shadow-sm)}
+.tab:hover{border-color:var(--c-accent)}
+.tab.active{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.tab-number{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--radius-sm);background:var(--c-surface-raised);color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)}
+.tab.active .tab-number{background:var(--c-overlay);color:var(--c-white)}
+
+.method-shell{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden}
+.method-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-5);align-items:start;padding:var(--space-6);border-bottom:1px solid var(--c-border)}
+.eyebrow{display:flex;align-items:center;gap:var(--space-2);color:var(--c-accent);font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.eyebrow-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.method-title{font-family:var(--font-display);font-size:var(--fs-2xl);line-height:var(--lh-tight);margin:0}
+.method-answer{color:var(--c-text-soft);font-size:var(--fs-md);max-width:780px;margin:var(--space-3) 0 0}
+.mode-note{min-width:260px;max-width:340px;background:var(--c-warning-soft);border:1px solid var(--c-warning);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm)}
+.mode-note strong{display:block;margin-bottom:var(--space-1)}
+
+.preset-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) var(--space-6);background:var(--c-surface-soft);border-bottom:1px solid var(--c-border)}
+.preset-set{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none}
+.preset-set::-webkit-scrollbar{display:none}
+.preset{border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-pill);padding:var(--space-2) var(--space-3);white-space:nowrap;cursor:pointer;font-size:var(--fs-sm);font-weight:600}
+.preset.active{border-color:var(--c-accent);background:var(--c-accent-soft);color:var(--c-accent)}
+.change-note{font-size:var(--fs-sm);color:var(--c-muted);text-align:var(--align-start)}
+.change-note strong{color:var(--c-text)}
+
+.canvas{padding:var(--space-6)}
+.section-title{font-family:var(--font-display);font-size:var(--fs-lg);margin:0 0 var(--space-4)}
+.section-kicker{color:var(--c-muted);font-size:var(--fs-sm);margin:-.6rem 0 var(--space-4)}
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4)}
+.soft-card{background:var(--c-surface-soft)}
+.label{display:block;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.field{border:1px solid var(--c-border-strong);background:var(--c-white);border-radius:var(--radius-sm);padding:var(--space-3);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:var(--lh-base)}
+.status{display:inline-flex;align-items:center;gap:var(--space-1);border-radius:var(--radius-pill);padding:.22rem .55rem;font-size:var(--fs-xs);font-weight:700;white-space:nowrap}
+.status.pass{background:var(--c-positive-soft);color:var(--c-positive)}
+.status.fail{background:var(--c-negative-soft);color:var(--c-negative)}
+.status.info{background:var(--c-info-soft);color:var(--c-info)}
+.status.warn{background:var(--c-warning-soft);color:var(--c-warning)}
+.method-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.7fr);gap:var(--space-5);align-items:start}
+.summary-rail{display:grid;gap:var(--space-3);position:sticky;top:78px}
+.summary-card{border:1px solid var(--c-border);background:var(--c-surface-soft);border-radius:var(--radius);padding:var(--space-4)}
+.summary-card h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.summary-card p{color:var(--c-muted);font-size:var(--fs-sm);margin:var(--space-2) 0 0}
+.metric-value{font-family:var(--font-display);font-size:var(--fs-xl);line-height:var(--lh-tight);margin-top:var(--space-2)}
+.ratio{font-family:var(--font-mono);color:var(--c-muted);font-size:var(--fs-xs);margin-top:var(--space-1)}
+.neutral-track{height:8px;border-radius:var(--radius-pill);background:var(--c-surface-raised);overflow:hidden;margin-top:var(--space-3)}
+.neutral-fill{height:100%;border-radius:inherit;background:var(--c-accent)}
+.metric-group-label{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin:var(--space-2) 0 0}
+
+.log-details{border-top:1px solid var(--c-border);background:var(--c-surface-soft)}
+.log-details summary{cursor:pointer;padding:var(--space-4) var(--space-6);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);list-style:none}
+.log-details summary::-webkit-details-marker{display:none}
+.log-details summary::after{content:'+';font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--c-accent)}
+.log-details[open] summary::after{content:'−'}
+.terminal{margin:0 var(--space-6) var(--space-6);background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);white-space:pre-wrap}
+.terminal .muted{color:var(--c-terminal-muted)}
+.terminal .accent{color:var(--c-terminal-accent)}
+
+/* RAGAS */
+.ragas-inputs{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-5)}
+.ragas-inputs .wide{grid-column:1 / -1}
+.evidence-map{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:var(--space-3);align-items:stretch}
+.evidence-column,.claims-column{display:grid;gap:var(--space-3)}
+.fragment{position:relative;border:1px solid var(--c-border);border-left:4px solid var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3)}
+.fragment.dimmed{border-left-color:var(--c-border-strong);background:var(--c-surface-soft);opacity:.72}
+.fragment-head,.claim-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
+.fragment p,.claim p{font-size:var(--fs-sm);margin:0}
+.match-words{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-info);margin-top:var(--space-2)}
+.connectors{display:grid;align-content:space-around;color:var(--c-accent)}
+.connector{display:flex;align-items:center}
+.connector::before{content:'';height:2px;background:currentColor;flex:1}
+.connector::after{content:'›';font-family:var(--font-display);font-size:var(--fs-xl);line-height:1}
+.claim{border:1px solid var(--c-positive);background:var(--c-positive-soft);border-radius:var(--radius);padding:var(--space-3)}
+.claim.unsupported{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.evidence-ref{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2)}
+.evidence-ref span{border-radius:var(--radius-pill);background:var(--c-white);padding:.18rem .45rem;font-size:var(--fs-xs);font-family:var(--font-mono)}
+
+/* ARES */
+.ares-workspace{display:grid;grid-template-columns:minmax(290px,.75fr) minmax(0,1.25fr);gap:var(--space-5)}
+.control-groups{display:grid;gap:var(--space-3)}
+.control-group{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.control-group h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-1)}
+.control-group>p{color:var(--c-muted);font-size:var(--fs-xs);margin:0 0 var(--space-3)}
+.slider-row{margin-top:var(--space-3)}
+.slider-head{display:flex;justify-content:space-between;gap:var(--space-3);font-size:var(--fs-sm);font-weight:600}
+.slider-head output{font-family:var(--font-mono);color:var(--c-accent)}
+input[type=range]{width:100%;accent-color:var(--c-accent)}
+.pool-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4)}
+.pool-head{display:flex;justify-content:space-between;gap:var(--space-3);align-items:start;margin-bottom:var(--space-4)}
+.pool-head h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.pool-head p{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-1) 0 0}
+.pool-dots{display:grid;grid-template-columns:repeat(20,1fr);gap:5px;margin-bottom:var(--space-4)}
+.pool-dot{aspect-ratio:1;border-radius:50%;background:var(--c-info)}
+.pool-dot.negative{background:var(--c-border-strong)}
+.pool-dot.audited{box-shadow:0 0 0 2px var(--c-accent)}
+.disagreement{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2)}
+.disagreement div{border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);font-size:var(--fs-xs);text-align:var(--align-center)}
+.disagreement b{display:block;font-family:var(--font-display);font-size:var(--fs-lg)}
+.numberline-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);margin-top:var(--space-3)}
+.numberline-card h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-5)}
+.numberline{position:relative;height:98px;margin:0 var(--space-3)}
+.axis{position:absolute;left:0;right:0;top:42px;height:2px;background:var(--c-border-strong)}
+.axis-tick{position:absolute;top:36px;width:1px;height:14px;background:var(--c-border-strong)}
+.axis-label{position:absolute;top:56px;transform:translateX(-50%);font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted)}
+.ci-band{position:absolute;top:33px;left:57%;width:22%;height:20px;border-radius:var(--radius-pill);background:var(--c-accent-soft);border:1px solid var(--c-accent)}
+.point{position:absolute;top:30px;width:10px;height:26px;transform:translateX(-50%);border-radius:var(--radius-pill);background:var(--c-text)}
+.point.raw{background:var(--c-amber);left:71.4%}
+.point.ppi{background:var(--c-accent);left:68.1%}
+.point.truth{background:var(--c-text);left:70%}
+.point-label{position:absolute;transform:translateX(-50%);font-size:var(--fs-xs);font-weight:700;white-space:nowrap}
+.point-label.truth{left:70%;top:0}
+.point-label.raw{left:71.4%;top:74px;color:var(--c-amber)}
+.point-label.ppi{left:68.1%;top:18px;color:var(--c-accent)}
+.correction-callout{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);background:var(--c-accent-soft);border-radius:var(--radius);padding:var(--space-3);margin-top:var(--space-3)}
+.correction-callout b{font-family:var(--font-display);font-size:var(--fs-lg);color:var(--c-accent)}
+
+/* IFEVAL */
+.prompt-card{background:var(--c-ink-soft);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);font-family:var(--font-mono);font-size:var(--fs-sm);margin-bottom:var(--space-5)}
+.prompt-card .prompt-label{color:var(--c-terminal-accent);display:block;margin-bottom:var(--space-2)}
+.overall-gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-4);align-items:center;border:1px solid var(--c-negative);background:var(--c-negative-soft);border-radius:var(--radius);padding:var(--space-4);margin-bottom:var(--space-4)}
+.overall-gate h3{font-family:var(--font-display);font-size:var(--fs-lg);margin:0}
+.overall-gate p{color:var(--c-text-soft);font-size:var(--fs-sm);margin:var(--space-1) 0 0}
+.gate-chain{display:flex;align-items:center;gap:var(--space-1);flex-wrap:wrap;justify-content:flex-end}
+.gate-node{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--c-positive);color:var(--c-white);font-size:var(--fs-xs);font-weight:700}
+.gate-node.fail{background:var(--c-negative)}
+.gate-arrow{color:var(--c-muted)}
+.constraint-table{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.constraint-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(150px,1fr) 90px 90px;align-items:center}
+.constraint-row>div{padding:var(--space-3);border-top:1px solid var(--c-border);font-size:var(--fs-sm)}
+.constraint-row.header{background:var(--c-surface-raised);font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.constraint-row.header>div{border-top:0}
+.constraint-name{display:flex;align-items:start;gap:var(--space-2);font-weight:600}
+.category-dot{width:9px;height:9px;border-radius:50%;margin-top:.38rem;flex:0 0 auto;background:var(--c-info)}
+.category-dot.forbid{background:var(--c-amber)}
+.category-dot.citation{background:var(--c-violet)}
+.constraint-evidence{color:var(--c-muted);font-family:var(--font-mono);font-size:var(--fs-xs)!important}
+.result-cell{text-align:var(--align-center)}
+.four-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-top:var(--space-4)}
+.mini-metric{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-3);background:var(--c-surface-soft)}
+.mini-metric span{color:var(--c-muted);font-size:var(--fs-xs)}
+.mini-metric b{display:block;font-family:var(--font-display);font-size:var(--fs-lg);margin-top:var(--space-1)}
+
+/* QUESTEVAL */
+.text-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-5)}
+.text-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.text-card p{font-family:var(--font-mono);font-size:var(--fs-sm);margin:0}
+.scope-note{display:flex;align-items:center;gap:var(--space-2);color:var(--c-info);background:var(--c-info-soft);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm);margin-bottom:var(--space-4)}
+.qa-lanes{display:grid;gap:var(--space-4)}
+.qa-lane{border:1px solid var(--c-border);border-radius:var(--radius);overflow:hidden}
+.lane-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--c-surface-raised)}
+.lane-head h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0}
+.lane-head span{font-size:var(--fs-xs);color:var(--c-muted)}
+.qa-row{display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(120px,.7fr) 34px minmax(120px,.7fr) 86px;align-items:center;padding:var(--space-3) var(--space-4);border-top:1px solid var(--c-border);gap:var(--space-2);font-size:var(--fs-sm)}
+.qa-question{font-weight:600}
+.qa-answer{font-family:var(--font-mono);font-size:var(--fs-xs);padding:var(--space-2);background:var(--c-surface-soft);border-radius:var(--radius-sm)}
+.qa-arrow{text-align:var(--align-center);color:var(--c-accent);font-size:var(--fs-lg)}
+.issue-row{background:var(--c-warning-soft)}
+.quest-summary{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:var(--space-3);margin-top:var(--space-4)}
+.balance-card{border:1px solid var(--c-border);border-radius:var(--radius);padding:var(--space-4);background:var(--c-surface-soft)}
+.balance-card.combined{border-color:var(--c-accent);background:var(--c-accent-soft)}
+.balance-card span{color:var(--c-muted);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.balance-card b{display:block;font-family:var(--font-display);font-size:var(--fs-xl);margin-top:var(--space-1)}
+.balance-card p{color:var(--c-muted);font-size:var(--fs-xs);margin:var(--space-1) 0 0}
+
+.footer{display:flex;justify-content:space-between;gap:var(--space-4);color:var(--c-muted);font-size:var(--fs-xs);padding:var(--space-4) var(--space-1)}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Interactive layer */
+button,textarea,select,input{font:inherit}
+button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--c-info);outline-offset:3px}
+.method-shell,.canvas,.method-layout,.evidence-column,.claims-column,.control-groups,.qa-lanes{min-width:0}
+.field-control{width:100%;border:1px solid var(--c-border-strong);background:var(--c-white);color:var(--c-text);border-radius:var(--radius-sm);padding:var(--space-3);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:var(--lh-base);resize:vertical}
+.field-control:hover{border-color:var(--c-accent)}
+.field-control[aria-invalid="true"]{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.input-stack{display:grid;gap:var(--space-3)}
+.input-label{display:block;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:var(--space-2)}
+.actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-3)}
+.button{border:1px solid var(--c-border-strong);background:var(--c-surface);border-radius:var(--radius);padding:.68rem .95rem;cursor:pointer;font-weight:700;font-size:var(--fs-sm)}
+.button:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.button.primary{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.button.primary:hover{background:var(--c-accent-hover);color:var(--c-white)}
+.button:disabled{cursor:wait;opacity:.65}
+.button-row-end{margin-left:auto}
+.method-copy{overflow-wrap:anywhere}
+.proxy-banner{display:flex;align-items:flex-start;gap:var(--space-2);background:var(--c-warning-soft);border:1px solid var(--c-warning);border-radius:var(--radius);padding:var(--space-3);font-size:var(--fs-sm);margin-bottom:var(--space-4)}
+.source-note{font-size:var(--fs-xs);color:var(--c-muted);margin:calc(var(--space-2) * -1) 0 var(--space-4)}
+.source-note a{color:var(--c-info);font-weight:700}
+.method-head .source-note{margin:var(--space-1) 0 0}
+.empty-state{border:1px dashed var(--c-border-strong);border-radius:var(--radius);padding:var(--space-5);color:var(--c-muted);text-align:var(--align-center)}
+.metric-card[data-value="na"] .metric-value{color:var(--c-muted)}
+.evidence-map[data-connection-mode="explicit"] .fragment[data-used="false"]{opacity:.68}
+.evidence-link{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);margin-top:var(--space-2)}
+.connector-list{display:grid;align-content:center;gap:var(--space-3);font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-accent);text-align:center}
+.select-control{width:100%;border:1px solid var(--c-border-strong);border-radius:var(--radius-sm);background:var(--c-white);color:var(--c-text);padding:.58rem .7rem}
+.slider-row input{display:block;margin-top:var(--space-2)}
+.pool-legend{display:flex;gap:var(--space-3);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--c-muted);margin-top:var(--space-3)}
+.legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:var(--space-1);background:var(--c-info)}
+.legend-mark.negative{background:var(--c-border-strong)}
+.legend-mark.audited{background:var(--c-surface);box-shadow:0 0 0 2px var(--c-accent)}
+.numberline{overflow:visible}
+.axis-range{position:absolute;top:57px;font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-muted)}
+.axis-range.end{right:0}
+.axis-range.start{left:0}
+.point-label{max-width:120px}
+.ifeval-editor{display:grid;grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr);gap:var(--space-4);margin-bottom:var(--space-5)}
+.constraint-list{display:grid;gap:var(--space-2)}
+.constraint-chip{display:flex;align-items:flex-start;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);background:var(--c-surface-soft);font-size:var(--fs-xs)}
+.constraint-chip input{margin-top:.2rem;accent-color:var(--c-accent)}
+.result-cell::before{display:none;color:var(--c-muted);font-size:var(--fs-xs);font-weight:700;margin-right:var(--space-2)}
+.qa-answer{overflow-wrap:anywhere}
+.na-cell{color:var(--c-muted)}
+.ai-result{border:1px solid var(--c-violet);background:var(--c-violet-soft);border-radius:var(--radius);padding:var(--space-4);margin-top:var(--space-4)}
+.ai-result h3{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-3)}
+.ai-result ul{margin:.35rem 0 0;padding-left:1.2rem}
+.ai-error{border-color:var(--c-negative);background:var(--c-negative-soft)}
+.qa-panel{margin-top:var(--space-5);border:1px solid var(--c-border);background:var(--c-surface);border-radius:var(--radius-lg);padding:var(--space-4)}
+.qa-panel h2{font-family:var(--font-display);font-size:var(--fs-md);margin:0 0 var(--space-3)}
+.qa-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+.qa-check{display:flex;justify-content:space-between;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);font-size:var(--fs-xs)}
+.footer-actions{display:flex;gap:var(--space-3);align-items:center}
+.link-button{border:0;background:none;padding:0;color:var(--c-accent);font-weight:700;cursor:pointer;font-size:inherit}
+#ai-dialog{border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:var(--space-5);max-width:460px;width:calc(100vw - 2rem);background:var(--c-surface);color:var(--c-text);font-family:var(--font-sans);box-shadow:var(--shadow-md)}
+#ai-dialog::backdrop{background:var(--c-backdrop)}
+#ai-dialog h2{font-family:var(--font-display);margin:0 0 var(--space-4)}
+.provider-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
+.provider-row button.active{background:var(--c-accent);border-color:var(--c-accent);color:var(--c-white)}
+.ai-note{font-size:var(--fs-xs);color:var(--c-muted)}
+.loading-dot{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.loading-dot{animation:none}}
+
+@media(max-width:1050px){
+  .method-layout,.ares-workspace{grid-template-columns:1fr}
+  .summary-rail{position:static;grid-template-columns:repeat(3,1fr)}
+  .constraint-row{grid-template-columns:minmax(180px,1.2fr) minmax(140px,1fr) 80px 80px}
+}
+
+@media(max-width:768px){
+  :root{--fs-2xl:1.65rem;--fs-xl:1.4rem}
+  .app{padding:var(--space-4)}
+  .topbar{align-items:flex-start;margin-bottom:var(--space-4)}
+  .brand img{width:28px;height:28px}
+  .brand p{display:none}
+  .model-chip{width:40px;height:40px;padding:0;justify-content:center}
+  .model-chip .model-text{display:none}
+  .tabs-wrap{margin:0 calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
+  .method-head{grid-template-columns:1fr;padding:var(--space-4)}
+  .mode-note{min-width:0;max-width:none}
+  .preset-bar{display:block;padding:var(--space-3) var(--space-4)}
+  .change-note{margin-top:var(--space-2)}
+  .canvas{padding:var(--space-4)}
+  .ragas-inputs,.text-pair{grid-template-columns:1fr}
+  .ragas-inputs .wide{grid-column:auto}
+  .evidence-map{grid-template-columns:1fr}
+  .connectors{display:none}
+  .summary-rail{grid-template-columns:1fr}
+  .pool-dots{grid-template-columns:repeat(10,1fr)}
+  .disagreement{grid-template-columns:1fr 1fr 1fr}
+  .constraint-table{overflow:visible;border:0}
+  .constraint-row.header{display:none}
+  .constraint-row{grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--c-border);border-radius:var(--radius);margin-bottom:var(--space-2);overflow:hidden}
+  .constraint-row>div{border-top:0}
+  .constraint-name,.constraint-evidence{grid-column:1 / -1}
+  .constraint-evidence{border-top:1px solid var(--c-border)!important}
+  .result-cell{border-top:1px solid var(--c-border)!important;background:var(--c-surface-soft)}
+  .four-metrics{grid-template-columns:1fr 1fr}
+  .overall-gate{grid-template-columns:1fr}
+  .gate-chain{justify-content:flex-start}
+  .qa-row{grid-template-columns:1fr 34px 1fr 78px}
+  .qa-question{grid-column:1 / -1}
+  .quest-summary{grid-template-columns:1fr 1fr}
+  .balance-card.combined{grid-column:1 / -1}
+  .log-details summary{padding:var(--space-4)}
+  .terminal{margin:0 var(--space-4) var(--space-4)}
+  .footer{display:block}
+  .ifeval-editor{grid-template-columns:1fr}
+  .result-cell::before{display:inline;content:attr(data-label)}
+  .qa-checks{grid-template-columns:1fr}
+  .footer-actions{margin-top:var(--space-2)}
+  .button-row-end{margin-left:0}
+}
+</style>
+</head>
+<body>
+<main class="app" id="app" data-active-bench="ragas" data-lang="pl" data-run-state="ready">
+  <header class="topbar">
+    <div class="brand">
+      <img src="quantica-q-mark-black.png" alt="Quantica Lab">
+      <div class="brand-copy">
+        <h1>BenchSim</h1>
+        <p data-t="appSubtitle"></p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="model-chip" id="ai-chip" data-action="ai-settings" type="button" aria-label="AI model settings">
+        <span class="model-dot"></span>
+        <span class="model-text">AI · optional</span>
+      </button>
+      <div class="lang-group" role="group" aria-label="Language">
+        <button type="button" data-lang="pl">PL</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs-wrap">
+    <nav class="tabs" id="tabs" aria-label="Evaluation methods"></nav>
+  </div>
+
+  <section id="method-root"></section>
+
+  <section id="qa-root" hidden></section>
+
+  <footer class="footer">
+    <span id="footer-note"></span>
+    <span class="footer-actions"><span id="shortcuts-note"></span><button class="link-button" id="qa-toggle" type="button"></button></span>
+  </footer>
+  <div class="visually-hidden" aria-live="polite" id="live"></div>
+</main>
+
+<dialog id="ai-dialog"></dialog>
+
+<script type="text/plain" id="visual-reference-script">
+"use strict";
+
+// ─── Constants ───
+
+const TOOLS = [
+  { id:"ragas", label:"RAGAS", number:"1" },
+  { id:"ares", label:"ARES", number:"2" },
+  { id:"ifeval", label:"IFEval", number:"3" },
+  { id:"questeval", label:"QuestEval", number:"4" }
+];
+
+const T = {
+  pl:{
+    appSubtitle:"wizualny kierunek symulatora ewaluacji RAG",
+    visualOnly:"Makieta wizualna · wyniki są przykładowe",
+    shortcuts:"Skróty: 1–4 zmieniają metodę",
+    visualMockup:"Makieta wizualna",
+    proxyTitle:"Tryb edukacyjny",
+    proxyText:"Najpierw pokazujemy zależności i dowody. Szczegóły techniczne są dostępne na żądanie.",
+    presets:"Scenariusze",
+    change:"Co się zmieniło:",
+    calculationLog:"Dziennik obliczeń",
+    ragasQuestion:"Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
+    ragasGood:"Dobry przykład", ragasNoise:"Szum w kontekście", ragasHalluc:"Halucynacja",
+    ragasChange:"Każde twierdzenie ma wskazane źródło. Jeden fragment jest oznaczony jako zbędny.",
+    inputs:"Dane wejściowe", question:"Pytanie", answer:"Odpowiedź RAG",
+    evidenceMap:"Mapa dowodów", evidenceMapSub:"Fragmenty po lewej wspierają konkretne twierdzenia po prawej.",
+    fragment:"Fragment", relevant:"użyteczny", redundant:"zbędny", claim:"Twierdzenie", supported:"wspierane", unsupported:"niewspierane",
+    retrieval:"Retriever", generation:"Generator", contextRel:"Context relevance", faith:"Faithfulness", answerRel:"Answer relevance",
+    fragmentsUseful:"2 / 3 fragmenty użyteczne", claimsSupported:"2 / 2 twierdzenia wspierane", conceptsCovered:"2 / 3 pojęcia pokryte",
+    aresQuestion:"Jak skorygować automatycznego judge'a małą próbą ocen ludzkich?",
+    aresBaseline:"Próba bazowa", aresBiased:"Judge z biasem", aresMoreLabels:"Więcej etykiet",
+    aresChange:"Oceny ludzi wykrywają zawyżanie judge'a i przesuwają estymatę w stronę prawdy.",
+    population:"Populacja", populationHelp:"Duża pula oceniana automatycznie", automaticExamples:"Przykłady automatyczne", hiddenRate:"Ukryta proporcja pozytywna",
+    judgeBehavior:"Zachowanie judge'a", judgeHelp:"Kontrolowana jakość automatycznych predykcji", overrating:"Prawdopodobieństwo zawyżenia", randomError:"Losowy błąd",
+    humanAudit:"Audyt ludzi", humanHelp:"Mała próba do kalibracji", humanLabels:"Etykiety ludzkie",
+    automaticPool:"Automatycznie oceniona pula", auditedDots:"Różowa obwódka oznacza próbę sprawdzoną przez ludzi.",
+    agreement:"Zgodność", falsePositive:"Fałszywie dodatnie", falseNegative:"Fałszywie ujemne",
+    calibratedResult:"Wynik po kalibracji", truth:"Prawda 70,0%", raw:"Raw 71,4%", ppi:"PPI 68,1%", correction:"Korekta audytu", uncertainty:"95% CI: 57,0–79,1%",
+    ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
+    ifevalGood:"Spełnia wszystko", ifevalMiss:"Pomija warunek", ifevalPreamble:"Wstęp przed JSON",
+    ifevalChange:"Jeden brakujący warunek powoduje niezaliczenie całego promptu.",
+    promptSent:"Prompt wysłany do modelu", overallFail:"Prompt: FAIL", overallExplain:"10 z 11 warunków spełnionych. Wszystkie muszą przejść jednocześnie.",
+    constraint:"Warunek", evidence:"Dowód w odpowiedzi", strict:"Strict", loose:"Loose",
+    onlineRoute:"Wspomnij drogę online", cityOffice:"Wspomnij urząd miasta", noForbidden:"Nie używaj zakazanych metod", freeService:"Napisz, że usługa jest bezpłatna", citations:"Dodaj obie podstawy prawne",
+    foundOnline:"„przez internet”", foundOffice:"„urząd miasta”", nothingFound:"nie znaleziono", foundCitations:"2 identyfikatory",
+    instStrict:"Instruction strict", promptStrict:"Prompt strict", instLoose:"Instruction loose", promptLoose:"Prompt loose",
+    questQuestion:"Czy tekst docelowy zachowuje informacje źródła i nie dodaje nowych twierdzeń?",
+    questFull:"Pełne pokrycie", questMissing:"Pominięty fakt", questHalluc:"Dodana halucynacja",
+    questChange:"Dwa kierunki QA rozdzielają brakujące informacje od twierdzeń bez pokrycia.",
+    source:"Tekst źródłowy", target:"Tekst docelowy", deterministicScope:"Tryb deterministyczny zna 6 faktów źródłowych i 1 kontrolowaną halucynację.",
+    sourceToTarget:"Źródło → tekst docelowy", sourceToTargetSub:"Czy ważne informacje zostały zachowane?", targetToSource:"Tekst docelowy → źródło", targetToSourceSub:"Czy każde twierdzenie ma pokrycie?",
+    qaQuestion:"Pytanie QA", sourceAnswer:"Odpowiedź źródła", targetAnswer:"Odpowiedź celu", outcome:"Wynik",
+    qOnline:"Czy profil można założyć online?", qConfirm:"Gdzie potwierdza się tożsamość?", qCost:"Ile kosztuje usługa?", qApp:"Czy wymagana jest aplikacja mObywatel?",
+    yesOnline:"online", officeList:"urząd · ZUS · US", free:"bezpłatna", notFound:"brak informacji", completeness:"Completeness", groundedness:"Faithfulness", combined:"Wynik łączny", balanceExplain:"Średnia harmoniczna premiuje równowagę obu kierunków.",
+    showAll:"3 przykładowe próby QA", pass:"PASS", fail:"FAIL"
+  },
+  en:{
+    appSubtitle:"visual direction for the RAG evaluation simulator",
+    visualOnly:"Visual mockup · results are illustrative",
+    shortcuts:"Shortcuts: 1–4 switch methods",
+    visualMockup:"Visual mockup",
+    proxyTitle:"Learning mode",
+    proxyText:"Relationships and evidence come first. Technical details are available on demand.",
+    presets:"Scenarios",
+    change:"What changed:",
+    calculationLog:"Calculation log",
+    ragasQuestion:"Are the answer's claims grounded in the retrieved sources?",
+    ragasGood:"Good example", ragasNoise:"Context noise", ragasHalluc:"Hallucination",
+    ragasChange:"Every claim points to its source. One fragment is marked as redundant.",
+    inputs:"Inputs", question:"Question", answer:"RAG answer",
+    evidenceMap:"Evidence map", evidenceMapSub:"Fragments on the left support specific claims on the right.",
+    fragment:"Fragment", relevant:"useful", redundant:"redundant", claim:"Claim", supported:"supported", unsupported:"unsupported",
+    retrieval:"Retriever", generation:"Generator", contextRel:"Context relevance", faith:"Faithfulness", answerRel:"Answer relevance",
+    fragmentsUseful:"2 / 3 useful fragments", claimsSupported:"2 / 2 supported claims", conceptsCovered:"2 / 3 concepts covered",
+    aresQuestion:"How can a small human audit correct an automatic judge?",
+    aresBaseline:"Baseline sample", aresBiased:"Biased judge", aresMoreLabels:"More labels",
+    aresChange:"Human labels detect judge overrating and shift the estimate toward truth.",
+    population:"Population", populationHelp:"Large automatically evaluated pool", automaticExamples:"Automatic examples", hiddenRate:"Hidden positive rate",
+    judgeBehavior:"Judge behavior", judgeHelp:"Controlled automatic prediction quality", overrating:"Overrating probability", randomError:"Random error",
+    humanAudit:"Human audit", humanHelp:"Small calibration sample", humanLabels:"Human labels",
+    automaticPool:"Automatically scored pool", auditedDots:"Pink outlines mark the human-audited sample.",
+    agreement:"Agreement", falsePositive:"False positives", falseNegative:"False negatives",
+    calibratedResult:"Calibrated result", truth:"Truth 70.0%", raw:"Raw 71.4%", ppi:"PPI 68.1%", correction:"Audit correction", uncertainty:"95% CI: 57.0–79.1%",
+    ifevalQuestion:"Does the response satisfy every explicit and automatically verifiable constraint?",
+    ifevalGood:"Satisfies all", ifevalMiss:"Misses one", ifevalPreamble:"Preamble before JSON",
+    ifevalChange:"One missing constraint causes the entire prompt to fail.",
+    promptSent:"Prompt sent to the model", overallFail:"Prompt: FAIL", overallExplain:"10 of 11 constraints passed. Every constraint must pass at once.",
+    constraint:"Constraint", evidence:"Evidence in answer", strict:"Strict", loose:"Loose",
+    onlineRoute:"Mention the online route", cityOffice:"Mention the city office", noForbidden:"Avoid forbidden methods", freeService:"State that the service is free", citations:"Add both legal citations",
+    foundOnline:"“online”", foundOffice:"“city office”", nothingFound:"not found", foundCitations:"2 identifiers",
+    instStrict:"Instruction strict", promptStrict:"Prompt strict", instLoose:"Instruction loose", promptLoose:"Prompt loose",
+    questQuestion:"Does the target retain source information without adding unsupported claims?",
+    questFull:"Full coverage", questMissing:"Missing fact", questHalluc:"Added hallucination",
+    questChange:"Two QA directions separate missing information from unsupported target claims.",
+    source:"Source text", target:"Target text", deterministicScope:"Deterministic mode knows 6 source facts and 1 controlled hallucination.",
+    sourceToTarget:"Source → target", sourceToTargetSub:"Were important facts retained?", targetToSource:"Target → source", targetToSourceSub:"Is every target claim grounded?",
+    qaQuestion:"QA question", sourceAnswer:"Source answer", targetAnswer:"Target answer", outcome:"Outcome",
+    qOnline:"Can the profile be created online?", qConfirm:"Where is identity confirmed?", qCost:"How much does the service cost?", qApp:"Is the mObywatel app required?",
+    yesOnline:"online", officeList:"office · ZUS · tax office", free:"free", notFound:"no information", completeness:"Completeness", groundedness:"Faithfulness", combined:"Combined", balanceExplain:"The harmonic mean rewards balance between both directions.",
+    showAll:"3 sample QA probes", pass:"PASS", fail:"FAIL"
+  }
+};
+
+const PRESETS = {
+  ragas:["ragasGood","ragasNoise","ragasHalluc"],
+  ares:["aresBaseline","aresBiased","aresMoreLabels"],
+  ifeval:["ifevalGood","ifevalMiss","ifevalPreamble"],
+  questeval:["questFull","questMissing","questHalluc"]
+};
+
+// ─── State ───
+
+const state = {
+  activeTool:"ragas",
+  lang:localStorage.getItem("suggestionsLang") || "pl",
+  activePreset:{ ragas:0, ares:1, ifeval:1, questeval:0 }
+};
+
+// ─── DOM refs ───
+
+const app = document.querySelector("#app");
+const tabs = document.querySelector("#tabs");
+const methodRoot = document.querySelector("#method-root");
+const live = document.querySelector("#live");
+
+// ─── Helpers ───
+
+const t = key => T[state.lang][key] || T.pl[key] || key;
+const status = (pass, label) => `<span class="status ${pass ? "pass" : "fail"}">${label || t(pass ? "pass" : "fail")}</span>`;
+const presetBar = changeKey => `
+  <div class="preset-bar">
+    <div class="preset-set" aria-label="${t("presets")}">
+      ${PRESETS[state.activeTool].map((key,index) => `<button class="preset ${state.activePreset[state.activeTool]===index ? "active" : ""}" type="button" data-preset="${index}">${t(key)}</button>`).join("")}
+    </div>
+    <div class="change-note"><strong>${t("change")}</strong> ${t(changeKey)}</div>
+  </div>`;
+
+const methodHeader = (title, questionKey) => `
+  <div class="method-head">
+    <div>
+      <div class="eyebrow"><span class="eyebrow-dot"></span>${t("visualMockup")}</div>
+      <h2 class="method-title">${title}</h2>
+      <p class="method-answer">${t(questionKey)}</p>
+    </div>
+    <div class="mode-note"><strong>${t("proxyTitle")}</strong>${t("proxyText")}</div>
+  </div>`;
+
+const logDetails = text => `
+  <details class="log-details">
+    <summary>${t("calculationLog")}</summary>
+    <div class="terminal"><span class="accent">$ benchsim inspect --visual</span>\n<span class="muted">${text}</span>\n✓ complete</div>
+  </details>`;
+
+// ─── Render: RAGAS ───
+
+function renderRagas(){
+  return `<article class="method-shell" data-method="ragas">
+    ${methodHeader("RAGAS", "ragasQuestion")}
+    ${presetBar("ragasChange")}
+    <div class="canvas">
+      <div class="ragas-inputs">
+        <div class="card soft-card"><span class="label">${t("question")}</span><div class="field">Jak założyć profil zaufany?</div></div>
+        <div class="card soft-card"><span class="label">${t("answer")}</span><div class="field">Profil zakłada się online. Następnie należy złożyć wniosek i potwierdzić tożsamość.</div></div>
+      </div>
+      <div class="method-layout">
+        <div>
+          <h3 class="section-title">${t("evidenceMap")}</h3>
+          <p class="section-kicker">${t("evidenceMapSub")}</p>
+          <div class="evidence-map">
+            <div class="evidence-column">
+              <div class="fragment"><div class="fragment-head"><b>${t("fragment")} 1</b><span class="status info">${t("relevant")}</span></div><p>Profil zaufany można założyć online przez internet.</p><div class="match-words">profil · online · internet</div></div>
+              <div class="fragment"><div class="fragment-head"><b>${t("fragment")} 2</b><span class="status info">${t("relevant")}</span></div><p>Należy złożyć wniosek i potwierdzić tożsamość.</p><div class="match-words">wniosek · potwierdzić</div></div>
+              <div class="fragment dimmed"><div class="fragment-head"><b>${t("fragment")} 3</b><span class="status warn">${t("redundant")}</span></div><p>Raport gospodarczy wskazuje na wzrost PKB.</p></div>
+            </div>
+            <div class="connectors" aria-hidden="true"><div class="connector"></div><div class="connector"></div></div>
+            <div class="claims-column">
+              <div class="claim"><div class="claim-head"><b>${t("claim")} 1</b>${status(true,t("supported"))}</div><p>Profil można założyć przez internet.</p><div class="evidence-ref"><span>${t("fragment")} 1</span></div></div>
+              <div class="claim"><div class="claim-head"><b>${t("claim")} 2</b>${status(true,t("supported"))}</div><p>Należy złożyć wniosek i potwierdzić tożsamość.</p><div class="evidence-ref"><span>${t("fragment")} 2</span></div></div>
+            </div>
+          </div>
+        </div>
+        <aside class="summary-rail">
+          <div class="metric-group-label">${t("retrieval")}</div>
+          <div class="summary-card"><h3>${t("contextRel")}</h3><div class="metric-value">67%</div><div class="ratio">${t("fragmentsUseful")}</div><div class="neutral-track"><div class="neutral-fill" style="width:67%"></div></div></div>
+          <div class="metric-group-label">${t("generation")}</div>
+          <div class="summary-card"><h3>${t("faith")}</h3><div class="metric-value">100%</div><div class="ratio">${t("claimsSupported")}</div><div class="neutral-track"><div class="neutral-fill" style="width:100%"></div></div></div>
+          <div class="summary-card"><h3>${t("answerRel")}</h3><div class="metric-value">67%</div><div class="ratio">${t("conceptsCovered")}</div><div class="neutral-track"><div class="neutral-fill" style="width:67%"></div></div></div>
+        </aside>
+      </div>
+    </div>
+    ${logDetails("2 claims → 2 evidence links → 3 diagnostic metrics")}
+  </article>`;
+}
+
+// ─── Render: ARES ───
+
+function renderAres(){
+  const dots = Array.from({length:100},(_,index) => `<span class="pool-dot ${index>70 ? "negative" : ""} ${index%17===0 ? "audited" : ""}"></span>`).join("");
+  return `<article class="method-shell" data-method="ares">
+    ${methodHeader("ARES", "aresQuestion")}
+    ${presetBar("aresChange")}
+    <div class="canvas">
+      <div class="ares-workspace">
+        <div class="control-groups">
+          <section class="control-group"><h3>${t("population")}</h3><p>${t("populationHelp")}</p><div class="slider-row"><div class="slider-head"><span>${t("automaticExamples")}</span><output>500</output></div><input type="range" min="100" max="1000" value="500"></div><div class="slider-row"><div class="slider-head"><span>${t("hiddenRate")}</span><output>70%</output></div><input type="range" min="0" max="100" value="70"></div></section>
+          <section class="control-group"><h3>${t("judgeBehavior")}</h3><p>${t("judgeHelp")}</p><div class="slider-row"><div class="slider-head"><span>${t("overrating")}</span><output>10%</output></div><input type="range" min="0" max="30" value="10"></div><div class="slider-row"><div class="slider-head"><span>${t("randomError")}</span><output>15%</output></div><input type="range" min="0" max="30" value="15"></div></section>
+          <section class="control-group"><h3>${t("humanAudit")}</h3><p>${t("humanHelp")}</p><div class="slider-row"><div class="slider-head"><span>${t("humanLabels")}</span><output>60</output></div><input type="range" min="30" max="300" value="60"></div></section>
+        </div>
+        <div>
+          <section class="pool-card"><div class="pool-head"><div><h3>${t("automaticPool")}</h3><p>${t("auditedDots")}</p></div><span class="status info">N = 500 · n = 60</span></div><div class="pool-dots">${dots}</div><div class="disagreement"><div><b>52</b>${t("agreement")}</div><div><b>6</b>${t("falsePositive")}</div><div><b>2</b>${t("falseNegative")}</div></div></section>
+          <section class="numberline-card"><h3>${t("calibratedResult")}</h3><div class="numberline"><div class="axis"></div>${[0,25,50,75,100].map(v => `<span class="axis-tick" style="left:${v}%"></span><span class="axis-label" style="left:${v}%">${v}</span>`).join("")}<div class="ci-band"></div><span class="point truth"></span><span class="point raw"></span><span class="point ppi"></span><span class="point-label truth">${t("truth")}</span><span class="point-label raw">${t("raw")}</span><span class="point-label ppi">${t("ppi")}</span></div><div class="correction-callout"><span>${t("correction")}<br><small>${t("uncertainty")}</small></span><b>−3,3 pp</b></div></section>
+        </div>
+      </div>
+    </div>
+    ${logDetails("raw 71.4% + audit correction −3.3 pp = PPI 68.1%")}
+  </article>`;
+}
+
+// ─── Render: IFEval ───
+
+function constraintRow(category,name,evidence,strictPass,loosePass){
+  return `<div class="constraint-row"><div class="constraint-name"><span class="category-dot ${category}"></span><span>${t(name)}</span></div><div class="constraint-evidence">${t(evidence)}</div><div class="result-cell">${status(strictPass)}</div><div class="result-cell">${status(loosePass)}</div></div>`;
+}
+
+function renderIfeval(){
+  return `<article class="method-shell" data-method="ifeval">
+    ${methodHeader("IFEval", "ifevalQuestion")}
+    ${presetBar("ifevalChange")}
+    <div class="canvas">
+      <div class="prompt-card"><span class="prompt-label">${t("promptSent")}</span>Odpowiedz na pytanie: Jak założyć profil zaufany?\nUwzględnij: drogę online, wniosek, potwierdzenie tożsamości i koszt.\nDodaj wskazane cytowania. Nie używaj zakazanych metod.</div>
+      <div class="overall-gate"><div><h3>${t("overallFail")}</h3><p>${t("overallExplain")}</p></div><div class="gate-chain" aria-label="constraint chain">${Array.from({length:6},(_,index) => `<span class="gate-node ${index===3 ? "fail" : ""}">${index===3 ? "×" : "✓"}</span>${index<5 ? `<span class="gate-arrow">+</span>` : ""}`).join("")}<span class="gate-arrow">→</span>${status(false)}</div></div>
+      <div class="constraint-table">
+        <div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>
+        ${constraintRow("", "onlineRoute", "foundOnline", true, true)}
+        ${constraintRow("", "cityOffice", "foundOffice", true, true)}
+        ${constraintRow("forbid", "noForbidden", "nothingFound", true, true)}
+        ${constraintRow("", "freeService", "nothingFound", false, false)}
+        ${constraintRow("citation", "citations", "foundCitations", true, true)}
+      </div>
+      <div class="four-metrics"><div class="mini-metric"><span>${t("instStrict")}</span><b>91%</b></div><div class="mini-metric"><span>${t("promptStrict")}</span><b>0%</b></div><div class="mini-metric"><span>${t("instLoose")}</span><b>91%</b></div><div class="mini-metric"><span>${t("promptLoose")}</span><b>0%</b></div></div>
+    </div>
+    ${logDetails("strict: 10/11 constraints · loose: 10/11 constraints · prompt: FAIL")}
+  </article>`;
+}
+
+// ─── Render: QuestEval ───
+
+function qaRow(question,sourceAnswer,targetAnswer,pass,issue){
+  return `<div class="qa-row ${issue ? "issue-row" : ""}"><div class="qa-question">${t(question)}</div><div class="qa-answer">${t(sourceAnswer)}</div><div class="qa-arrow">↔</div><div class="qa-answer">${t(targetAnswer)}</div><div>${status(pass)}</div></div>`;
+}
+
+function qaLane(titleKey,subtitleKey,rows){
+  return `<section class="qa-lane"><div class="lane-head"><div><h3>${t(titleKey)}</h3><span>${t(subtitleKey)}</span></div><span>${t("showAll")}</span></div><div class="qa-row constraint-row header"><div>${t("qaQuestion")}</div><div>${t("sourceAnswer")}</div><div></div><div>${t("targetAnswer")}</div><div>${t("outcome")}</div></div>${rows}</section>`;
+}
+
+function renderQuestEval(){
+  const forward = qaRow("qOnline","yesOnline","yesOnline",true,false)+qaRow("qConfirm","officeList","officeList",true,false)+qaRow("qCost","free","free",true,false);
+  const backward = qaRow("qOnline","yesOnline","yesOnline",true,false)+qaRow("qConfirm","officeList","officeList",true,false)+qaRow("qApp","notFound","notFound",true,false);
+  return `<article class="method-shell" data-method="questeval">
+    ${methodHeader("QuestEval", "questQuestion")}
+    ${presetBar("questChange")}
+    <div class="canvas">
+      <div class="text-pair"><section class="text-card"><span class="label">${t("source")}</span><p>Profil zaufany można założyć online. Należy złożyć wniosek i potwierdzić tożsamość. Usługa jest bezpłatna.</p></section><section class="text-card"><span class="label">${t("target")}</span><p>Profil zakłada się online. Wniosek potwierdza się w urzędzie, ZUS lub urzędzie skarbowym. Usługa jest bezpłatna.</p></section></div>
+      <div class="scope-note"><span>ⓘ</span><span>${t("deterministicScope")}</span></div>
+      <div class="qa-lanes">${qaLane("sourceToTarget","sourceToTargetSub",forward)}${qaLane("targetToSource","targetToSourceSub",backward)}</div>
+      <div class="quest-summary"><div class="balance-card"><span>${t("completeness")}</span><b>100%</b><p>6 / 6</p></div><div class="balance-card"><span>${t("groundedness")}</span><b>100%</b><p>6 / 6</p></div><div class="balance-card combined"><span>${t("combined")}</span><b>100%</b><p>${t("balanceExplain")}</p></div></div>
+    </div>
+    ${logDetails("forward QA: 6/6 retained · backward QA: 6/6 grounded · F1: 100%")}
+  </article>`;
+}
+
+// ─── Render ───
+
+function renderShell(){
+  document.documentElement.lang = state.lang;
+  app.dataset.activeTool = state.activeTool;
+  app.dataset.lang = state.lang;
+  document.querySelectorAll("[data-t]").forEach(element => element.textContent = t(element.dataset.t));
+  document.querySelectorAll("[data-lang]").forEach(button => button.classList.toggle("active",button.dataset.lang===state.lang));
+  tabs.innerHTML = TOOLS.map(tool => `<button class="tab ${tool.id===state.activeTool ? "active" : ""}" type="button" data-tool="${tool.id}" aria-current="${tool.id===state.activeTool ? "page" : "false"}">${tool.label}<span class="tab-number">${tool.number}</span></button>`).join("");
+}
+
+function renderMethod(){
+  const renders = { ragas:renderRagas, ares:renderAres, ifeval:renderIfeval, questeval:renderQuestEval };
+  methodRoot.innerHTML = renders[state.activeTool]();
+}
+
+function render(){
+  renderShell();
+  renderMethod();
+}
+
+// ─── Listeners ───
+
+document.addEventListener("click",event => {
+  const toolButton = event.target.closest("[data-tool]");
+  if(toolButton){
+    state.activeTool = toolButton.dataset.tool;
+    render();
+    live.textContent = TOOLS.find(tool => tool.id===state.activeTool).label;
+    return;
+  }
+  const presetButton = event.target.closest("[data-preset]");
+  if(presetButton){
+    state.activePreset[state.activeTool] = Number(presetButton.dataset.preset);
+    render();
+    live.textContent = presetButton.textContent;
+    return;
+  }
+  const langButton = event.target.closest("[data-lang]");
+  if(langButton){
+    state.lang = langButton.dataset.lang;
+    localStorage.setItem("suggestionsLang",state.lang);
+    render();
+  }
+});
+
+document.addEventListener("keydown",event => {
+  if(event.target.matches("input,button")) return;
+  const tool = TOOLS.find(item => item.number===event.key);
+  if(tool){ state.activeTool = tool.id; render(); live.textContent = tool.label; }
+});
+
+// ─── Init ───
+
+render();
+</script>
+<script>
+"use strict";
+
+// ─── Constants ───
+
+const BENCHES = [
+  { id:"ragas", name:"RAGAS", number:"1" },
+  { id:"ares", name:"ARES / PPI", number:"2" },
+  { id:"ifeval", name:"IFEval", number:"3" },
+  { id:"questeval", name:"QuestEval", number:"4" }
+];
+
+const T = {
+  pl:{
+    appSubtitle:"interaktywny symulator metod ewaluacji RAG",
+    footer:"Symulacja edukacyjna – uproszczone, jawne proxy zamiast pełnych implementacji benchmarków.",
+    shortcuts:"Skróty: 1–4 metody · Ctrl/⌘ + Enter oblicza · R zmienia scenariusz",
+    qaShow:"Pokaż testy",qaHide:"Ukryj testy",qaTitle:"Wbudowane testy kontraktu",
+    learning:"Tryb edukacyjny",proxy:"To jawne, deterministyczne przybliżenie. Pokazuje mechanizm i ślad dowodowy, nie odtwarza pełnego benchmarku.",
+    scenarios:"Scenariusze",changed:"Co się zmienia:",run:"Oblicz wynik",calculation:"Dziennik obliczeń",inputs:"Dane wejściowe",
+    question:"Pytanie",context:"Fragment kontekstu",answer:"Odpowiedź",source:"Tekst źródłowy",target:"Tekst docelowy",
+    ragasQuestion:"Czy twierdzenia odpowiedzi mają oparcie w wyszukanych źródłach?",
+    ragasGood:"Dobry przykład",ragasNoise:"Szum w kontekście",ragasHalluc:"Halucynacja",
+    ragasGoodChange:"Wszystkie twierdzenia mają źródła; jeden fragment pozostaje zbędny.",ragasNoiseChange:"Dodatkowy fragment obniża trafność kontekstu, ale nie uziemienie odpowiedzi.",ragasHallucChange:"Nowe twierdzenie bez źródła obniża faithfulness.",
+    evidenceMap:"Mapa dowodów",evidenceSub:"Każde twierdzenie wskazuje konkretne fragmenty, które je wspierają.",retriever:"Retriever",generator:"Generator",
+    useful:"użyteczny",redundant:"zbędny",supported:"wspierane",unsupported:"niewspierane",fragment:"Fragment",claim:"Twierdzenie",
+    contextRel:"Context relevance",faithfulness:"Faithfulness",answerRel:"Answer relevance",usefulFragments:"użyteczne fragmenty",supportedClaims:"wspierane twierdzenia",coveredConcepts:"pokryte pojęcia",
+    aresQuestion:"Jak mała próba ocen ludzi koryguje automatycznego judge'a?",aresBase:"Próba bazowa",aresBiased:"Judge z biasem",aresLabels:"Więcej etykiet",
+    aresBaseChange:"Pokaż surowy wynik judge'a i korektę z małego audytu.",aresBiasedChange:"Zawyżający judge tworzy fałszywie dodatnie oceny, które wykrywa audyt.",aresLabelsChange:"Większy audyt zwykle zwęża ilustracyjny przedział niepewności.",
+    population:"Populacja",populationHelp:"Duża pula oceniona automatycznie",examples:"Przykłady N",truthRate:"Ukryta proporcja pozytywna",dimension:"Wymiar oceny",
+    judge:"Zachowanie judge'a",judgeHelp:"Kontrolowany błąd automatycznej oceny",bias:"Bias judge'a",noise:"Losowy błąd",
+    audit:"Audyt ludzi",auditHelp:"Mała próba kalibracyjna",labels:"Etykiety n",pool:"Automatycznie oceniona pula",poolNote:"Obwódka oznacza przykład sprawdzony przez człowieka.",
+    positive:"prawda: pozytywny",negative:"prawda: negatywny",audited:"audytowany",agreement:"Zgodność",fp:"Fałszywie dodatnie",fn:"Fałszywie ujemne",
+    calibrated:"Wynik po kalibracji",truth:"Prawda",raw:"Raw judge",ppi:"PPI",correction:"Korekta audytu",ci:"Ilustracyjne 95% CI",overrates:"zawyża",underrates:"zaniża",neutral:"neutralny",
+    ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalPreamble:"Wstęp przed JSON",
+    ifevalGoodChange:"Każdy warunek przechodzi; bramka AND zalicza cały prompt.",ifevalMissChange:"Brak jednego wymaganego terminu oblewa prompt mimo wysokiego wyniku instruction-level.",ifevalPreambleChange:"Wstęp psuje strict JSON; wariant loose odzyskuje obiekt JSON.",
+    builtPrompt:"Dokładny prompt",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",allMust:"Wszystkie aktywne warunki muszą przejść jednocześnie.",
+    validJson:"Zwróć poprawny JSON",mentionOnline:"Wspomnij online lub internet",mentionRequest:"Wspomnij wniosek",mentionFree:"Napisz, że usługa jest bezpłatna",citations:"Podaj obie podstawy prawne",forbidDelay:"Nie pisz „14 dni”",maxWords:"Maksymalnie 80 słów",
+    instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",found:"znaleziono",notFound:"nie znaleziono",absent:"brak zakazanej frazy",valid:"poprawny JSON",invalid:"niepoprawny JSON",
+    questQuestion:"Czy tekst docelowy zachowuje informacje źródła bez dodawania nowych twierdzeń?",questFull:"Pełne pokrycie",questMissing:"Pominięty fakt",questHalluc:"Dodana halucynacja",
+    questFullChange:"Oba kierunki QA przechodzą: treść jest kompletna i uziemiona.",questMissingChange:"Kierunek źródło → cel ujawnia utraconą informację.",questHallucChange:"Kierunek cel → źródło ujawnia twierdzenie bez pokrycia.",
+    scope:"Zakres proxy: zamknięty zestaw 5 faktów źródłowych i 1 kontrolowanej halucynacji.",forward:"Źródło → cel",forwardSub:"Czy ważne informacje zostały zachowane?",backward:"Cel → źródło",backwardSub:"Czy każde rozpoznane twierdzenie ma pokrycie?",
+    qaQuestion:"Pytanie QA",sourceAnswer:"Odpowiedź źródła",targetAnswer:"Odpowiedź celu",outcome:"Wynik",completeness:"Completeness",groundedness:"Faithfulness",combined:"Wynik łączny",noClaims:"Brak rozpoznanych twierdzeń – wynik N/A",
+    qOnline:"Czy profil można założyć online?",qRequest:"Czy trzeba złożyć wniosek?",qIdentity:"Czy trzeba potwierdzić tożsamość?",qOffice:"Gdzie można ją potwierdzić?",qCost:"Ile kosztuje usługa?",qApp:"Czy aplikacja mObywatel jest wymagana?",
+    references:"Źródła scenariusza: aktualne informacje o Profilu Zaufanym oraz akty prawne",aiTitle:"Tryb lokalny",aiBody:"Ta wersja nie przechowuje kluczy API. Wszystkie wyniki są obliczane lokalnie i mają widoczny ślad dowodowy.",close:"Zamknij",ready:"Gotowe",updated:"Wynik zaktualizowany",testPass:"PASS",testFail:"FAIL"
+  },
+  en:{
+    appSubtitle:"interactive simulator of RAG evaluation methods",
+    footer:"Educational simulation – explicit simplified proxies, not full benchmark implementations.",
+    shortcuts:"Shortcuts: 1–4 methods · Ctrl/⌘ + Enter evaluates · R changes scenario",
+    qaShow:"Show tests",qaHide:"Hide tests",qaTitle:"Built-in contract tests",
+    learning:"Learning mode",proxy:"This is an explicit deterministic approximation. It demonstrates the mechanism and evidence trail, not the full benchmark.",
+    scenarios:"Scenarios",changed:"What changes:",run:"Evaluate",calculation:"Calculation log",inputs:"Inputs",
+    question:"Question",context:"Context fragment",answer:"Answer",source:"Source text",target:"Target text",
+    ragasQuestion:"Are the answer's claims grounded in the retrieved sources?",
+    ragasGood:"Good example",ragasNoise:"Context noise",ragasHalluc:"Hallucination",
+    ragasGoodChange:"Every claim has a source; one fragment remains redundant.",ragasNoiseChange:"An extra fragment lowers context relevance without changing answer grounding.",ragasHallucChange:"A new source-free claim lowers faithfulness.",
+    evidenceMap:"Evidence map",evidenceSub:"Each claim points to the exact fragments that support it.",retriever:"Retriever",generator:"Generator",
+    useful:"useful",redundant:"redundant",supported:"supported",unsupported:"unsupported",fragment:"Fragment",claim:"Claim",
+    contextRel:"Context relevance",faithfulness:"Faithfulness",answerRel:"Answer relevance",usefulFragments:"useful fragments",supportedClaims:"supported claims",coveredConcepts:"covered concepts",
+    aresQuestion:"How can a small human audit correct an automatic judge?",aresBase:"Baseline sample",aresBiased:"Biased judge",aresLabels:"More labels",
+    aresBaseChange:"Compare the judge's raw result with a small audit correction.",aresBiasedChange:"An overrating judge creates false positives that the audit detects.",aresLabelsChange:"A larger audit usually narrows the illustrative uncertainty interval.",
+    population:"Population",populationHelp:"Large automatically scored pool",examples:"Examples N",truthRate:"Hidden positive rate",dimension:"Evaluation dimension",
+    judge:"Judge behavior",judgeHelp:"Controlled automatic scoring error",bias:"Judge bias",noise:"Random error",
+    audit:"Human audit",auditHelp:"Small calibration sample",labels:"Labels n",pool:"Automatically scored pool",poolNote:"An outline marks an example checked by a human.",
+    positive:"truth: positive",negative:"truth: negative",audited:"audited",agreement:"Agreement",fp:"False positives",fn:"False negatives",
+    calibrated:"Calibrated result",truth:"Truth",raw:"Raw judge",ppi:"PPI",correction:"Audit correction",ci:"Illustrative 95% CI",overrates:"overrates",underrates:"underrates",neutral:"neutral",
+    ifevalQuestion:"Does the answer satisfy every explicit and automatically verifiable constraint?",ifevalGood:"Satisfies all",ifevalMiss:"Misses one",ifevalPreamble:"Preamble before JSON",
+    ifevalGoodChange:"Every constraint passes, so the AND gate passes the prompt.",ifevalMissChange:"One missing term fails the prompt despite a high instruction-level score.",ifevalPreambleChange:"A preamble breaks strict JSON; the loose variant recovers the JSON object.",
+    builtPrompt:"Exact prompt",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",allMust:"Every active constraint must pass at the same time.",
+    validJson:"Return valid JSON",mentionOnline:"Mention online or internet",mentionRequest:"Mention an application",mentionFree:"State that the service is free",citations:"Include both legal citations",forbidDelay:"Do not write “14 days”",maxWords:"No more than 80 words",
+    instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",found:"found",notFound:"not found",absent:"forbidden phrase absent",valid:"valid JSON",invalid:"invalid JSON",
+    questQuestion:"Does the target preserve source information without adding unsupported claims?",questFull:"Full coverage",questMissing:"Missing fact",questHalluc:"Added hallucination",
+    questFullChange:"Both QA directions pass: the target is complete and grounded.",questMissingChange:"The source → target direction reveals lost information.",questHallucChange:"The target → source direction reveals an unsupported claim.",
+    scope:"Proxy scope: a closed set of 5 source facts and 1 controlled hallucination.",forward:"Source → target",forwardSub:"Were important facts retained?",backward:"Target → source",backwardSub:"Is every recognized claim grounded?",
+    qaQuestion:"QA question",sourceAnswer:"Source answer",targetAnswer:"Target answer",outcome:"Outcome",completeness:"Completeness",groundedness:"Faithfulness",combined:"Combined",noClaims:"No recognized claims – score is N/A",
+    qOnline:"Can the profile be created online?",qRequest:"Is an application required?",qIdentity:"Must identity be confirmed?",qOffice:"Where can it be confirmed?",qCost:"How much does the service cost?",qApp:"Is the mObywatel app required?",
+    references:"Scenario sources: current Trusted Profile guidance and legal acts",aiTitle:"Local mode",aiBody:"This version stores no API keys. Every score is calculated locally and exposes its evidence trail.",close:"Close",ready:"Ready",updated:"Result updated",testPass:"PASS",testFail:"FAIL"
+  }
+};
+
+const RAGAS_PRESETS = {
+  good:{
+    question:"Jak założyć Profil Zaufany i gdzie potwierdzić tożsamość?",
+    context:[
+      "Profil Zaufany można założyć online po złożeniu elektronicznego wniosku.",
+      "Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym.",
+      "Dowód osobisty zawiera fotografię oraz dane posiadacza."
+    ],
+    answer:"Profil Zaufany można założyć online po złożeniu wniosku. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym."
+  },
+  noise:{
+    question:"Jak założyć Profil Zaufany i gdzie potwierdzić tożsamość?",
+    context:[
+      "Profil Zaufany można założyć online po złożeniu elektronicznego wniosku.",
+      "Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym.",
+      "Paszport biometryczny zawiera mikroprocesor. Dowód osobisty zawiera fotografię.",
+      "Wniosek o paszport składa się osobiście."
+    ],
+    answer:"Profil Zaufany można założyć online po złożeniu wniosku. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym."
+  },
+  halluc:{
+    question:"Jak założyć Profil Zaufany i gdzie potwierdzić tożsamość?",
+    context:[
+      "Profil Zaufany można założyć online po złożeniu elektronicznego wniosku.",
+      "Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym.",
+      "Dowód osobisty zawiera fotografię oraz dane posiadacza."
+    ],
+    answer:"Profil Zaufany można założyć online po złożeniu wniosku. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym. Profil jest ważny bezterminowo."
+  }
+};
+
+const IFEVAL_ANSWER_GOOD = `{"sposob":"Profil Zaufany założysz online przez internet, składając wniosek. Potwierdzenie tożsamości jest bezpłatne.","podstawy":["Dz.U. 2005 nr 64 poz. 565","Dz.U. 2020 poz. 1194"]}`;
+const IFEVAL_ANSWER_MISS = `{"sposob":"Profil Zaufany założysz online przez internet, składając wniosek. Potwierdzenie tożsamości odbywa się w urzędzie.","podstawy":["Dz.U. 2005 nr 64 poz. 565","Dz.U. 2020 poz. 1194"]}`;
+const IFEVAL_ANSWER_PREAMBLE = `Oto odpowiedź:\n${IFEVAL_ANSWER_GOOD}`;
+
+const QUEST_SOURCE = "Profil Zaufany można założyć online. Należy złożyć wniosek i potwierdzić tożsamość. Tożsamość można potwierdzić w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym. Usługa jest bezpłatna.";
+const QUEST_TARGET_FULL = "Profil Zaufany zakłada się online, składając wniosek. Trzeba potwierdzić tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub urzędzie skarbowym. Usługa jest bezpłatna.";
+const QUEST_FACTS = [
+  { id:"online",question:"qOnline",sourceAnswer:"online",accepted:["online","przez internet"],origin:"source" },
+  { id:"request",question:"qRequest",sourceAnswer:"wniosek",accepted:["wniosek"],origin:"source" },
+  { id:"identity",question:"qIdentity",sourceAnswer:"potwierdzić tożsamość",accepted:["potwierdzic tozsamosc","potwierdzenie tozsamosci"],origin:"source" },
+  { id:"office",question:"qOffice",sourceAnswer:"punkt potwierdzający · urząd gminy · urząd skarbowy",accepted:["punkt potwierdzajacy","urzad gminy","urzad skarbowy"],minMatches:2,origin:"source" },
+  { id:"free",question:"qCost",sourceAnswer:"bezpłatna",accepted:["bezplatna","bezplatnie","bez oplat"],origin:"source" },
+  { id:"app",question:"qApp",sourceAnswer:"brak informacji",accepted:["aplikacja mobywatel","mobywatel jest wymagany","wymaga aplikacji mobywatel"],origin:"hallucination" }
+];
+
+const IFEVAL_CONSTRAINTS = [
+  { id:"json",label:"validJson" },{ id:"online",label:"mentionOnline" },{ id:"request",label:"mentionRequest" },
+  { id:"free",label:"mentionFree" },{ id:"citations",label:"citations" },{ id:"delay",label:"forbidDelay" },{ id:"words",label:"maxWords" }
+];
+
+// ─── State ───
+
+const state = {
+  activeBench:"ragas",
+  lang:localStorage.getItem("coSimLang") || "pl",
+  runState:"ready",
+  showQa:new URLSearchParams(location.search).get("qa") === "1",
+  preset:{ ragas:"good", ares:"biased", ifeval:"miss", questeval:"full" },
+  values:{
+    ragas:structuredClone(RAGAS_PRESETS.good),
+    ares:{ N:500,n:60,bias:12,noise:10,trueRate:70,dimension:"faithfulness",seed:37 },
+    ifeval:{ answer:IFEVAL_ANSWER_MISS },
+    questeval:{ source:QUEST_SOURCE,target:QUEST_TARGET_FULL }
+  },
+  results:{},
+  qa:[]
+};
+
+// ─── DOM refs ───
+
+const app = document.querySelector("#app");
+const tabs = document.querySelector("#tabs");
+const methodRoot = document.querySelector("#method-root");
+const qaRoot = document.querySelector("#qa-root");
+const live = document.querySelector("#live");
+const aiDialog = document.querySelector("#ai-dialog");
+
+// ─── Helpers ───
+
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+const t = key => T[state.lang][key] ?? key;
+const clamp = (value,min=0,max=1) => Math.max(min,Math.min(max,value));
+const pct = value => value === null || !Number.isFinite(value) ? "N/A" : new Intl.NumberFormat(state.lang === "pl" ? "pl-PL" : "en-US",{style:"percent",maximumFractionDigits:1}).format(value);
+const num = value => new Intl.NumberFormat(state.lang === "pl" ? "pl-PL" : "en-US",{maximumFractionDigits:1}).format(value);
+const mean = values => values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : 0;
+const variance = values => values.length > 1 ? values.reduce((sum,value)=>sum+(value-mean(values))**2,0)/(values.length-1) : 0;
+const announce = message => { live.textContent = ""; requestAnimationFrame(()=>{ live.textContent = message; }); };
+
+function normText(value){
+  return String(value ?? "").toLowerCase().replace(/ł/g,"l").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+}
+
+const STOP_WORDS = new Set("a aby albo and are be czy do dla gdzie how i in is jak jest lub mozna na of po sie the to w with z za oraz można można".split(" "));
+const STEMS = [
+  [/^zaloz/,"zalozyc"],[/^zaklad/,"zalozyc"],[/^wniosk/,"wniosek"],[/^potwierdz/,"potwierdzic"],[/^tozsamosc/,"tozsamosc"],
+  [/^urzed/,"urzad"],[/^skarbow/,"skarbowy"],[/^bezplat/,"bezplatny"],[/^profil/,"profil"],[/^internet/,"online"]
+];
+
+function tokens(value){
+  return normText(value).split(/\s+/).filter(word => word.length > 2 && !STOP_WORDS.has(word)).map(word => {
+    const match = STEMS.find(([pattern])=>pattern.test(word));
+    return match ? match[1] : word;
+  });
+}
+
+function unique(values){ return [...new Set(values)]; }
+function overlap(left,right){ const set = new Set(right); return unique(left.filter(item=>set.has(item))); }
+function phraseMatches(text,phrase){
+  const haystack = ` ${tokens(text).join(" ")} `;
+  const needle = ` ${tokens(phrase).join(" ")} `;
+  return haystack.includes(needle);
+}
+function factPresent(text,fact){
+  const hits = fact.accepted.filter(item=>phraseMatches(text,item)).length;
+  return hits >= (fact.minMatches || 1);
+}
+function factEvidence(text,fact){ return fact.accepted.filter(item=>phraseMatches(text,item)).join(" · ") || t("notFound"); }
+function mulberry32(seed){ return function(){ let value=seed+=0x6D2B79F5; value=Math.imul(value^value>>>15,value|1); value^=value+Math.imul(value^value>>>7,value|61); return ((value^value>>>14)>>>0)/4294967296; }; }
+function clone(value){ return JSON.parse(JSON.stringify(value)); }
+
+function captureInputs(){
+  if(state.activeBench === "ragas"){
+    state.values.ragas.question = document.querySelector("#r-question")?.value ?? "";
+    state.values.ragas.answer = document.querySelector("#r-answer")?.value ?? "";
+    state.values.ragas.context = [...document.querySelectorAll("[data-r-context]")].map(node=>node.value);
+  } else if(state.activeBench === "ares"){
+    ["N","n","bias","noise","trueRate"].forEach(key=>{ const node=document.querySelector(`#a-${key}`); if(node) state.values.ares[key]=Number(node.value); });
+    state.values.ares.n = Math.min(state.values.ares.N,state.values.ares.n);
+    const dimension = document.querySelector("#a-dimension"); if(dimension) state.values.ares.dimension=dimension.value;
+  } else if(state.activeBench === "ifeval"){
+    state.values.ifeval.answer = document.querySelector("#i-answer")?.value ?? "";
+  } else {
+    state.values.questeval.source = document.querySelector("#q-source")?.value ?? "";
+    state.values.questeval.target = document.querySelector("#q-target")?.value ?? "";
+  }
+}
+
+// ─── Evaluation engines ───
+
+function splitClaims(answer){
+  return String(answer).split(/[.!?;]+/).map(item=>item.trim()).filter(Boolean);
+}
+
+function evaluateRagas(values){
+  const contexts = values.context.map(text=>({text,tokens:tokens(text)})).filter(item=>item.text.trim());
+  const questionTokens = unique(tokens(values.question));
+  const claims = splitClaims(values.answer).map((text,index)=>{
+    const claimTokens = unique(tokens(text));
+    const matches = contexts.map((context,contextIndex)=>({contextIndex,terms:overlap(claimTokens,context.tokens)}))
+      .filter(match=>match.terms.length >= Math.min(2,Math.max(1,claimTokens.length)));
+    return { index,text,tokens:claimTokens,matches,supported:matches.length>0 };
+  });
+  const fragments = contexts.map((context,index)=>{
+    const claimIds = claims.filter(claim=>claim.matches.some(match=>match.contextIndex===index)).map(claim=>claim.index);
+    const questionTerms = overlap(context.tokens,questionTokens);
+    return { index,text:context.text,claimIds,questionTerms,useful:claimIds.length>0 || questionTerms.length>=2 };
+  });
+  const answerTokens = unique(tokens(values.answer));
+  const covered = overlap(questionTokens,answerTokens);
+  return {
+    empty:!values.question.trim() || !values.answer.trim() || !contexts.length,
+    fragments,claims,questionTokens,covered,
+    contextRelevance:fragments.length ? fragments.filter(item=>item.useful).length/fragments.length : 0,
+    faithfulness:claims.length ? claims.filter(item=>item.supported).length/claims.length : 0,
+    answerRelevance:questionTokens.length ? covered.length/questionTokens.length : 0
+  };
+}
+
+function evaluateAres(config){
+  const N=Math.max(20,Math.round(config.N));
+  const n=Math.min(N,Math.max(5,Math.round(config.n)));
+  const profile={context:[.65,.75],faithfulness:[1,1],relevance:[1.25,1.35]}[config.dimension] || [1,1];
+  const signedBias=clamp(config.bias/100*profile[0],-.95,.95);
+  const noiseRate=clamp(config.noise/100*profile[1],0,.95);
+  const trueRate=clamp(config.trueRate/100);
+  const random=mulberry32(config.seed + N*3 + n*7 + Math.round(config.bias*11));
+  const rows=Array.from({length:N},()=>{
+    const truth=random()<trueRate?1:0;
+    let judge=truth;
+    if(random()<noiseRate) judge=1-judge;
+    if(truth===0 && signedBias>0 && random()<signedBias) judge=1;
+    if(truth===1 && signedBias<0 && random()<-signedBias) judge=0;
+    return {truth,judge,audited:false};
+  });
+  const order=rows.map((_,index)=>index);
+  for(let index=order.length-1;index>0;index--){ const other=Math.floor(random()*(index+1)); [order[index],order[other]]=[order[other],order[index]]; }
+  const audited=order.slice(0,n); audited.forEach(index=>{rows[index].audited=true;});
+  const raw=mean(rows.map(row=>row.judge));
+  const differences=audited.map(index=>rows[index].truth-rows[index].judge);
+  const correction=mean(differences);
+  const ppi=clamp(raw+correction);
+  const se=Math.sqrt(variance(rows.map(row=>row.judge))/N + variance(differences)/n);
+  const stats={agreement:0,fp:0,fn:0};
+  audited.forEach(index=>{ const row=rows[index]; if(row.truth===row.judge)stats.agreement++; else if(row.judge===1)stats.fp++; else stats.fn++; });
+  const sample=rows.length<=100?rows:rows.filter((_,index)=>index%Math.ceil(rows.length/100)===0).slice(0,100);
+  return {N,n,trueRate,raw,correction,ppi,se,ci:{lo:clamp(ppi-1.96*se),hi:clamp(ppi+1.96*se)},stats,sample,bias:signedBias,dimension:config.dimension};
+}
+
+function jsonCandidate(answer){
+  const start=answer.indexOf("{"); const end=answer.lastIndexOf("}");
+  return start>=0 && end>start ? answer.slice(start,end+1) : answer;
+}
+
+function checkIfeval(id,answer){
+  const normalized=normText(answer);
+  if(id==="json"){ try{JSON.parse(answer);return {pass:true,evidence:t("valid")};}catch(error){return {pass:false,evidence:t("invalid")};} }
+  if(id==="online"){ const found=["online","internet"].find(term=>phraseMatches(answer,term)); return {pass:Boolean(found),evidence:found||t("notFound")}; }
+  if(id==="request"){ const pass=/\bwnios\w*/.test(normalized); return {pass,evidence:pass?"wniosek":t("notFound")}; }
+  if(id==="free"){ const found=["bezplatne","bezplatna","bezplatnie","bez oplat","free"].find(term=>phraseMatches(answer,term)); return {pass:Boolean(found),evidence:found||t("notFound")}; }
+  if(id==="citations"){ const terms=["Dz.U. 2005 nr 64 poz. 565","Dz.U. 2020 poz. 1194"]; const count=terms.filter(term=>answer.includes(term)).length; return {pass:count===2,evidence:`${count}/2`}; }
+  if(id==="delay"){ const pass=!phraseMatches(answer,"14 dni")&&!phraseMatches(answer,"14 days"); return {pass,evidence:pass?t("absent"):"14 dni"}; }
+  if(id==="words"){ const count=answer.trim().split(/\s+/).filter(Boolean).length; return {pass:count<=80,evidence:`${count}/80`}; }
+  return {pass:false,evidence:t("notFound")};
+}
+
+function evaluateIfeval(answer){
+  const loose=jsonCandidate(answer.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim());
+  const rows=IFEVAL_CONSTRAINTS.map(constraint=>{
+    const strict=checkIfeval(constraint.id,answer);
+    const relaxed=checkIfeval(constraint.id,loose);
+    return {...constraint,strict,loose:relaxed};
+  });
+  const strictPass=rows.filter(row=>row.strict.pass).length;
+  const loosePass=rows.filter(row=>row.loose.pass).length;
+  return {rows,strictInstr:strictPass/rows.length,strictPrompt:strictPass===rows.length?1:0,looseInstr:loosePass/rows.length,loosePrompt:loosePass===rows.length?1:0,builtPrompt:buildIfevalPrompt()};
+}
+
+function buildIfevalPrompt(){
+  const lines=IFEVAL_CONSTRAINTS.map((constraint,index)=>`${index+1}. ${t(constraint.label)}`);
+  return `${state.lang==="pl"?"Wyjaśnij, jak założyć Profil Zaufany.":"Explain how to create a Trusted Profile."}\n${lines.join("\n")}`;
+}
+
+function evaluateQuest(values){
+  const sourceFacts=QUEST_FACTS.filter(fact=>fact.origin==="source" && factPresent(values.source,fact));
+  const forward=sourceFacts.map(fact=>({...fact,found:factPresent(values.target,fact),sourceEvidence:factEvidence(values.source,fact),targetEvidence:factEvidence(values.target,fact)}));
+  const presentTarget=QUEST_FACTS.filter(fact=>factPresent(values.target,fact));
+  const backward=presentTarget.map(fact=>({...fact,found:factPresent(values.source,fact),sourceEvidence:factEvidence(values.source,fact),targetEvidence:factEvidence(values.target,fact)}));
+  const completeness=forward.length?forward.filter(fact=>fact.found).length/forward.length:null;
+  const faithfulness=backward.length?backward.filter(fact=>fact.found).length/backward.length:null;
+  const combined=completeness===null||faithfulness===null||completeness+faithfulness===0?null:2*completeness*faithfulness/(completeness+faithfulness);
+  return {forward,backward,completeness,faithfulness,combined};
+}
+
+// ─── Render helpers ───
+
+function methodHeader(title,question){
+  return `<header class="method-head"><div><div class="eyebrow"><span class="eyebrow-dot"></span>${t("learning")}</div><h2 class="method-title">${title}</h2><p class="method-answer">${t(question)}</p>${scenarioSources()}</div><aside class="mode-note"><strong>${t("learning")}</strong>${t("proxy")}</aside></header>`;
+}
+
+function presetBar(items,change){
+  return `<div class="preset-bar"><div class="preset-set" aria-label="${t("scenarios")}">${items.map(item=>`<button class="preset ${state.preset[state.activeBench]===item.id?"active":""}" type="button" data-action="preset" data-preset="${item.id}" aria-pressed="${state.preset[state.activeBench]===item.id}">${t(item.label)}</button>`).join("")}</div><div class="change-note"><strong>${t("changed")}</strong> ${t(change)}</div></div>`;
+}
+
+function logDetails(content){
+  return `<details class="log-details" data-calculation-log><summary>${t("calculation")}</summary><pre class="terminal">${escapeHtml(content)}</pre></details>`;
+}
+
+function metricCard(label,value,ratio,group=""){
+  const width=value===null?0:Math.round(clamp(value)*100);
+  return `<section class="summary-card metric-card" data-metric="${escapeHtml(label)}" data-value="${value===null?"na":value.toFixed(4)}">${group?`<div class="metric-group-label">${group}</div>`:""}<h3>${label}</h3><div class="metric-value">${pct(value)}</div><div class="ratio">${ratio}</div><div class="neutral-track" aria-hidden="true"><div class="neutral-fill" style="width:${width}%"></div></div></section>`;
+}
+
+function status(pass){ return `<span class="status ${pass?"pass":"fail"}">${pass?t("testPass"):t("testFail")}</span>`; }
+
+function scenarioSources(){
+  return `<p class="source-note">${t("references")}: <a href="https://www.gov.pl/web/profilzaufany/najczesciej-zadawane-pytania2" target="_blank" rel="noreferrer">gov.pl</a> · <a href="https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20200001194" target="_blank" rel="noreferrer">ISAP</a></p>`;
+}
+
+function renderRagas(){
+  const values=state.values.ragas; const result=state.results.ragas || evaluateRagas(values);
+  const presetMeta={good:["ragasGood","ragasGoodChange"],noise:["ragasNoise","ragasNoiseChange"],halluc:["ragasHalluc","ragasHallucChange"]};
+  const fragments=result.fragments.map(fragment=>`<article class="fragment ${fragment.useful?"":"dimmed"}" data-fragment="${fragment.index+1}" data-used="${fragment.useful}"><div class="fragment-head"><b>${t("fragment")} ${fragment.index+1}</b><span class="status ${fragment.useful?"info":"warn"}">${fragment.useful?t("useful"):t("redundant")}</span></div><p>${escapeHtml(fragment.text)}</p><div class="match-words">${fragment.questionTerms.length?fragment.questionTerms.join(" · "):"∅"}</div><div class="evidence-link">${fragment.claimIds.length?`→ C${fragment.claimIds.map(index=>index+1).join(", C")}`:"→ ∅"}</div></article>`).join("");
+  const claims=result.claims.map(claim=>`<article class="claim ${claim.supported?"":"unsupported"}" data-claim="${claim.index+1}" data-supported="${claim.supported}"><div class="claim-head"><b>${t("claim")} C${claim.index+1}</b>${status(claim.supported)}</div><p>${escapeHtml(claim.text)}</p><div class="evidence-ref">${claim.matches.length?claim.matches.map(match=>`<span>F${match.contextIndex+1}: ${escapeHtml(match.terms.join(" · "))}</span>`).join(""):`<span>${t("notFound")}</span>`}</div></article>`).join("");
+  const log=`proxy = overlap of canonical content words\ncontext relevance = ${result.fragments.filter(item=>item.useful).length}/${result.fragments.length}\nfaithfulness = ${result.claims.filter(item=>item.supported).length}/${result.claims.length}\nanswer relevance = ${result.covered.length}/${result.questionTokens.length}\ncovered concepts = ${result.covered.join(", ") || "∅"}`;
+  return `<article class="method-shell" data-sim-id="ragas" data-sim-state="${state.runState}">${methodHeader("RAGAS","ragasQuestion")}${presetBar(Object.entries(presetMeta).map(([id,meta])=>({id,label:meta[0]})),presetMeta[state.preset.ragas][1])}<div class="canvas"><div class="proxy-banner"><b>ⓘ</b><span>${t("proxy")}</span></div><div class="method-layout"><div><div class="ragas-inputs"><label class="wide"><span class="input-label">${t("question")}</span><input class="field-control" id="r-question" value="${escapeHtml(values.question)}"></label>${values.context.map((context,index)=>`<label><span class="input-label">${t("context")} ${index+1}</span><textarea class="field-control" id="r-ctx-${index}" data-r-context rows="3">${escapeHtml(context)}</textarea></label>`).join("")}<label class="wide"><span class="input-label">${t("answer")}</span><textarea class="field-control" id="r-answer" rows="4">${escapeHtml(values.answer)}</textarea></label></div><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div><h3 class="section-title" style="margin-top:var(--space-5)">${t("evidenceMap")}</h3><p class="section-kicker">${t("evidenceSub")}</p>${result.empty?`<div class="empty-state">${t("notFound")}</div>`:`<div class="evidence-map" data-connection-mode="explicit"><div class="evidence-column">${fragments}</div><div class="connector-list" aria-hidden="true">${result.claims.map((_,index)=>`F → C${index+1}`).join("<br>")}</div><div class="claims-column">${claims}</div></div>`}</div><aside class="summary-rail"><div class="metric-group-label">${t("retriever")}</div>${metricCard(t("contextRel"),result.contextRelevance,`${result.fragments.filter(item=>item.useful).length}/${result.fragments.length} ${t("usefulFragments")}`)}<div class="metric-group-label">${t("generator")}</div>${metricCard(t("faithfulness"),result.faithfulness,`${result.claims.filter(item=>item.supported).length}/${result.claims.length} ${t("supportedClaims")}`)}${metricCard(t("answerRel"),result.answerRelevance,`${result.covered.length}/${result.questionTokens.length} ${t("coveredConcepts")}`)}</aside></div></div>${logDetails(log)}</article>`;
+}
+
+function slider(id,label,min,max,step,value,suffix=""){
+  return `<div class="slider-row"><div class="slider-head"><label for="a-${id}">${label}</label><output id="a-${id}-out">${num(value)}${suffix}</output></div><input type="range" id="a-${id}" data-ares-control min="${min}" max="${max}" step="${step}" value="${value}"></div>`;
+}
+
+function renderAres(){
+  const values=state.values.ares; const result=state.results.ares || evaluateAres(values);
+  const meta={base:["aresBase","aresBaseChange"],biased:["aresBiased","aresBiasedChange"],labels:["aresLabels","aresLabelsChange"]};
+  const dots=result.sample.map(row=>`<span class="pool-dot ${row.truth?"":"negative"} ${row.audited?"audited":""}" title="truth ${row.truth}; judge ${row.judge}; audited ${row.audited}"></span>`).join("");
+  const biasWord=result.bias>0?t("overrates"):result.bias<0?t("underrates"):t("neutral");
+  const point=(className,label,value,top)=>`<span class="point ${className}" style="left:${clamp(value)*100}%"></span><span class="point-label ${className}" style="left:${clamp(value)*100}%;top:${top}px">${label} ${pct(value)}</span>`;
+  const log=`raw = mean(judge on N) = ${pct(result.raw)}\naudit correction = mean(human − judge on n) = ${result.correction>=0?"+":""}${pct(result.correction)}\nPPI proxy = clamp(raw + correction) = ${pct(result.ppi)}\nSE proxy = sqrt(var(judge)/N + var(human−judge)/n) = ${result.se.toFixed(4)}\n95% CI is illustrative, not an exact ARES confidence interval.`;
+  return `<article class="method-shell" data-sim-id="ares" data-sim-state="${state.runState}" data-n-valid="${result.n<=result.N}">${methodHeader("ARES / PPI","aresQuestion")}${presetBar(Object.entries(meta).map(([id,item])=>({id,label:item[0]})),meta[state.preset.ares][1])}<div class="canvas"><div class="proxy-banner"><b>ⓘ</b><span>${t("proxy")}</span></div><div class="ares-workspace"><div class="control-groups"><section class="control-group"><h3>${t("population")}</h3><p>${t("populationHelp")}</p>${slider("N",t("examples"),100,1000,50,values.N)}${slider("trueRate",t("truthRate"),20,90,1,values.trueRate,"%")}</section><section class="control-group"><h3>${t("judge")}</h3><p>${t("judgeHelp")}</p><label class="input-label" for="a-dimension">${t("dimension")}</label><select class="select-control" id="a-dimension" data-ares-control><option value="context" ${values.dimension==="context"?"selected":""}>Context relevance</option><option value="faithfulness" ${values.dimension==="faithfulness"?"selected":""}>Faithfulness</option><option value="relevance" ${values.dimension==="relevance"?"selected":""}>Answer relevance</option></select>${slider("bias",`${t("bias")} · ${biasWord}`,-25,25,1,values.bias,"%")}${slider("noise",t("noise"),0,30,1,values.noise,"%")}</section><section class="control-group"><h3>${t("audit")}</h3><p>${t("auditHelp")}</p>${slider("n",t("labels"),5,values.N,5,Math.min(values.n,values.N))}</section><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></div><div><section class="pool-card"><div class="pool-head"><div><h3>${t("pool")}</h3><p>${t("poolNote")}</p></div><span class="status info">n=${result.n} / N=${result.N}</span></div><div class="pool-dots" data-pool-size="${result.sample.length}">${dots}</div><div class="pool-legend"><span><i class="legend-mark"></i>${t("positive")}</span><span><i class="legend-mark negative"></i>${t("negative")}</span><span><i class="legend-mark audited"></i>${t("audited")}</span></div><div class="disagreement"><div><span>${t("agreement")}</span><b>${result.stats.agreement}</b></div><div><span>${t("fp")}</span><b>${result.stats.fp}</b></div><div><span>${t("fn")}</span><b>${result.stats.fn}</b></div></div></section><section class="numberline-card"><h3>${t("calibrated")}</h3><div class="numberline" data-ci-valid="${result.ci.lo<=result.ppi&&result.ppi<=result.ci.hi}"><div class="axis"></div><span class="axis-range start">0%</span><span class="axis-range end">100%</span><span class="ci-band" style="left:${result.ci.lo*100}%;width:${(result.ci.hi-result.ci.lo)*100}%"></span>${point("truth",t("truth"),result.trueRate,0)}${point("raw",t("raw"),result.raw,74)}${point("ppi",t("ppi"),result.ppi,18)}</div><div class="correction-callout"><span>${t("correction")}</span><b>${result.correction>=0?"+":""}${pct(result.correction)}</b></div><p class="ratio">${t("ci")}: ${pct(result.ci.lo)} – ${pct(result.ci.hi)}</p></section></div></div></div>${logDetails(log)}</article>`;
+}
+
+function renderIfeval(){
+  const values=state.values.ifeval; const result=state.results.ifeval || evaluateIfeval(values.answer);
+  const meta={good:["ifevalGood","ifevalGoodChange"],miss:["ifevalMiss","ifevalMissChange"],preamble:["ifevalPreamble","ifevalPreambleChange"]};
+  const rows=result.rows.map((row,index)=>`<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strict.pass}" data-loose="${row.loose.pass}"><div class="constraint-name"><span class="category-dot ${row.id==="delay"?"forbid":row.id==="citations"?"citation":""}"></span>${index+1}. ${t(row.label)}</div><div class="constraint-evidence">${escapeHtml(row.strict.evidence)}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strict.pass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loose.pass)}</div></div>`).join("");
+  const all=result.strictPrompt===1; const passed=result.rows.filter(row=>row.strict.pass).length;
+  const chain=result.rows.map((row,index)=>`<span class="gate-node ${row.strict.pass?"":"fail"}" title="${escapeHtml(t(row.label))}">${index+1}</span>${index<result.rows.length-1?`<span class="gate-arrow">∧</span>`:""}`).join("");
+  const metrics=[["instrStrict",result.strictInstr],["promptStrict",result.strictPrompt],["instrLoose",result.looseInstr],["promptLoose",result.loosePrompt]];
+  const log=`strict instruction = ${passed}/${result.rows.length}\nstrict prompt = AND(${result.rows.map(row=>row.strict.pass?1:0).join(",")}) = ${result.strictPrompt}\nloose candidate = substring from first { to last }\nloose prompt = ${result.loosePrompt}\nLoose mode here is an explicit teaching proxy, not the full official IFEval transformation set.`;
+  return `<article class="method-shell" data-sim-id="ifeval" data-sim-state="${state.runState}" data-prompt-pass="${all}">${methodHeader("IFEval","ifevalQuestion")}${presetBar(Object.entries(meta).map(([id,item])=>({id,label:item[0]})),meta[state.preset.ifeval][1])}<div class="canvas"><div class="proxy-banner"><b>ⓘ</b><span>${t("proxy")}</span></div><div class="ifeval-editor"><section><span class="input-label">${t("builtPrompt")}</span><pre class="prompt-card method-copy">${escapeHtml(result.builtPrompt)}</pre></section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="10">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><section class="overall-gate" style="border-color:${all?"var(--c-positive)":"var(--c-negative)"};background:${all?"var(--c-positive-soft)":"var(--c-negative-soft)"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${passed}/${result.rows.length}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([label,value])=>`<div class="mini-metric" data-metric="${label}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div></div>${logDetails(log)}</article>`;
+}
+
+function qaRow(fact,direction){
+  const sourceEvidence=fact.sourceEvidence || t("notFound");
+  const targetEvidence=fact.targetEvidence || t("notFound");
+  return `<div class="qa-row ${fact.found?"":"issue-row"}" data-fact="${fact.id}" data-found="${fact.found}"><div class="qa-question">${t(fact.question)}</div><div class="qa-answer">${escapeHtml(sourceEvidence)}</div><div class="qa-arrow">→</div><div class="qa-answer ${fact.found?"":"na-cell"}">${escapeHtml(targetEvidence)}</div><div>${status(fact.found)}</div></div>`;
+}
+
+function qaLane(title,subtitle,rows,empty=false){
+  return `<section class="qa-lane"><div class="lane-head"><div><h3>${t(title)}</h3><span>${t(subtitle)}</span></div><span>${rows.length}</span></div><div class="qa-row constraint-row header"><div>${t("qaQuestion")}</div><div>${t("sourceAnswer")}</div><div></div><div>${t("targetAnswer")}</div><div>${t("outcome")}</div></div>${rows.length?rows.map(row=>qaRow(row,title==="forward"?"forward":"backward")).join(""):`<div class="empty-state">${empty?t("noClaims"):t("notFound")}</div>`}</section>`;
+}
+
+function renderQuest(){
+  const values=state.values.questeval; const result=state.results.questeval || evaluateQuest(values);
+  const meta={full:["questFull","questFullChange"],missing:["questMissing","questMissingChange"],halluc:["questHalluc","questHallucChange"]};
+  const ratio=(score,rows)=>score===null?"N/A":`${rows.filter(row=>row.found).length}/${rows.length}`;
+  const log=`forward completeness = ${ratio(result.completeness,result.forward)}\nbackward faithfulness = ${ratio(result.faithfulness,result.backward)}\ncombined harmonic mean = ${pct(result.combined)}\nOnly claims in the declared closed fact set can be detected.`;
+  return `<article class="method-shell" data-sim-id="questeval" data-sim-state="${state.runState}" data-combined="${result.combined===null?"na":result.combined.toFixed(4)}">${methodHeader("QuestEval","questQuestion")}${presetBar(Object.entries(meta).map(([id,item])=>({id,label:item[0]})),meta[state.preset.questeval][1])}<div class="canvas"><div class="proxy-banner"><b>ⓘ</b><span>${t("proxy")}</span></div><div class="text-pair"><label class="text-card"><span class="input-label">${t("source")}</span><textarea class="field-control" id="q-source" rows="6">${escapeHtml(values.source)}</textarea></label><label class="text-card"><span class="input-label">${t("target")}</span><textarea class="field-control" id="q-target" rows="6">${escapeHtml(values.target)}</textarea></label></div><div class="actions" style="margin-top:calc(var(--space-4) * -1);margin-bottom:var(--space-4)"><button class="button primary" data-action="evaluate">${t("run")}</button></div><div class="scope-note"><span>ⓘ</span><span>${t("scope")}</span></div><div class="qa-lanes">${qaLane("forward","forwardSub",result.forward)}${qaLane("backward","backwardSub",result.backward,true)}</div><div class="quest-summary">${metricCard(t("completeness"),result.completeness,ratio(result.completeness,result.forward))}${metricCard(t("groundedness"),result.faithfulness,ratio(result.faithfulness,result.backward))}<div class="balance-card combined" data-value="${result.combined===null?"na":result.combined.toFixed(4)}"><span>${t("combined")}</span><b>${pct(result.combined)}</b><p>${result.combined===null?t("noClaims"):"F1 = 2 × C × F / (C + F)"}</p></div></div></div>${logDetails(log)}</article>`;
+}
+
+// ─── Render ───
+
+function evaluateActive(announceResult=true){
+  captureInputs(); state.runState="evaluated";
+  if(state.activeBench==="ragas") state.results.ragas=evaluateRagas(state.values.ragas);
+  if(state.activeBench==="ares") state.results.ares=evaluateAres(state.values.ares);
+  if(state.activeBench==="ifeval") state.results.ifeval=evaluateIfeval(state.values.ifeval.answer);
+  if(state.activeBench==="questeval") state.results.questeval=evaluateQuest(state.values.questeval);
+  renderMethod(); if(announceResult) announce(t("updated"));
+}
+
+function renderShell(){
+  document.documentElement.lang=state.lang; app.dataset.activeBench=state.activeBench; app.dataset.lang=state.lang; app.dataset.runState=state.runState;
+  document.querySelector(".brand-copy p").textContent=t("appSubtitle");
+  document.querySelectorAll("[data-lang]").forEach(button=>button.classList.toggle("active",button.dataset.lang===state.lang));
+  tabs.innerHTML=BENCHES.map(bench=>`<button class="tab ${bench.id===state.activeBench?"active":""}" type="button" role="tab" data-action="bench" data-bench="${bench.id}" aria-selected="${bench.id===state.activeBench}">${bench.name}<span class="tab-number">${bench.number}</span></button>`).join("");
+  document.querySelector("#footer-note").textContent=t("footer"); document.querySelector("#shortcuts-note").textContent=t("shortcuts"); document.querySelector("#qa-toggle").textContent=state.showQa?t("qaHide"):t("qaShow");
+}
+
+function renderMethod(){
+  const renderers={ragas:renderRagas,ares:renderAres,ifeval:renderIfeval,questeval:renderQuest};
+  methodRoot.innerHTML=renderers[state.activeBench](); app.dataset.runState=state.runState; renderQa();
+}
+
+function runQaTests(){
+  const good=evaluateRagas(RAGAS_PRESETS.good), halluc=evaluateRagas(RAGAS_PRESETS.halluc);
+  const ares=evaluateAres({...state.values.ares,N:100,n:500});
+  const goodIf=evaluateIfeval(IFEVAL_ANSWER_GOOD), preamble=evaluateIfeval(IFEVAL_ANSWER_PREAMBLE);
+  const full=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGET_FULL});
+  const missing=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGET_FULL.replace("Usługa jest bezpłatna.","")});
+  const hallucQuest=evaluateQuest({source:QUEST_SOURCE,target:`${QUEST_TARGET_FULL} Aplikacja mObywatel jest wymagana.`});
+  const empty=evaluateQuest({source:QUEST_SOURCE,target:""});
+  return [
+    ["RAGAS: hallucination lowers faithfulness",halluc.faithfulness<good.faithfulness],
+    ["RAGAS: every evidence reference exists",good.claims.every(claim=>claim.matches.every(match=>Boolean(good.fragments[match.contextIndex])))],
+    ["ARES: n is clamped to N",ares.n===ares.N],
+    ["ARES: PPI lies inside displayed CI",ares.ci.lo<=ares.ppi&&ares.ppi<=ares.ci.hi],
+    ["IFEval: good answer passes all four metrics",goodIf.strictPrompt===1&&goodIf.loosePrompt===1],
+    ["IFEval: preamble differs strict vs loose",preamble.strictPrompt===0&&preamble.loosePrompt===1],
+    ["QuestEval: missing fact lowers completeness",missing.completeness<full.completeness],
+    ["QuestEval: hallucination lowers faithfulness",hallucQuest.faithfulness<full.faithfulness],
+    ["QuestEval: empty target is N/A",empty.faithfulness===null&&empty.combined===null]
+  ].map(([name,pass])=>({name,pass}));
+}
+
+function renderQa(){
+  state.qa=runQaTests(); qaRoot.hidden=!state.showQa;
+  if(!state.showQa){qaRoot.innerHTML="";return;}
+  qaRoot.innerHTML=`<div class="qa-panel" data-tests-total="${state.qa.length}" data-tests-passed="${state.qa.filter(test=>test.pass).length}"><h2>${t("qaTitle")}</h2><div class="qa-checks">${state.qa.map(test=>`<div class="qa-check" data-test-pass="${test.pass}"><span>${escapeHtml(test.name)}</span>${status(test.pass)}</div>`).join("")}</div></div>`;
+}
+
+function render(){ renderShell(); renderMethod(); }
+
+// ─── Presets ───
+
+function applyPreset(id){
+  state.preset[state.activeBench]=id; state.runState="preset";
+  if(state.activeBench==="ragas") state.values.ragas=clone(RAGAS_PRESETS[id]);
+  if(state.activeBench==="ares"){
+    const presets={base:{N:500,n:40,bias:0,noise:10,trueRate:70,dimension:"faithfulness",seed:37},biased:{N:500,n:60,bias:18,noise:10,trueRate:70,dimension:"faithfulness",seed:37},labels:{N:500,n:200,bias:18,noise:10,trueRate:70,dimension:"faithfulness",seed:37}};
+    state.values.ares=clone(presets[id]);
+  }
+  if(state.activeBench==="ifeval") state.values.ifeval.answer={good:IFEVAL_ANSWER_GOOD,miss:IFEVAL_ANSWER_MISS,preamble:IFEVAL_ANSWER_PREAMBLE}[id];
+  if(state.activeBench==="questeval"){
+    const targets={full:QUEST_TARGET_FULL,missing:QUEST_TARGET_FULL.replace("Usługa jest bezpłatna.",""),halluc:`${QUEST_TARGET_FULL} Aplikacja mObywatel jest wymagana.`};
+    state.values.questeval={source:QUEST_SOURCE,target:targets[id]};
+  }
+  if(state.activeBench==="ragas") state.results.ragas=evaluateRagas(state.values.ragas);
+  if(state.activeBench==="ares") state.results.ares=evaluateAres(state.values.ares);
+  if(state.activeBench==="ifeval") state.results.ifeval=evaluateIfeval(state.values.ifeval.answer);
+  if(state.activeBench==="questeval") state.results.questeval=evaluateQuest(state.values.questeval);
+  renderMethod(); announce(t("updated"));
+}
+
+function openLocalDialog(){
+  aiDialog.innerHTML=`<h2>${t("aiTitle")}</h2><p>${t("aiBody")}</p><div class="actions"><button class="button primary button-row-end" id="ai-close" type="button">${t("close")}</button></div>`;
+  aiDialog.showModal(); document.querySelector("#ai-close").addEventListener("click",()=>aiDialog.close(),{once:true});
+}
+
+// ─── Listeners ───
+
+document.addEventListener("click",event=>{
+  const action=event.target.closest("[data-action]");
+  if(action){
+    if(action.dataset.action==="bench"){ captureInputs(); state.activeBench=action.dataset.bench; state.runState="ready"; render(); announce(BENCHES.find(bench=>bench.id===state.activeBench).name); }
+    if(action.dataset.action==="preset") applyPreset(action.dataset.preset);
+    if(action.dataset.action==="evaluate") evaluateActive();
+    if(action.dataset.action==="ai-settings") openLocalDialog();
+    return;
+  }
+  const language=event.target.closest("[data-lang]");
+  if(language){ captureInputs(); state.lang=language.dataset.lang; localStorage.setItem("coSimLang",state.lang); state.results={}; render(); announce(t("ready")); }
+});
+
+document.addEventListener("input",event=>{
+  if(!event.target.closest("#method-root")) return;
+  if(event.target.matches("[data-ares-control]")){
+    const key=event.target.id.replace("a-","");
+    const output=document.querySelector(`#${event.target.id}-out`);
+    if(output) output.textContent=`${num(event.target.value)}${["bias","noise","trueRate"].includes(key)?"%":""}`;
+    if(key==="N"){
+      const labels=document.querySelector("#a-n");
+      if(labels){ labels.max=event.target.value; labels.value=Math.min(Number(labels.value),Number(event.target.value)); }
+    }
+  }
+});
+
+document.addEventListener("change",event=>{
+  if(event.target.matches("[data-ares-control]")){ captureInputs(); state.results.ares=evaluateAres(state.values.ares); renderMethod(); announce(t("updated")); }
+});
+
+document.querySelector("#qa-toggle").addEventListener("click",()=>{ state.showQa=!state.showQa; renderShell(); renderQa(); });
+
+document.addEventListener("keydown",event=>{
+  const editing=event.target.matches("input,textarea,select,button") || event.target.isContentEditable;
+  if((event.ctrlKey||event.metaKey)&&event.key==="Enter"){ event.preventDefault(); evaluateActive(); return; }
+  if(editing) return;
+  const bench=BENCHES.find(item=>item.number===event.key);
+  if(bench){ state.activeBench=bench.id; state.runState="ready"; render(); announce(bench.name); return; }
+  if(event.key.toLowerCase()==="r"){
+    const orders={ragas:["good","noise","halluc"],ares:["base","biased","labels"],ifeval:["good","miss","preamble"],questeval:["full","missing","halluc"]};
+    const order=orders[state.activeBench]; const next=order[(order.indexOf(state.preset[state.activeBench])+1)%order.length]; applyPreset(next);
+  }
+});
+
+// ─── Init ───
+
+state.results.ragas=evaluateRagas(state.values.ragas);
+state.results.ares=evaluateAres(state.values.ares);
+state.results.ifeval=evaluateIfeval(state.values.ifeval.answer);
+state.results.questeval=evaluateQuest(state.values.questeval);
+render();
+</script>
+</body>
+</html>

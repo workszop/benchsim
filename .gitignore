@@ -10,3 +10,7 @@ scratch/
 bench_sim.md
 implementation_plan.md
 check*.png
+
+# Untracked working files (keep only the sims)
+suggestions.html
+visual_improvement.md
