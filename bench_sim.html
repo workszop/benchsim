@@ -890,9 +890,9 @@ const T = {
     aresStage1Title: "1. Dane syntetyczne",
     aresStage2Title: "2. Judge",
     aresStage3Title: "3. Human labels + PPI",
-    aresStage1Desc: "Wygenerowano {total} syntetycznych przykładów: {pos} pozytywnych i {neg} negatywnych. Ukryty wskaźnik prawdy w populacji: {trueRate}.",
-    aresStage2Desc: "Judge sklasyfikował całą pulę {total} przykładów. Surowa średnia ocen judge'a: {raw}.",
-    aresStage3Desc: "Na losowym podzbiorze {n} przykładów porównano etykiety ludzkie z ocenami judge'a i wyliczono korektę. PPI: {ppi}, SE: {se}pp.",
+    aresStage1Desc: "Wygenerowano {total} syntetycznych odpowiedzi systemu RAG na pytanie „Jak założyć profil zaufany?”: {pos} poprawnych i {neg} błędnych. Ukryty wskaźnik prawdy w populacji: {trueRate}.",
+    aresStage2Desc: "Judge sklasyfikował całą pulę {total} odpowiedzi na to pytanie. Surowa średnia ocen judge'a: {raw}.",
+    aresStage3Desc: "Na losowym podzbiorze {n} odpowiedzi porównano etykiety ludzkie z ocenami judge'a i wyliczono korektę. PPI: {ppi}, SE: {se}pp.",
     aresStageEmpty: "Uruchom eksperyment, aby zobaczyć wynik tego etapu.",
     aresResultHeading: "Wynik eksperymentu",
     aresTrueRateLabel: "Ukryty wynik rzeczywisty",
@@ -914,11 +914,11 @@ const T = {
     questevalTargetHeading: "Tekst uproszczony lub wygenerowany",
     questevalArrowSrLabel: "Dwukierunkowe porównanie tekstów",
     questevalTogglesHeading: "Fakty w tekście docelowym",
-    "questevalToggle_qe-fact-1": "Moc silnika (250 W)",
-    "questevalToggle_qe-fact-2": "Zasięg na jednym ładowaniu (80 km)",
-    "questevalToggle_qe-fact-3": "Czas ładowania (ok. 4h)",
-    "questevalToggle_qe-fact-4": "Prędkość wspomagania (25 km/h)",
-    "questevalToggle_qe-fact-5": "Masa roweru (22 kg)",
+    "questevalToggle_qe-fact-1": "Złożenie wniosku (online)",
+    "questevalToggle_qe-fact-2": "Potwierdzenie w urzędzie miasta",
+    "questevalToggle_qe-fact-3": "Potwierdzenie w ZUS lub urzędzie skarbowym",
+    "questevalToggle_qe-fact-4": "Usługa bezpłatna",
+    "questevalToggle_qe-fact-5": "Ważność profilu (3 lata)",
     questevalTogglesCustomNote: "Tekst edytowany ręcznie - przełączniki tylko pokazują, które fakty są aktualnie wykryte.",
     questevalTargetFieldLabel: "Edytuj tekst docelowy",
     questevalPresetFull: "Pełne pokrycie",
@@ -1114,9 +1114,9 @@ const T = {
     aresStage1Title: "1. Synthetic data",
     aresStage2Title: "2. Judge",
     aresStage3Title: "3. Human labels + PPI",
-    aresStage1Desc: "Generated {total} synthetic examples: {pos} positive and {neg} negative. Hidden population true rate: {trueRate}.",
-    aresStage2Desc: "The judge classified the whole pool of {total} examples. Raw judge mean: {raw}.",
-    aresStage3Desc: "On a random subset of {n} examples, human labels were compared to the judge's labels to compute the correction. PPI: {ppi}, SE: {se}pp.",
+    aresStage1Desc: "Generated {total} synthetic RAG-system answers to the question “How to set up a trusted profile (profil zaufany)?”: {pos} correct and {neg} incorrect. Hidden population true rate: {trueRate}.",
+    aresStage2Desc: "The judge classified the whole pool of {total} answers to that question. Raw judge mean: {raw}.",
+    aresStage3Desc: "On a random subset of {n} answers, human labels were compared to the judge's labels to compute the correction. PPI: {ppi}, SE: {se}pp.",
     aresStageEmpty: "Run the experiment to see this stage's result.",
     aresResultHeading: "Experiment result",
     aresTrueRateLabel: "Hidden true rate",
@@ -1138,11 +1138,11 @@ const T = {
     questevalTargetHeading: "Simplified or generated text",
     questevalArrowSrLabel: "Bidirectional text comparison",
     questevalTogglesHeading: "Facts in the target text",
-    "questevalToggle_qe-fact-1": "Motor power (250 W)",
-    "questevalToggle_qe-fact-2": "Range per charge (80 km)",
-    "questevalToggle_qe-fact-3": "Charging time (about 4h)",
-    "questevalToggle_qe-fact-4": "Assist speed limit (25 km/h)",
-    "questevalToggle_qe-fact-5": "Bike weight (22 kg)",
+    "questevalToggle_qe-fact-1": "Submitting the application (online)",
+    "questevalToggle_qe-fact-2": "Confirmation at a city hall",
+    "questevalToggle_qe-fact-3": "Confirmation at ZUS or a tax office",
+    "questevalToggle_qe-fact-4": "Free of charge",
+    "questevalToggle_qe-fact-5": "Validity (3 years)",
     questevalTogglesCustomNote: "Text edited by hand - the toggles now only show which facts are currently detected.",
     questevalTargetFieldLabel: "Edit the target text",
     questevalPresetFull: "Full coverage",
@@ -1212,91 +1212,96 @@ function t(key, vars) {
 
 const MODEL = {
   ragas: {
-    // Hand-verified against ragasEval(): see phase1-report.md for the word-
-    // by-word overlap accounting behind each fixture's scores.
+    // Hand-verified against ragasEval(): see phase8-report.md for the word-
+    // by-word overlap accounting behind each fixture's scores. Scenario
+    // shared with IFEval (phase7): "Jak założyć profil zaufany?" - context
+    // fragments cover online submission, confirmation points, and cost/
+    // validity; the hallucination echoes IFEval's forbidden "opłata 20 zł".
     hallucinationSentence: {
-      pl: "Regularna aktywność fizyczna leczy również przeziębienie w ciągu jednej doby.",
-      en: "Regular physical activity also cures the common cold within one day.",
+      pl: "Usługa wymaga opłaty w wysokości 20 zł.",
+      en: "The service requires a fee of 20 PLN.",
     },
     fixtures: {
       pl: [
         {
           id: "ragas-good",
-          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          question: "Jak założyć profil zaufany?",
           context: [
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
-            "Regularna aktywność fizyczna, czyli regularne ćwiczenia, pomaga utrzymać prawidłową masę ciała, wzmacnia mięśnie i kości.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet bez wychodzenia z domu.",
+            "Aby założyć profil zaufany, trzeba potwierdzić tożsamość w punkcie potwierdzającym, na przykład w urzędzie miasta, w ZUS albo w urzędzie skarbowym.",
+            "Założenie profilu zaufanego jest bezpłatne - profil zaufany jest ważny 3 lata i można go przedłużyć.",
           ],
           answer:
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne. " +
-            "Regularne ćwiczenia pomagają utrzymać prawidłową masę ciała oraz wzmacniają mięśnie i kości.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet. " +
+            "Tożsamość trzeba potwierdzić w punkcie potwierdzającym, na przykład w urzędzie miasta, w ZUS albo w urzędzie skarbowym. " +
+            "Założenie profilu zaufanego jest bezpłatne, a profil zaufany jest ważny 3 lata i można go przedłużyć.",
         },
         {
           id: "ragas-noise",
-          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          question: "Jak założyć profil zaufany?",
           context: [
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
-            "Stolica Australii to Canberra, założona na początku dwudziestego wieku jako kompromis między Sydney a Melbourne.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet bez wychodzenia z domu.",
+            "Aby przedłużyć prawo jazdy, należy złożyć wniosek w wydziale komunikacji i uiścić opłatę za nowy dokument.",
+            "Założenie profilu zaufanego jest bezpłatne - profil zaufany jest ważny 3 lata i można go przedłużyć.",
           ],
           answer:
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet. " +
+            "Założenie profilu zaufanego jest bezpłatne, a profil zaufany jest ważny 3 lata i można go przedłużyć.",
         },
         {
           id: "ragas-hallucination",
-          question: "Czy regularna aktywność fizyczna poprawia zdrowie serca?",
+          question: "Jak założyć profil zaufany?",
           context: [
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia poprzez wzmocnienie mięśnia sercowego.",
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne poprzez wydzielanie endorfin w mózgu.",
-            "Regularna aktywność fizyczna, czyli regularne ćwiczenia, pomaga utrzymać prawidłową masę ciała, wzmacnia mięśnie i kości.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet bez wychodzenia z domu.",
+            "Aby założyć profil zaufany, trzeba potwierdzić tożsamość w punkcie potwierdzającym, na przykład w urzędzie miasta, w ZUS albo w urzędzie skarbowym.",
+            "Założenie profilu zaufanego jest bezpłatne - profil zaufany jest ważny 3 lata i można go przedłużyć.",
           ],
           answer:
-            "Regularna aktywność fizyczna poprawia zdrowie serca i zmniejsza ryzyko chorób układu krążenia. " +
-            "Aktywność fizyczna redukuje poziom stresu i poprawia samopoczucie psychiczne. " +
-            "Regularna aktywność fizyczna leczy również przeziębienie w ciągu jednej doby.",
+            "Profil zaufany można założyć online, wypełniając wniosek przez internet. " +
+            "Tożsamość trzeba potwierdzić w punkcie potwierdzającym, na przykład w urzędzie miasta, w ZUS albo w urzędzie skarbowym. " +
+            "Założenie profilu zaufanego jest bezpłatne, a profil zaufany jest ważny 3 lata i można go przedłużyć. " +
+            "Usługa wymaga opłaty w wysokości 20 zł.",
         },
       ],
       en: [
         {
           id: "ragas-good",
-          question: "Does regular physical activity improve heart health?",
+          question: "How to set up a trusted profile (profil zaufany)?",
           context: [
-            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
-            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
-            "Regular physical activity, in other words regular exercise, helps maintain a healthy body weight, strengthens muscles and bones.",
+            "You can set up a trusted profile online, by submitting an application via the internet without leaving home.",
+            "To set up a trusted profile, you must confirm your identity at a confirmation point, for example at a city hall, at ZUS, or at a tax office.",
+            "Setting up a trusted profile is free of charge - a trusted profile is valid for 3 years and can be renewed.",
           ],
           answer:
-            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
-            "Physical activity supports mental health by reducing stress and improving mood. " +
-            "Regular exercise helps maintain a healthy body weight and strengthens muscles and bones.",
+            "Here is how to set up a trusted profile (profil zaufany): submit an application online, via the internet. " +
+            "You must confirm your identity at a confirmation point, for example at a city hall, at ZUS, or at a tax office. " +
+            "Setting up a trusted profile is free of charge, and a trusted profile is valid for 3 years and can be renewed.",
         },
         {
           id: "ragas-noise",
-          question: "Does regular physical activity improve heart health?",
+          question: "How to set up a trusted profile (profil zaufany)?",
           context: [
-            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
-            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
-            "The capital of Australia is Canberra, chosen in the early twentieth century as a compromise between Sydney and Melbourne.",
+            "You can set up a trusted profile online, by submitting an application via the internet without leaving home.",
+            "To renew a driving licence, you must submit an application at the licensing office and pay a fee for the new document.",
+            "Setting up a trusted profile is free of charge - a trusted profile is valid for 3 years and can be renewed.",
           ],
           answer:
-            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
-            "Physical activity supports mental health by reducing stress and improving mood.",
+            "Here is how to set up a trusted profile (profil zaufany): submit an application online, via the internet. " +
+            "Setting up a trusted profile is free of charge, and a trusted profile is valid for 3 years and can be renewed.",
         },
         {
           id: "ragas-hallucination",
-          question: "Does regular physical activity improve heart health?",
+          question: "How to set up a trusted profile (profil zaufany)?",
           context: [
-            "Regular physical activity improves heart health by lowering the risk of heart disease and strengthening the heart muscle.",
-            "Physical activity supports mental health by reducing stress levels and boosting mood through endorphin release.",
-            "Regular physical activity, in other words regular exercise, helps maintain a healthy body weight, strengthens muscles and bones.",
+            "You can set up a trusted profile online, by submitting an application via the internet without leaving home.",
+            "To set up a trusted profile, you must confirm your identity at a confirmation point, for example at a city hall, at ZUS, or at a tax office.",
+            "Setting up a trusted profile is free of charge - a trusted profile is valid for 3 years and can be renewed.",
           ],
           answer:
-            "Regular physical activity improves heart health and lowers the risk of heart disease. " +
-            "Physical activity supports mental health by reducing stress and improving mood. " +
-            "Regular physical activity also cures the common cold within one day.",
+            "Here is how to set up a trusted profile (profil zaufany): submit an application online, via the internet. " +
+            "You must confirm your identity at a confirmation point, for example at a city hall, at ZUS, or at a tax office. " +
+            "Setting up a trusted profile is free of charge, and a trusted profile is valid for 3 years and can be renewed. " +
+            "The service requires a fee of 20 PLN.",
         },
       ],
     },
@@ -1546,66 +1551,68 @@ const MODEL = {
     ],
     // Fact fixtures per "Model danych fixture'a": 5 origin:"source" facts plus
     // one origin:"hallucination" fact, pl and en. Each accepted[] variant is
-    // hand-verified (phase4-report.md) to appear, after normalizePhrase(), as
+    // hand-verified (phase8-report.md) to appear, after normalizePhrase(), as
     // a substring of BOTH that fact's own sourceSentence and targetSentence
     // (source facts) so toggling a fact reliably matches on both sides; the
     // hallucination fact's variants are verified to appear in NEITHER of the
     // other facts' sourceSentences, so it reliably fails the backward check.
+    // Scenario shared with RAGAS/IFEval: "Jak założyć profil zaufany?" - the
+    // hallucination echoes IFEval's forbidden "opłata 20 zł".
     fixtures: {
       pl: {
         facts: [
           {
             id: "qe-fact-1",
             origin: "source",
-            sourceSentence: "Rower elektryczny jest wyposażony w silnik elektryczny o mocy do 250 watów, który wspomaga pedałowanie.",
-            targetSentence: "Rower elektryczny ma silnik o mocy do 250 watów.",
-            question: "Jaką maksymalną moc ma silnik roweru elektrycznego?",
-            goldAnswer: "250 watów",
-            accepted: ["250 watów", "mocy do 250 watów", "silnik o mocy 250 watów"],
+            sourceSentence: "Profil zaufany można założyć online, wypełniając wniosek przez internet bez wychodzenia z domu.",
+            targetSentence: "Profil zaufany zakłada się online, wypełniając wniosek przez internet.",
+            question: "Jak można złożyć wniosek o profil zaufany?",
+            goldAnswer: "online, przez internet",
+            accepted: ["online", "przez internet"],
           },
           {
             id: "qe-fact-2",
             origin: "source",
-            sourceSentence: "Bateria roweru elektrycznego pozwala przejechać do 80 kilometrów na jednym ładowaniu.",
-            targetSentence: "Na jednym ładowaniu baterii rower elektryczny przejeżdża do 80 kilometrów.",
-            question: "Ile kilometrów można przejechać na jednym ładowaniu baterii?",
-            goldAnswer: "80 kilometrów",
-            accepted: ["80 kilometrów", "do 80 kilometrów", "zasięg 80 kilometrów"],
+            sourceSentence: "Po złożeniu wniosku trzeba potwierdzić tożsamość w punkcie potwierdzającym, na przykład w urzędzie miasta.",
+            targetSentence: "Tożsamość trzeba potwierdzić w punkcie potwierdzającym, na przykład w urzędzie miasta.",
+            question: "Gdzie trzeba potwierdzić tożsamość?",
+            goldAnswer: "w punkcie potwierdzającym, np. w urzędzie miasta",
+            accepted: ["punkcie potwierdzającym", "urzędzie miasta"],
           },
           {
             id: "qe-fact-3",
             origin: "source",
-            sourceSentence: "Pełne naładowanie baterii roweru elektrycznego trwa około czterech godzin.",
-            targetSentence: "Naładowanie baterii trwa około czterech godzin.",
-            question: "Ile trwa pełne naładowanie baterii?",
-            goldAnswer: "około czterech godzin",
-            accepted: ["cztery godziny", "około czterech godzin", "trwa około czterech godzin"],
+            sourceSentence: "Potwierdzenia tożsamości można też dokonać w ZUS albo w urzędzie skarbowym, w zależności od wybranej placówki.",
+            targetSentence: "Tożsamość można potwierdzić również w ZUS albo w urzędzie skarbowym.",
+            question: "W jakich innych placówkach można potwierdzić tożsamość?",
+            goldAnswer: "w ZUS albo w urzędzie skarbowym",
+            accepted: ["urzędzie skarbowym", "w ZUS"],
           },
           {
             id: "qe-fact-4",
             origin: "source",
-            sourceSentence: "Maksymalna prędkość wspomagania elektrycznego wynosi 25 kilometrów na godzinę zgodnie z przepisami Unii Europejskiej.",
-            targetSentence: "Wspomaganie elektryczne działa do prędkości 25 kilometrów na godzinę.",
-            question: "Jaka jest maksymalna prędkość wspomagania elektrycznego?",
-            goldAnswer: "25 kilometrów na godzinę",
-            accepted: ["25 kilometrów na godzinę", "25 km/h", "prędkości 25 kilometrów na godzinę"],
+            sourceSentence: "Założenie profilu zaufanego jest bezpłatne, usługa jest bez opłat dla wnioskodawcy.",
+            targetSentence: "Założenie profilu zaufanego jest bezpłatne i jest bez opłat.",
+            question: "Czy założenie profilu zaufanego jest płatne?",
+            goldAnswer: "nie, jest bezpłatne",
+            accepted: ["bezpłatne", "bez opłat"],
           },
           {
             id: "qe-fact-5",
             origin: "source",
-            sourceSentence: "Rower elektryczny waży średnio 22 kilogramy, co jest więcej niż rower tradycyjny.",
-            targetSentence: "Rower elektryczny waży średnio 22 kilogramy.",
-            question: "Ile waży średnio rower elektryczny?",
-            goldAnswer: "22 kilogramy",
-            accepted: ["22 kilogramy", "waży średnio 22 kilogramy", "masa 22 kilogramy"],
+            sourceSentence: "Profil zaufany jest ważny przez 3 lata i można go przedłużyć na kolejny okres.",
+            targetSentence: "Profil zaufany jest ważny 3 lata i można go przedłużyć.",
+            question: "Jak długo ważny jest profil zaufany?",
+            goldAnswer: "3 lata, z możliwością przedłużenia",
+            accepted: ["3 lata", "przedłużyć"],
           },
           {
             id: "qe-fact-h1",
             origin: "hallucination",
-            targetSentence: "Rower elektryczny automatycznie rozpoznaje polecenia głosowe użytkownika i steruje nawigacją.",
-            question: "Jaką funkcję sterowania ma rower elektryczny?",
-            goldAnswer: "rozpoznawanie poleceń głosowych",
-            accepted: ["rozpoznaje polecenia głosowe", "rozpoznawanie poleceń głosowych", "sterowanie głosem"],
+            targetSentence: "Założenie profilu zaufanego wymaga opłaty w wysokości 20 złotych.",
+            question: "Ile kosztuje założenie profilu zaufanego?",
+            goldAnswer: "20 złotych",
+            accepted: ["opłaty w wysokości 20 złotych", "20 złotych"],
           },
         ],
       },
@@ -1614,55 +1621,55 @@ const MODEL = {
           {
             id: "qe-fact-1",
             origin: "source",
-            sourceSentence: "The e-bike is equipped with an electric motor with power up to 250 watts that assists pedaling.",
-            targetSentence: "The e-bike has a motor with power up to 250 watts.",
-            question: "What is the e-bike motor's maximum power?",
-            goldAnswer: "250 watts",
-            accepted: ["250 watts", "power up to 250 watts", "motor rated at 250 watts"],
+            sourceSentence: "You can set up a trusted profile online, by submitting an application via the internet without leaving home.",
+            targetSentence: "A trusted profile is set up online, by submitting an application via the internet.",
+            question: "How can you submit an application for a trusted profile?",
+            goldAnswer: "online, via the internet",
+            accepted: ["online", "via the internet"],
           },
           {
             id: "qe-fact-2",
             origin: "source",
-            sourceSentence: "The e-bike's battery allows riding up to 80 kilometers on a single charge.",
-            targetSentence: "On a single charge, the e-bike can ride up to 80 kilometers.",
-            question: "How many kilometers can it ride on a single charge?",
-            goldAnswer: "80 kilometers",
-            accepted: ["80 kilometers", "up to 80 kilometers", "range of 80 kilometers"],
+            sourceSentence: "After submitting the application, you must confirm your identity at a confirmation point, for example at a city hall.",
+            targetSentence: "Identity must be confirmed at a confirmation point, for example at a city hall.",
+            question: "Where must you confirm your identity?",
+            goldAnswer: "at a confirmation point, e.g. a city hall",
+            accepted: ["confirmation point", "city hall"],
           },
           {
             id: "qe-fact-3",
             origin: "source",
-            sourceSentence: "A full battery charge takes about four hours.",
-            targetSentence: "Charging the battery takes about four hours.",
-            question: "How long does a full battery charge take?",
-            goldAnswer: "about four hours",
-            accepted: ["four hours", "about four hours", "takes about four hours"],
+            sourceSentence: "Identity confirmation can also be done at ZUS or at a tax office, depending on the chosen location.",
+            targetSentence: "Identity can also be confirmed at ZUS or at a tax office.",
+            question: "Where else can identity be confirmed?",
+            goldAnswer: "at ZUS or a tax office",
+            accepted: ["tax office", "at ZUS"],
           },
           {
             id: "qe-fact-4",
             origin: "source",
-            sourceSentence: "The maximum assisted speed is 25 kilometers per hour under European Union regulations.",
-            targetSentence: "Electric assistance works up to a speed of 25 kilometers per hour.",
-            question: "What is the maximum assisted speed?",
-            goldAnswer: "25 kilometers per hour",
-            accepted: ["25 kilometers per hour", "25 km/h", "speed of 25 kilometers per hour"],
+            sourceSentence: "Setting up a trusted profile is free of charge, the service is free of charge for the applicant.",
+            targetSentence: "Setting up a trusted profile is free of charge and has no fees.",
+            question: "Is setting up a trusted profile a paid service?",
+            goldAnswer: "no, it is free of charge",
+            accepted: ["free of charge"],
           },
           {
             id: "qe-fact-5",
             origin: "source",
-            sourceSentence: "The e-bike weighs 22 kilograms on average, more than a traditional bicycle.",
-            targetSentence: "The e-bike weighs 22 kilograms on average.",
-            question: "What is the e-bike's average weight?",
-            goldAnswer: "22 kilograms",
-            accepted: ["22 kilograms", "weighs 22 kilograms on average", "weight of 22 kilograms"],
+            sourceSentence: "A trusted profile is valid for 3 years and can be renewed for another period.",
+            targetSentence: "A trusted profile is valid for 3 years and can be renewed.",
+            question: "How long is a trusted profile valid?",
+            goldAnswer: "3 years, renewable",
+            accepted: ["3 years", "renewed"],
           },
           {
             id: "qe-fact-h1",
             origin: "hallucination",
-            targetSentence: "The e-bike automatically recognizes voice commands and controls navigation.",
-            question: "What control feature does the e-bike have?",
-            goldAnswer: "voice command recognition",
-            accepted: ["recognizes voice commands", "voice command recognition", "voice control"],
+            targetSentence: "Setting up a trusted profile requires a fee of 20 PLN.",
+            question: "How much does setting up a trusted profile cost?",
+            goldAnswer: "20 PLN",
+            accepted: ["fee of 20 PLN", "20 PLN"],
           },
         ],
       },
