@@ -1,3 +1,8 @@
+> **Status wdrożenia (aktualizacja).** Silnik `deep_sim` został przeniesiony do `co_sim`
+> i opisane niżej poprawki są w nim wdrożone — szczegółowa mapa „ustalenie → zmiana”
+> znajduje się na końcu dokumentu, w sekcji **Wdrożone w `co_sim`**. Plik `deep_sim.html`
+> pozostaje niezmieniony; blokery z sekcji A nadal go dotyczą.
+
 # Przegląd `deep_sim` i `co_sim` — wartość demo, wierność faktograficzna, poprawność wizualizacji
 
 Metoda: statyczna lektura obu plików + uruchomienie w headless Chromium (Playwright),
@@ -401,3 +406,160 @@ dopóki użytkownik świadomie nie zaznaczy „zapamiętaj".
 5. **D3 + D2** — wydajność i martwy kod.
 6. **D1** — wspólny moduł; dopiero po ustabilizowaniu semantyki.
 7. **B9** — dociągnięcie liczb z `benches.md` do interfejsu (541 promptów, próg 150 etykiet).
+
+
+---
+
+# Wdrożone w `co_sim`
+
+Silnik `deep_sim` przeniesiony do `co_sim`, plus poprawki z sekcji B–D. `deep_sim.html`
+nie był ruszany. Wbudowany zestaw testów kontraktu urósł z 9 do 20 pozycji i przechodzi
+w całości (`co_sim.html?qa=1`).
+
+## Przeniesione z `deep_sim`
+
+**IFEval — klasyczny prompt zamiast luźnej listy warunków.** Rubryka to teraz
+`task + include + exclude + citations + format + length`, dokładnie w układzie
+`deep_sim`, ale z poprawioną treścią:
+
+```
+Wyjaśnij, jak założyć Profil Zaufany i gdzie potwierdzić tożsamość.
+
+1. Uwzględnij w odpowiedzi: online lub przez internet; wniosek lub wniosku; …
+2. Zacytuj podstawę prawną: Dz.U. 2005 nr 64 poz. 565, Dz.U. 2020 poz. 1194.
+3. Nie uwzględniaj: 14 dni lub czternaście dni; płatna lub opłata skarbowa lub za opłatą.
+4. Zacznij odpowiedź od frazy „Profil Zaufany”.
+5. Nie używaj znaczników Markdown (gwiazdek).
+6. Użyj maksymalnie 90 słów.
+```
+
+Sześć wierszy rubryki rozwija się na **12 pojedynczych instrukcji** (grupa terminów =
+jedna instrukcja), i to na nich liczona jest instruction-level accuracy — tak jak
+w IFEval. Każdy wiersz pokazuje chipy `✓ / ✗` dla swoich instrukcji, więc widać nie
+tylko „include: FAIL”, ale który dokładnie termin nie przeszedł.
+
+**Pełny wariant loose (8 przekształceń).** Zamiast „wytnij tekst od `{` do `}`”
+`co_sim` liczy teraz oficjalny zestaw: usunięcie gwiazdek × usunięcie pierwszej linii ×
+usunięcie ostatniej linii. Instrukcja przechodzi loose, jeśli spełnia ją którykolwiek
+z 8 wariantów.
+
+**Rozbijanie twierdzeń na klauzule (`claimClauses`).** RAGAS dzieli odpowiedź na zdaniach,
+średnikach **i spójnikach** `i / oraz / ale`. Scenariusz „Halucynacja” korzysta z tego
+wprost: dodane zdanie „Profil jest ważny bezterminowo **i** kosztuje siedemnaście złotych”
+rozpada się na dwa niezależne twierdzenia, oba niewspierane — faithfulness spada
+ze 100% do 50% (2/4), a nie do 67% (2/3) jak przy podziale wyłącznie na zdania.
+
+## Cztery scenariusze IFEval — strict kontra loose w obie strony
+
+`benches.md` zauważa, że wariant loose ogranicza false negatives, ale może zwiększać
+false positives. Teraz oba przypadki są klikalne obok siebie:
+
+| Scenariusz | Strict | Loose | Czego uczy |
+|---|---|---|---|
+| Spełnia wszystko | PASS | PASS | punkt odniesienia |
+| Pomija warunek | FAIL (91,7% instr.) | FAIL | bramka AND — jeden brak oblewa cały prompt |
+| Wstęp przed odpowiedzią | FAIL | **PASS** | loose usuwa pierwszą linię — **naprawiony false negative** |
+| Pogrubienia Markdown | FAIL | **PASS** | odpowiedź naprawdę ma gwiazdki — **false positive wariantu loose** |
+
+W `deep_sim` scenariusz „wstęp” nie działał, bo warunek `validJson` nigdy nie był
+aktywny w UI (sekcja B5); tutaj rozstrzyga o nim warunek „zacznij od frazy”, który
+wstęp faktycznie łamie, a `dropFirst` faktycznie naprawia.
+
+## Poprawki merytoryczne
+
+**B1 — model szumu (najważniejsza zmiana).** Symetryczny flip zastąpiony rozbiciem
+zachowującym średnią:
+
+```js
+const flipPositive = clamp(noiseRate / (2 * trueRate));        // P(1 → 0)
+const flipNegative = clamp(noiseRate / (2 * (1 - trueRate)));  // P(0 → 1)
+```
+
+`E[judge] = p` niezależnie od `p`, a łączna stopa błędu nadal równa się suwakowi.
+Bias jest teraz **jedynym** źródłem błędu systematycznego, więc „judge zawyżający”
+wreszcie leży powyżej prawdy. Test kontraktu pilnuje tego liczbowo: uśrednione po
+ośmiu ziarnach przesunięcie nieskażonego judge'a przy szumie 24% mieści się w 3 pp
+(stary model dawałby tu `noise × (2p−1)` = 9,6 pp).
+
+**B2 — marker „Prawda”.** Oś pokazuje `mean(truth)` zrealizowanej puli N, a nie parametr
+suwaka; nazwa zmieniona na „Prawda w puli” i objaśniona notatką pod wykresem. To jest
+wielkość, którą PPI faktycznie szacuje.
+
+**B6 — presety dobrane pod widoczny efekt** (i pod próg z `benches.md`). N = 2000,
+szum 6%, ziarno 43. Każdy pill pokazuje to, co obiecuje jego podpis:
+
+| Preset | n | Raw | Korekta | PPI | Prawda w puli |
+|---|---|---|---|---|---|
+| Judge bez biasu | 400 | 69,3% | +0,8 pp | 70,0% | 70,0% |
+| Judge z biasem | 400 | 74,0% | −4,3 pp | 69,8% | 70,0% |
+| **Za mały audyt** | 50 | 75,3% | −14 pp | **61,3%** | 69,4% |
+| Więcej etykiet | 800 | 75,5% | −4,0 pp | 71,5% | 70,4% |
+
+Scenariusz „Za mały audyt” to nowy dodatek i bezpośrednia ilustracja progu ~150 etykiet
+opisanego w `benches.md`: korekta przestrzeliwuje i PPI ląduje **dalej** od prawdy niż
+surowy wynik. Panel audytu pokazuje ostrzeżenie, gdy `n` spada poniżej progu, a testy
+kontraktu sprawdzają zarówno że „judge z biasem” koryguje w dół o ≥ 3 pp, jak i że
+„za mały audyt” kończy gorzej niż `raw`.
+
+**Dopasowanie terminów do granicy słowa.** `deep_sim` używał `a.includes(alt)`, przez
+co zakazany termin „płatna” zapaliłby się wewnątrz „bez**płatna**”. `co_sim` dopasowuje
+całe słowa na tekście znormalizowanym; jest na to osobny test.
+
+**B9 — liczby z `benches.md` w interfejsie.** IFEval: „Oryginalny IFEval: 541 promptów
+i 25 typów instrukcji. Tutaj: 12 instrukcji w jednym prompcie”. ARES: próg 150 etykiet
+jako aktywne ostrzeżenie przy suwaku. QuestEval: notatka, że 5 pytań na tekst to tyle,
+ile generuje PLainBench.
+
+## Poprawki wizualne
+
+* **C3 — QuestEval liczył kierunki opacznie.** Kolumny pokazywały werdykt kierunku
+  „w przód” po obu stronach, więc halucynacja renderowała się jako „wzorzec: aplikacja
+  mObywatel / cel: brak informacji” — odwrotnie niż w rzeczywistości. Każda komórka
+  mówi teraz, co zawiera **jej własny** tekst (`sourceHas` / `targetHas`), a nagłówki
+  brzmią „W tekście źródłowym” / „W tekście docelowym”. Wiersz halucynacji czyta się
+  poprawnie: źródło „brak informacji”, cel „aplikacja mObywatel”, wynik FAIL.
+* **C5 — gold answer zamiast wnętrza matchera.** Kolumny pokazują czytelną odpowiedź
+  („punkt potwierdzający · urząd gminy · urząd skarbowy”), a dopasowane wzorce schodzą
+  do wyszarzonej linii pomocniczej. Pole `sourceAnswer`, które wcześniej nie było
+  renderowane nigdzie, zostało zastąpione polem `gold` i jest używane.
+* **C6 — oś liczbowa przycięta do zakresu danych** z podziałką co 5/10/20 pp zamiast
+  trzech markerów zlepionych w jedną plamę na osi 0–100%.
+* **C2 — kolumna łączników** to jeden ozdobny chevron zamiast listy `F → C1`, która nie
+  niosła informacji i sugerowała mapowanie 1:1. Przypisania fragment→twierdzenie
+  pozostają na chipach po obu stronach, gdzie są prawdziwe.
+* **C7 — koniec z potrójnym „Tryb edukacyjny”**: baner `.proxy-banner` powielał słowo
+  w słowo treść karty `.mode-note`; został usunięty razem z regułą CSS.
+* `.overall-gate` ma wreszcie reguły `.pass` / `.fail` zamiast obejścia inline-style.
+* Chip „AI · optional”, który otwierał okno „ta wersja nie używa AI”, nazywa się teraz
+  „Tryb lokalny”.
+* Prompt zawija się w karcie (`white-space:pre-wrap`), a pasek scenariuszy przechodzi
+  do drugiej linii zamiast obcinać czwarty pill.
+
+## Sprzątanie
+
+* Testy QA uruchamiają się **tylko przy otwartym panelu** — wcześniej pełny zestaw
+  (z symulacją ARES) chodził przy każdym renderze, czyli przy każdym naciśnięciu klawisza.
+* `data-metric` niesie stabilne klucze (`faithfulness`, `contextRelevance`, …) zamiast
+  przetłumaczonych etykiet, więc selektory kontraktowe przeżywają przełączenie PL/EN.
+* `clone()` usunięte na rzecz `structuredClone`; `qaRow` straciło nieużywany parametr
+  `direction`; `STOP_WORDS` odchudzone o wpisy z polskimi znakami, które nigdy nie mogły
+  się dopasować (tokenizer normalizuje przed sprawdzeniem) i o duplikat „można”.
+* Cztery bliźniacze bloki `if (activeBench === …)` w `evaluateActive` / `applyPreset` /
+  init zastąpione tablicą `EVALUATORS`; `PRESET_ORDER` i `PRESET_META` są jednym źródłem
+  prawdy dla paska scenariuszy i skrótu `R`.
+* `<button>` wyjęty ze strażnika klawiatury — `1`–`4` i `R` działają po kliknięciu pilla
+  (wcześniej fokus na przycisku blokował skróty reklamowane w stopce).
+* Polska odmiana liczebnika („1 instrukcja / 2 instrukcje / 5 instrukcji”).
+* Zdanie zadania IFEval przeszło do i18n — wcześniej prompt mieszał angielskie nagłówki
+  z polskim poleceniem po przełączeniu na EN.
+
+## Czego świadomie nie przenoszono
+
+**Warstwa AI z `deep_sim`** (`streamSseRequest`, budowniczowie zapytań, dialog kluczy).
+Jest dobrze napisana — to najlepszy kod w obu plikach — ale `co_sim` jest pozycjonowany
+jako w pełni lokalny („nie przechowuje kluczy API, wszystko liczone w przeglądarce”),
+więc dołożenie wywołań do dostawców zmieniłoby charakter aplikacji, a nie tylko jej
+silnik. Zostaje jako osobna decyzja; przy okazji trzeba wtedy zweryfikować katalog
+modeli (sekcja B8).
+
+**`deep_sim.html` nie był modyfikowany.** Blokery A1–A8 nadal w nim są.
