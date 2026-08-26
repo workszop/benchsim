@@ -307,7 +307,6 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
 .annotation-card{background:var(--c-ink);color:var(--c-terminal-text);border-radius:var(--radius);padding:var(--space-4);margin:0;font-family:var(--font-mono);font-size:var(--fs-xs);line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
 .json-key{color:var(--c-terminal-accent)}
 .json-string{color:#8fd3a8}
-.ext{display:inline-block;border-radius:var(--radius-pill);background:var(--c-violet-soft);color:var(--c-violet);padding:0 .38rem;font-size:var(--fs-xs);font-weight:700}
 .constraint-list{display:grid;gap:var(--space-2)}
 .constraint-chip{display:flex;align-items:flex-start;gap:var(--space-2);border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:var(--space-2);background:var(--c-surface-soft);font-size:var(--fs-xs)}
 .constraint-chip input{margin-top:.2rem;accent-color:var(--c-accent)}
@@ -459,7 +458,7 @@ const BENCHES = [
 const PRESET_ORDER = {
   ragas:["good","noise","halluc"],
   ares:["base","biased","small","labels"],
-  ifeval:["good","miss","preamble","markdown"],
+  ifeval:["good","miss","markdown","tail"],
   questeval:["full","missing","halluc"]
 };
 
@@ -498,15 +497,14 @@ const T = {
     zoomNote:"Oś przycięta do zakresu danych.",
     ifevalQuestion:"Czy odpowiedź spełnia każde jawne i automatycznie sprawdzalne ograniczenie?",
     ifevalPrompt:"Odpowiedz na pytanie: Jak założyć profil zaufany?",
-    ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalPreamble:"Wstęp przed odpowiedzią",ifevalMarkdown:"Pogrubienia Markdown",
+    ifevalGood:"Spełnia wszystko",ifevalMiss:"Pomija warunek",ifevalMarkdown:"Pogrubienie w słowie",ifevalTail:"Dopisek na końcu",
     ifevalGoodChange:"Każda instrukcja przechodzi; bramka AND zalicza cały prompt.",
     ifevalMissChange:"Brak jednego wymaganego terminu oblewa prompt mimo wysokiego wyniku instruction-level.",
-    ifevalPreambleChange:"Wstęp psuje warunek początku odpowiedzi; loose usuwa pierwszą linię i odzyskuje wynik – to naprawiony false negative.",
-    ifevalMarkdownChange:"Odpowiedź naprawdę zawiera gwiazdki, ale loose je usuwa i zalicza warunek – to false positive wariantu loose.",
-    userPrompt:"Prompt użytkownika",userPromptSub:"Samo pytanie użytkownika — bez żadnych warunków.",annotationTitle:"Karta anotatora",annotationSub:"Rekord zbioru ewaluacyjnego: wszystko, czego anotator wymaga od dobrej odpowiedzi.",annotationNote:"Rekord powstaje z tej samej rubryki, którą wykonuje checker, więc karta nie może rozjechać się z wynikami. Zagnieżdżona lista, np. [\"online\",\"przez internet\"], znaczy „którykolwiek z wariantów” — w oryginalnym IFEval kwargs.keywords jest listą płaską. Identyfikatory oznaczone {ext} to rozszerzenia tego scenariusza, pozostałe pochodzą z opublikowanego benchmarku.",splitNote:"W oryginalnym IFEval warunki są częścią promptu — model wie, czego się od niego wymaga. Tutaj prompt to samo pytanie, a warunki zna wyłącznie anotator, więc mierzymy nie tyle wykonywanie instrukcji, co zgodność odpowiedzi z checklistą przygotowaną do testu.",extension:"rozszerzenie",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    ifevalMarkdownChange:"„bez**płatna**” rozpada się na „bez platna”: wymagany termin znika, a zakazany „płatna” się pojawia. Loose usuwa gwiazdki i odzyskuje wynik – naprawiony false negative.",
+    ifevalTailChange:"Zakazane twierdzenie stoi w ostatniej linii, którą loose usuwa. Odpowiedź nadal je zawiera, więc loose zalicza ją fałszywie – to false positive.",
+    userPrompt:"Prompt użytkownika",userPromptSub:"Samo pytanie użytkownika — bez żadnych warunków.",annotationTitle:"Karta anotatora",annotationSub:"Rekord zbioru ewaluacyjnego: wszystko, czego anotator wymaga od dobrej odpowiedzi.",annotationNote:"Rekord powstaje z tej samej rubryki, którą wykonuje checker, więc karta nie może rozjechać się z wynikami. Zagnieżdżona lista, np. [\"online\",\"przez internet\"], znaczy „którykolwiek z wariantów” — w oryginalnym IFEval kwargs.keywords jest listą płaską. Wszystkie trzy identyfikatory pochodzą z opublikowanego benchmarku.",splitNote:"W oryginalnym IFEval warunki są częścią promptu — model wie, czego się od niego wymaga. Tutaj prompt to samo pytanie, a warunki zna wyłącznie anotator, więc mierzymy nie tyle wykonywanie instrukcji, co zgodność odpowiedzi z checklistą przygotowaną do testu.",response:"Odpowiedź modelu",constraint:"Warunek",evidence:"Dowód",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Wszystkie instrukcje muszą przejść jednocześnie.",
     cInclude:"Uwzględnij wymagane terminy",cExclude:"Nie używaj zakazanych terminów",cCitations:"Zacytuj obie podstawy prawne",
-    cStartsWith:"Zacznij odpowiedź od frazy „{v}”",cNoMarkdown:"Nie używaj znaczników Markdown (*)",cMaxWords:"Użyj maksymalnie {v} słów",
     instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
     found:"znaleziono",notFound:"nie znaleziono",absent:"brak zakazanej frazy",present:"znaleziono zakazaną frazę",
     looseNote:"Wariant loose sprawdza 8 przekształceń odpowiedzi (usunięcie gwiazdek × pierwszej linii × ostatniej linii) i zalicza warunek, jeśli spełnia go którekolwiek z nich – tak jak oficjalna implementacja IFEval.",
@@ -550,15 +548,14 @@ const T = {
     zoomNote:"Axis cropped to the data range.",
     ifevalQuestion:"Does the answer satisfy every explicit and automatically verifiable constraint?",
     ifevalPrompt:"Answer the question: how do you set up a profil zaufany?",
-    ifevalGood:"Satisfies all",ifevalMiss:"Misses one",ifevalPreamble:"Preamble before the answer",ifevalMarkdown:"Markdown bold",
+    ifevalGood:"Satisfies all",ifevalMiss:"Misses one",ifevalMarkdown:"Bold inside a word",ifevalTail:"Trailing line",
     ifevalGoodChange:"Every instruction passes, so the AND gate passes the prompt.",
     ifevalMissChange:"One missing term fails the prompt despite a high instruction-level score.",
-    ifevalPreambleChange:"The preamble breaks the opening-phrase rule; loose drops the first line and recovers – a repaired false negative.",
-    ifevalMarkdownChange:"The answer really does contain asterisks, but loose strips them and passes – a false positive of the loose variant.",
-    userPrompt:"User prompt",userPromptSub:"The user's question on its own — it carries no constraints.",annotationTitle:"Annotator record",annotationSub:"One line of the evaluation set: everything the annotator requires of a good answer.",annotationNote:"The record is generated from the same rubric the checker runs, so the card cannot drift from the results. A nested list such as [\"online\",\"przez internet\"] means “any of these variants” — in the original IFEval kwargs.keywords is a flat list. Ids marked {ext} are extensions added by this scenario; the rest come from the released benchmark.",splitNote:"In the original IFEval the constraints are part of the prompt, so the model knows what is expected. Here the prompt is only the question and the constraints stay with the annotator, so what is measured is not instruction following as such, but whether the answer matches the checklist prepared for the test.",extension:"extension",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
+    ifevalMarkdownChange:"“bez**płatna**” normalises to “bez platna”: the required term disappears and the forbidden “płatna” appears. Loose strips the asterisks and recovers – a repaired false negative.",
+    ifevalTailChange:"The forbidden claim sits on the last line, which loose drops. The answer still contains it, so loose passes it wrongly – a false positive.",
+    userPrompt:"User prompt",userPromptSub:"The user's question on its own — it carries no constraints.",annotationTitle:"Annotator record",annotationSub:"One line of the evaluation set: everything the annotator requires of a good answer.",annotationNote:"The record is generated from the same rubric the checker runs, so the card cannot drift from the results. A nested list such as [\"online\",\"przez internet\"] means “any of these variants” — in the original IFEval kwargs.keywords is a flat list. All three ids come from the released benchmark.",splitNote:"In the original IFEval the constraints are part of the prompt, so the model knows what is expected. Here the prompt is only the question and the constraints stay with the annotator, so what is measured is not instruction following as such, but whether the answer matches the checklist prepared for the test.",response:"Model answer",constraint:"Constraint",evidence:"Evidence",strict:"Strict",loose:"Loose",promptPass:"Prompt: PASS",promptFail:"Prompt: FAIL",
     allMust:"Every instruction must pass at the same time.",
     cInclude:"Include the required terms",cExclude:"Do not use the forbidden terms",cCitations:"Cite both legal acts",
-    cStartsWith:"Start the answer with “{v}”",cNoMarkdown:"Do not use Markdown markers (*)",cMaxWords:"Use at most {v} words",
     instrStrict:"Instruction strict",promptStrict:"Prompt strict",instrLoose:"Instruction loose",promptLoose:"Prompt loose",
     found:"found",notFound:"not found",absent:"forbidden phrase absent",present:"forbidden phrase found",
     looseNote:"The loose variant checks 8 transformations of the answer (strip asterisks × drop first line × drop last line) and passes a constraint if any of them satisfies it – as the official IFEval implementation does.",
@@ -619,32 +616,31 @@ const IFEVAL_RUBRIC = {
   citations:[
     "Dz.U. 2005 nr 64 poz. 565",
     "Dz.U. 2020 poz. 1194"
-  ],
-  startsWith:"Profil Zaufany",
-  maxWords:90
+  ]
 };
 const IFEVAL_RECORD_KEY = 1187;
 
 // Every row names the IFEval instruction id an annotator would write into the eval
-// record. Four of them exist in the released benchmark; `custom:true` marks the two
-// this scenario adds, so the card never implies more fidelity than it has.
-// Order here drives the annotator card, the instruction list and the results table
-// alike, so the three views can never drift apart.
+// record; all three exist in the released benchmark. Order here drives the annotator
+// card, the instruction list and the results table alike, so the three views can
+// never drift apart.
 const IFEVAL_CONSTRAINTS = [
-  { id:"include",    label:"cInclude",    dot:"",         iid:"keywords:existence",              kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.include },
-  { id:"citations",  label:"cCitations",  dot:"citation", iid:"keywords:existence",              kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.citations },
-  { id:"exclude",    label:"cExclude",    dot:"forbid",   iid:"keywords:forbidden_words",        kwarg:"forbidden_words", terms:()=>IFEVAL_RUBRIC.exclude },
-  { id:"startsWith", label:"cStartsWith", dot:"format",   iid:"startend:start_checker",          kwarg:"phrase",          custom:true, terms:()=>[IFEVAL_RUBRIC.startsWith] },
-  { id:"noMarkdown", label:"cNoMarkdown", dot:"format",   iid:"detectable_format:no_markdown",   kwarg:"markers",         custom:true, terms:()=>["*"] },
-  { id:"maxWords",   label:"cMaxWords",   dot:"length",   iid:"length_constraints:number_words", kwarg:"num_words",       terms:()=>[String(IFEVAL_RUBRIC.maxWords)] }
+  { id:"include",   label:"cInclude",   dot:"",         iid:"keywords:existence",       kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.include },
+  { id:"citations", label:"cCitations", dot:"citation", iid:"keywords:existence",       kwarg:"keywords",        terms:()=>IFEVAL_RUBRIC.citations },
+  { id:"exclude",   label:"cExclude",   dot:"forbid",   iid:"keywords:forbidden_words", kwarg:"forbidden_words", terms:()=>IFEVAL_RUBRIC.exclude }
 ];
 
 const IFEVAL_ANSWER_GOOD = "Profil Zaufany założysz online, przez internet — wystarczy złożyć elektroniczny wniosek. Następnie potwierdzasz tożsamość w punkcie potwierdzającym, na przykład w urzędzie gminy lub w urzędzie skarbowym, albo zdalnie przez bankowość elektroniczną. Usługa jest bezpłatna. Podstawa prawna: Dz.U. 2005 nr 64 poz. 565 oraz Dz.U. 2020 poz. 1194.";
 const IFEVAL_ANSWER_MISS = IFEVAL_ANSWER_GOOD.replace(" Usługa jest bezpłatna.","");
-const IFEVAL_ANSWER_PREAMBLE = `Oczywiście, oto odpowiedź:\n${IFEVAL_ANSWER_GOOD}`;
-const IFEVAL_ANSWER_MARKDOWN = IFEVAL_ANSWER_GOOD.replace("online, przez internet","**online, przez internet**");
+// Emphasis inside a word splits it: "bez**płatna**" normalises to "bez platna", so the
+// required term disappears AND the forbidden term "płatna" appears. Stripping the
+// asterisks restores what the model actually wrote — a false negative loose repairs.
+const IFEVAL_ANSWER_MARKDOWN = IFEVAL_ANSWER_GOOD.replace("bezpłatna","bez**płatna**");
+// The forbidden claim sits on the last line, exactly where loose's dropLast erases it.
+// The answer really does say it, so loose passing here is a false positive.
+const IFEVAL_ANSWER_TAIL = `${IFEVAL_ANSWER_GOOD}\nUwaga: dla firm usługa jest płatna.`;
 
-const IFEVAL_ANSWERS = { good:IFEVAL_ANSWER_GOOD, miss:IFEVAL_ANSWER_MISS, preamble:IFEVAL_ANSWER_PREAMBLE, markdown:IFEVAL_ANSWER_MARKDOWN };
+const IFEVAL_ANSWERS = { good:IFEVAL_ANSWER_GOOD, miss:IFEVAL_ANSWER_MISS, markdown:IFEVAL_ANSWER_MARKDOWN, tail:IFEVAL_ANSWER_TAIL };
 
 // ─── QuestEval fixtures ───
 
@@ -900,8 +896,6 @@ function ifevalInstructions(){
   })));
 }
 
-function wordCount(answer){ return answer.trim().split(/\s+/).filter(Boolean).length; }
-
 function checkInstruction(instruction,answer){
   if(instruction.constraint==="include"){
     const hit=groupTerms(instruction.group).find(term=>termPresent(answer,term));
@@ -911,20 +905,8 @@ function checkInstruction(instruction,answer){
     const hit=groupTerms(instruction.group).find(term=>termPresent(answer,term));
     return { pass:!hit, evidence:hit ? `${t("present")}: ${hit}` : t("absent") };
   }
-  if(instruction.constraint==="citations"){
-    const pass=termPresent(answer,instruction.group);
-    return { pass, evidence:pass ? instruction.group : t("notFound") };
-  }
-  if(instruction.constraint==="startsWith"){
-    const pass=normText(answer).startsWith(normText(IFEVAL_RUBRIC.startsWith));
-    return { pass, evidence:answer.trim().split(/\s+/).slice(0,2).join(" ") || t("notFound") };
-  }
-  if(instruction.constraint==="noMarkdown"){
-    const pass=!answer.includes("*");
-    return { pass, evidence:pass ? t("absent") : "*" };
-  }
-  const count=wordCount(answer);
-  return { pass:count<=IFEVAL_RUBRIC.maxWords, evidence:`${count}/${IFEVAL_RUBRIC.maxWords}` };
+  const pass=termPresent(answer,instruction.group);
+  return { pass, evidence:pass ? instruction.group : t("notFound") };
 }
 
 // The official IFEval loose score tries the answer plus every combination of three
@@ -973,13 +955,9 @@ function evaluateIfeval(answer){
 // Built from IFEVAL_RUBRIC, so what the card shows is literally what gets checked.
 function ifevalAnnotation(){
   const prompt=t("ifevalPrompt");
-  const kwargs=constraint=>{
-    const terms=constraint.terms();
-    if(constraint.id==="maxWords") return { num_words:IFEVAL_RUBRIC.maxWords, relation:"less than" };
-    if(constraint.id==="startsWith") return { phrase:IFEVAL_RUBRIC.startsWith };
-    if(constraint.id==="noMarkdown") return { markers:terms };
-    return { [constraint.kwarg]:terms.map(group=>{ const alts=groupTerms(group); return alts.length>1 ? alts : alts[0]; }) };
-  };
+  const kwargs=constraint=>({
+    [constraint.kwarg]:constraint.terms().map(group=>{ const alts=groupTerms(group); return alts.length>1 ? alts : alts[0]; })
+  });
   return {
     key:IFEVAL_RECORD_KEY,
     prompt:prompt.length>72 ? `${prompt.slice(0,72).trimEnd()}…` : prompt,
@@ -1047,7 +1025,7 @@ function presetBar(){
 const PRESET_META = {
   ragas:{ good:["ragasGood","ragasGoodChange"], noise:["ragasNoise","ragasNoiseChange"], halluc:["ragasHalluc","ragasHallucChange"] },
   ares:{ base:["aresBase","aresBaseChange"], biased:["aresBiased","aresBiasedChange"], small:["aresSmall","aresSmallChange"], labels:["aresLabels","aresLabelsChange"] },
-  ifeval:{ good:["ifevalGood","ifevalGoodChange"], miss:["ifevalMiss","ifevalMissChange"], preamble:["ifevalPreamble","ifevalPreambleChange"], markdown:["ifevalMarkdown","ifevalMarkdownChange"] },
+  ifeval:{ good:["ifevalGood","ifevalGoodChange"], miss:["ifevalMiss","ifevalMissChange"], markdown:["ifevalMarkdown","ifevalMarkdownChange"], tail:["ifevalTail","ifevalTailChange"] },
   questeval:{ full:["questFull","questFullChange"], missing:["questMissing","questMissingChange"], halluc:["questHalluc","questHallucChange"] }
 };
 
@@ -1132,20 +1110,14 @@ function renderAres(){
 
 // ─── IFEval ───
 
-function constraintLabel(row){
-  if(row.id==="startsWith") return fmt("cStartsWith",{v:IFEVAL_RUBRIC.startsWith});
-  if(row.id==="maxWords") return fmt("cMaxWords",{v:IFEVAL_RUBRIC.maxWords});
-  return t(row.label);
-}
-
 function renderIfeval(){
   const values=state.values.ifeval; const result=state.results.ifeval || evaluateIfeval(values.answer);
   const rows=result.rows.map((row,index)=>{
     const chips=row.items.map(item=>`<span class="instr-chip ${item.strict.pass?"ok":"bad"}" data-instruction="${escapeHtml(item.label)}" data-strict="${item.strict.pass}" data-loose="${item.loose.pass}" title="${escapeHtml(item.strict.evidence)}">${item.strict.pass?"✓":"✗"} ${escapeHtml(item.label)}</span>`).join("");
-    return `<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strictPass}" data-loose="${row.loosePass}"><div class="constraint-name"><span class="category-dot ${row.dot}"></span><span>${index+1}. ${constraintLabel(row)}<em class="instr-count">${row.iid}${row.custom?` <b class="ext">${t("extension")}</b>`:""} · ${instructionCount(row.items.length)}</em></span></div><div class="constraint-evidence">${chips}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strictPass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loosePass)}</div></div>`;
+    return `<div class="constraint-row" data-constraint="${row.id}" data-strict="${row.strictPass}" data-loose="${row.loosePass}"><div class="constraint-name"><span class="category-dot ${row.dot}"></span><span>${index+1}. ${t(row.label)}<em class="instr-count">${row.iid} · ${instructionCount(row.items.length)}</em></span></div><div class="constraint-evidence">${chips}</div><div class="result-cell" data-label="${t("strict")}">${status(row.strictPass)}</div><div class="result-cell" data-label="${t("loose")}">${status(row.loosePass)}</div></div>`;
   }).join("");
   const all=result.strictPrompt===1;
-  const chain=result.rows.map((row,index)=>`<span class="gate-node ${row.strictPass?"":"fail"}" title="${escapeHtml(constraintLabel(row))}">${index+1}</span>${index<result.rows.length-1?`<span class="gate-arrow">∧</span>`:""}`).join("");
+  const chain=result.rows.map((row,index)=>`<span class="gate-node ${row.strictPass?"":"fail"}" title="${escapeHtml(t(row.label))}">${index+1}</span>${index<result.rows.length-1?`<span class="gate-arrow">∧</span>`:""}`).join("");
   const metrics=[["strictInstr","instrStrict",result.strictInstr],["strictPrompt","promptStrict",result.strictPrompt],["looseInstr","instrLoose",result.looseInstr],["loosePrompt","promptLoose",result.loosePrompt]];
   const log=[
     `strict instruction = ${result.strictPassed}/${result.total}`,
@@ -1155,7 +1127,7 @@ function renderIfeval(){
     `loose variants = strip "*" x drop first line x drop last line = 8 candidates`,
     `term matching is whole-word on normalised text, so "płatna" does not fire inside "bezpłatna"`
   ].join("\n");
-  const body=`<div class="ifeval-brief"><div class="brief-col"><section><span class="input-label">${t("userPrompt")}</span><p class="section-kicker">${t("userPromptSub")}</p><blockquote class="user-prompt">${escapeHtml(t("ifevalPrompt"))}</blockquote>${note("warn",t("splitNote"))}</section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="7">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><div class="brief-col"><section><span class="input-label">${t("annotationTitle")}</span><p class="section-kicker">${t("annotationSub")}</p><pre class="annotation-card method-copy">${highlightJson(result.annotation)}</pre></section>${note("",fmt("annotationNote",{ext:`<b class="ext">${t("extension")}</b>`}))}</div></div><section class="overall-gate ${all?"pass":"fail"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${result.strictPassed}/${result.total}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([key,label,value])=>`<div class="mini-metric" data-metric="${key}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div>${note("",t("looseNote"))}${note("",fmt("scaleNote",{p:IFEVAL_ORIGINAL.prompts,t:IFEVAL_ORIGINAL.types,n:result.total}))}`;
+  const body=`<div class="ifeval-brief"><div class="brief-col"><section><span class="input-label">${t("userPrompt")}</span><p class="section-kicker">${t("userPromptSub")}</p><blockquote class="user-prompt">${escapeHtml(t("ifevalPrompt"))}</blockquote>${note("warn",t("splitNote"))}</section><section><label for="i-answer" class="input-label">${t("response")}</label><textarea class="field-control" id="i-answer" rows="7">${escapeHtml(values.answer)}</textarea><div class="actions"><button class="button primary" data-action="evaluate">${t("run")}</button></div></section></div><div class="brief-col"><section><span class="input-label">${t("annotationTitle")}</span><p class="section-kicker">${t("annotationSub")}</p><pre class="annotation-card method-copy">${highlightJson(result.annotation)}</pre></section>${note("",t("annotationNote"))}</div></div><section class="overall-gate ${all?"pass":"fail"}"><div><h3>${all?t("promptPass"):t("promptFail")}</h3><p>${result.strictPassed}/${result.total}. ${t("allMust")}</p></div><div class="gate-chain">${chain}</div></section><div class="constraint-table"><div class="constraint-row header"><div>${t("constraint")}</div><div>${t("evidence")}</div><div>${t("strict")}</div><div>${t("loose")}</div></div>${rows}</div><div class="four-metrics">${metrics.map(([key,label,value])=>`<div class="mini-metric" data-metric="${key}" data-value="${value}"><span>${t(label)}</span><b>${pct(value)}</b></div>`).join("")}</div>${note("",t("looseNote"))}${note("",fmt("scaleNote",{p:IFEVAL_ORIGINAL.prompts,t:IFEVAL_ORIGINAL.types,n:result.total}))}`;
   return shell("ifeval",body,log,` data-prompt-pass="${all}"`);
 }
 
@@ -1232,7 +1204,7 @@ function runQaTests(){
   const clampCheck=evaluateAres({...ARES_PRESETS.base,N:100,n:500});
   const goodIf=evaluateIfeval(IFEVAL_ANSWER_GOOD);
   const missIf=evaluateIfeval(IFEVAL_ANSWER_MISS);
-  const preamble=evaluateIfeval(IFEVAL_ANSWER_PREAMBLE);
+  const tail=evaluateIfeval(IFEVAL_ANSWER_TAIL);
   const markdown=evaluateIfeval(IFEVAL_ANSWER_MARKDOWN);
   const full=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGETS.full});
   const missing=evaluateQuest({source:QUEST_SOURCE,target:QUEST_TARGETS.missing});
@@ -1251,8 +1223,9 @@ function runQaTests(){
     ["ARES: PPI lies inside displayed CI",biased.ci.lo<=biased.ppi&&biased.ppi<=biased.ci.hi],
     ["IFEval: good answer passes all four metrics",goodIf.strictPrompt===1&&goodIf.loosePrompt===1],
     ["IFEval: one missing term fails the prompt but not every instruction",missIf.strictPrompt===0&&missIf.strictInstr>0.8],
-    ["IFEval: preamble is a false negative that loose repairs",preamble.strictPrompt===0&&preamble.loosePrompt===1],
-    ["IFEval: markdown is a false positive that loose creates",markdown.strictPrompt===0&&markdown.loosePrompt===1],
+    ["IFEval: bold inside a word is a false negative that loose repairs",markdown.strictPrompt===0&&markdown.loosePrompt===1],
+    ["IFEval: bold inside a word breaks a required term and trips a forbidden one",markdown.strictPassed===markdown.total-2],
+    ["IFEval: a trailing forbidden claim is a false positive that loose creates",tail.strictPrompt===0&&tail.loosePrompt===1],
     ["IFEval: forbidden 'płatna' does not fire inside 'bezpłatna'",evaluateIfeval(IFEVAL_ANSWER_GOOD).rows.find(row=>row.id==="exclude").strictPass],
     ["QuestEval: missing fact lowers completeness",missing.completeness<full.completeness],
     ["QuestEval: hallucination lowers faithfulness",hallucQuest.faithfulness<full.faithfulness],

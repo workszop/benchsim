@@ -31,7 +31,7 @@ main{width:min(760px,100% - 3rem);padding:3rem 0}
 .brand img{width:38px;height:38px}
 h1{font-family:var(--font-display);font-size:1.65rem;margin:0}
 .brand p{color:var(--c-muted);font-size:.84rem;margin:.2rem 0 0}
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.tiles{display:grid;gap:1.25rem}
 .tile{display:block;background:var(--c-surface);border:1px solid var(--c-border);border-radius:14px;padding:1.5rem;text-decoration:none;color:inherit;box-shadow:0 1px 3px var(--c-shadow);transition:border-color .15s,transform .15s}
 .tile:hover{border-color:var(--c-accent);transform:translateY(-2px)}
 .tile .tag{font-family:var(--font-mono);font-size:.72rem;color:var(--c-accent);text-transform:uppercase;letter-spacing:.08em}
@@ -39,7 +39,6 @@ h1{font-family:var(--font-display);font-size:1.65rem;margin:0}
 .tile p{color:var(--c-muted);font-size:.84rem;line-height:1.5;margin:0}
 .tile span{display:inline-block;margin-top:1rem;color:var(--c-accent);font-weight:600;font-size:.84rem}
 .tile:hover span{color:var(--c-accent-hover)}
-@media (max-width:768px){.tiles{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -56,12 +55,6 @@ h1{font-family:var(--font-display);font-size:1.65rem;margin:0}
       <div class="tag">co_sim</div>
       <h2>Symulator ewaluacji</h2>
       <p>Wizualny kierunek symulatora ewaluacji RAG – RAGAS, IFEval i tryb AI.</p>
-      <span>Otwórz &rarr;</span>
-    </a>
-    <a class="tile" href="deep_sim.html">
-      <div class="tag">deep_sim</div>
-      <h2>Metody komplementarne</h2>
-      <p>Komplementarne metody ewaluacji RAG w formie interaktywnego symulatora.</p>
       <span>Otwórz &rarr;</span>
     </a>
   </div>
