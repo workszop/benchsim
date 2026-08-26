@@ -418,6 +418,8 @@ input[type="range"]:focus-visible { box-shadow: var(--focus-ring); }
 }
 .constraint-param { margin-top: var(--sp-2); }
 .constraint-result-pills { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-xs { padding: 6px 14px; font-size: 13px; }
+.group-remove-btn { margin-left: auto; }
 .diff-removed { color: var(--ink-3); text-decoration: line-through; }
 
 /* ── QuestEval panel: source/target text pair, arrow, fact toggles, Q/A cards ── */
@@ -658,12 +660,16 @@ const BENCHES = [
 
 const PHASES = ["input", "process", "result", "interpretation"];
 
-// IFEval: constraint validators, verbatim per phase3-brief.md "Walidatory".
+// IFEval: constraint validators, verbatim per phase7-brief.md "Walidatory".
 // r = raw or loose-variant answer text, p = the constraint's resolved params.
-// validJson uses JSON.parse only - never eval.
+// validJson uses JSON.parse only - never eval. requiredTerms/forbiddenTerms
+// operate on a group of "|"-separated variants (PASS if any variant is
+// present / FAIL if any variant is present); requiredCitation checks one
+// exact identifier. All three are built on phrasePresent() (see Helpers).
 const VALIDATORS = {
-  requiredWord:  (r, p) => words(r).includes(p.word.toLowerCase()),
-  forbiddenWord: (r, p) => !words(r).includes(p.word.toLowerCase()),
+  requiredTerms:  (r, p) => p.variants.some(v => phrasePresent(r, v)),   // jedna grupa = jeden warunek
+  forbiddenTerms: (r, p) => !p.variants.some(v => phrasePresent(r, v)),  // jedna grupa = jeden warunek
+  requiredCitation: (r, p) => phrasePresent(r, p.id),                    // jedno cytowanie = jeden warunek
   maxWords:      (r, p) => r.split(/\s+/).filter(Boolean).length <= p.max,
   exactItems:    (r, p) => r.split("\n").filter(l => /^[-*]\s/.test(l.trim())).length === p.n,
   noComma:       (r)    => !r.includes(","),
@@ -811,23 +817,33 @@ const T = {
     // ── IFEval panel ──
     ifevalInputHeading: "Warunki i odpowiedź",
     ifevalResultHeading: "Wynik sprawdzenia",
-    ifevalConstraintsHeading: "Warunki",
-    ifevalToggle_requiredWord: "Użyj wymaganego słowa",
-    ifevalToggle_forbiddenWord: "Nie używaj zakazanego słowa",
+    ifevalQuestionLabel: "Pytanie / zadanie",
+    ifevalGroupsRequiredHeading: "Wymagane pojęcia",
+    ifevalGroupsForbiddenHeading: "Zakazane pojęcia",
+    ifevalCitationsHeading: "Wymagane cytowania",
+    ifevalGroupVariantsHint: "Warianty rozdzielone „|”",
+    ifevalCitationIdHint: "Dokładny identyfikator",
+    ifevalGroupItemLabel: "Pojęcie {n}",
+    ifevalCitationItemLabel: "Cytowanie {n}",
+    ifevalAddRequiredGroupButton: "Dodaj pojęcie",
+    ifevalAddForbiddenGroupButton: "Dodaj pojęcie",
+    ifevalAddCitationButton: "Dodaj cytowanie",
+    ifevalRemoveButton: "Usuń",
+    ifevalConstraintsHeading: "Inne warunki",
     ifevalToggle_maxWords: "Maksymalnie N słów",
     ifevalToggle_exactItems: "Dokładnie N punktów listy",
     ifevalToggle_noComma: "Bez przecinków",
     ifevalToggle_validJson: "Zwróć poprawny JSON",
     ifevalToggle_exactEnding: "Zakończ dokładną frazą",
-    ifevalParamWord: "Słowo",
     ifevalParamMax: "Maksymalna liczba słów",
     ifevalParamN: "Liczba punktów",
     ifevalParamPhrase: "Fraza końcowa",
     ifevalPromptHeading: "Podgląd promptu",
     ifevalPromptIntro: "Odpowiedz zgodnie z poniższymi warunkami:",
     ifevalPromptEmpty: "Nie wybrano żadnych warunków - odpowiedź nie będzie sprawdzana.",
-    ifevalConstraintText_requiredWord: "użyj wymaganego słowa „{word}”",
-    ifevalConstraintText_forbiddenWord: "nie używaj zakazanego słowa „{word}”",
+    ifevalConstraintText_requiredTerms: "wymagane pojęcie (dowolny wariant): {variants}",
+    ifevalConstraintText_forbiddenTerms: "zakazane pojęcie (żaden wariant): {variants}",
+    ifevalConstraintText_requiredCitation: "wymagany cytat: {id}",
     ifevalConstraintText_maxWords: "odpowiedz w maksymalnie {max} słowach",
     ifevalConstraintText_exactItems: "podaj dokładnie {n} {noun} listy (linie zaczynające się od „-” lub „*”)",
     ifevalItemNounOne: "punkt",
@@ -1026,23 +1042,33 @@ const T = {
     // ── IFEval panel ──
     ifevalInputHeading: "Constraints and answer",
     ifevalResultHeading: "Check result",
-    ifevalConstraintsHeading: "Constraints",
-    ifevalToggle_requiredWord: "Use a required word",
-    ifevalToggle_forbiddenWord: "Don't use a forbidden word",
+    ifevalQuestionLabel: "Question / task",
+    ifevalGroupsRequiredHeading: "Required terms",
+    ifevalGroupsForbiddenHeading: "Forbidden terms",
+    ifevalCitationsHeading: "Required citations",
+    ifevalGroupVariantsHint: "Variants separated by \"|\"",
+    ifevalCitationIdHint: "Exact identifier",
+    ifevalGroupItemLabel: "Term {n}",
+    ifevalCitationItemLabel: "Citation {n}",
+    ifevalAddRequiredGroupButton: "Add term",
+    ifevalAddForbiddenGroupButton: "Add term",
+    ifevalAddCitationButton: "Add citation",
+    ifevalRemoveButton: "Remove",
+    ifevalConstraintsHeading: "Other constraints",
     ifevalToggle_maxWords: "At most N words",
     ifevalToggle_exactItems: "Exactly N list items",
     ifevalToggle_noComma: "No commas",
     ifevalToggle_validJson: "Return valid JSON",
     ifevalToggle_exactEnding: "End with an exact phrase",
-    ifevalParamWord: "Word",
     ifevalParamMax: "Maximum word count",
     ifevalParamN: "Number of items",
     ifevalParamPhrase: "Closing phrase",
     ifevalPromptHeading: "Prompt preview",
     ifevalPromptIntro: "Answer according to the constraints below:",
     ifevalPromptEmpty: "No constraints selected - the answer won't be checked.",
-    ifevalConstraintText_requiredWord: "use the required word “{word}”",
-    ifevalConstraintText_forbiddenWord: "don't use the forbidden word “{word}”",
+    ifevalConstraintText_requiredTerms: "required term (any variant): {variants}",
+    ifevalConstraintText_forbiddenTerms: "forbidden term (no variant): {variants}",
+    ifevalConstraintText_requiredCitation: "required citation: {id}",
     ifevalConstraintText_maxWords: "answer in at most {max} words",
     ifevalConstraintText_exactItems: "give exactly {n} {noun} (lines starting with “-” or “*”)",
     ifevalItemNounOne: "list item",
@@ -1277,104 +1303,221 @@ const MODEL = {
   ares:      { defaults: { N: 800, n: 60, biasPp: 15, errPct: 10, dimension: "context", seed: 1337 },
                trueRates: { context: 0.72, faithfulness: 0.85, relevance: 0.64 } },
   ifeval: {
-    // Constraint type definitions (fixed order used everywhere: toggles,
-    // prompt preview, result rows). paramKey maps into each constraint
-    // instance's stored value (state.inputs.ifeval.constraints[id]) and into
-    // the T() "ifevalConstraintText_<id>" placeholder name.
+    // Fixed non-group constraint type definitions (order used everywhere:
+    // toggles, prompt preview, result rows, after the group/citation rows).
+    // paramKey maps into each constraint instance's stored value
+    // (state.inputs.ifeval.constraints[id]) and into the T()
+    // "ifevalConstraintText_<id>" placeholder name. The old single-word
+    // requiredWord/forbiddenWord types are gone - replaced by the group
+    // (requiredGroups/forbiddenGroups) and citations arrays on each fixture,
+    // resolved into requiredTerms/forbiddenTerms/requiredCitation instances
+    // by activeIfevalConstraints().
     constraints: [
-      { id: "requiredWord", validator: "requiredWord", paramKey: "word" },
-      { id: "forbiddenWord", validator: "forbiddenWord", paramKey: "word" },
       { id: "maxWords", validator: "maxWords", paramKey: "max" },
       { id: "exactItems", validator: "exactItems", paramKey: "n" },
       { id: "noComma", validator: "noComma", paramKey: null },
       { id: "validJson", validator: "validJson", paramKey: null },
       { id: "exactEnding", validator: "exactEnding", paramKey: "phrase" },
     ],
+    // Scenario default: "Jak założyć profil zaufany?" (phase7-brief.md
+    // "Scenariusz domyślny"). 7 required groups, 2 forbidden groups, 2
+    // citations, shared by the "all" and "skip one" presets (same
+    // constraints, different answer text); the "json preamble" preset turns
+    // every group/citation off and only exercises validJson.
     fixtures: {
       pl: [
         {
           id: "ifeval-all",
+          question: "Jak założyć profil zaufany?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "przez internet"], active: true },
+            { id: "req-wniosek", variants: ["wniosek"], active: true },
+            { id: "req-potwierdzenie", variants: ["potwierdzenie"], active: true },
+            { id: "req-urzad-miasta", variants: ["urząd miasta"], active: true },
+            { id: "req-zus", variants: ["ZUS"], active: true },
+            { id: "req-urzad-skarbowy", variants: ["urząd skarbowy"], active: true },
+            { id: "req-bezplatnie", variants: ["bez opłat", "bezpłatnie"], active: true },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["bankowość elektroniczna", "e-dowód", "mObywatel"], active: true },
+            { id: "forb-14-dni", variants: ["14 dni", "czternaście dni"], active: true },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: true },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: true },
+          ],
           constraints: {
-            requiredWord: { active: true, word: "aktywność" },
-            forbiddenWord: { active: false, word: "" },
-            maxWords: { active: true, max: 40 },
+            maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
-            noComma: { active: true },
+            noComma: { active: false },
             validJson: { active: false },
             exactEnding: { active: false, phrase: "" },
           },
           answer:
-            "Regularna aktywność fizyczna poprawia kondycję serca i wzmacnia mięśnie oraz kości. " +
-            "Krótkie codzienne spacery już przynoszą wymierne korzyści zdrowotne dla całego organizmu.",
+            "Profil zaufany można założyć online, bez wychodzenia z domu. Najpierw wypełnij wniosek w serwisie rządowym, " +
+            "a następnie potwierdź swoją tożsamość w wybranej placówce - może to być urząd miasta, oddział ZUS albo urząd skarbowy. " +
+            "Cała procedura jest bez opłat. Po weryfikacji otrzymasz potwierdzenie założenia profilu. " +
+            "Szczegółowe wymagania opisano w dokumentach bip-146-1 oraz ustawy-928-1.",
         },
         {
           id: "ifeval-skip-one",
+          question: "Jak założyć profil zaufany?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "przez internet"], active: true },
+            { id: "req-wniosek", variants: ["wniosek"], active: true },
+            { id: "req-potwierdzenie", variants: ["potwierdzenie"], active: true },
+            { id: "req-urzad-miasta", variants: ["urząd miasta"], active: true },
+            { id: "req-zus", variants: ["ZUS"], active: true },
+            { id: "req-urzad-skarbowy", variants: ["urząd skarbowy"], active: true },
+            { id: "req-bezplatnie", variants: ["bez opłat", "bezpłatnie"], active: true },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["bankowość elektroniczna", "e-dowód", "mObywatel"], active: true },
+            { id: "forb-14-dni", variants: ["14 dni", "czternaście dni"], active: true },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: true },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: true },
+          ],
           constraints: {
-            requiredWord: { active: true, word: "aktywność" },
-            forbiddenWord: { active: false, word: "" },
-            maxWords: { active: true, max: 40 },
+            maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
-            noComma: { active: true },
+            noComma: { active: false },
             validJson: { active: false },
             exactEnding: { active: false, phrase: "" },
           },
-          answer: "Regularna aktywność fizyczna poprawia kondycję serca, wzmacnia mięśnie oraz zmniejsza poziom stresu.",
+          answer:
+            "Profil zaufany można założyć online, bez wychodzenia z domu, na przykład przez aplikację mObywatel. " +
+            "Najpierw wypełnij wniosek w serwisie rządowym, a następnie potwierdź tożsamość w wybranej placówce - " +
+            "może to być urząd miasta, oddział ZUS albo urząd skarbowy. Cała procedura jest bez opłat. " +
+            "Po weryfikacji otrzymasz potwierdzenie założenia profilu. Szczegóły opisano w dokumentach bip-146-1 oraz ustawy-928-1.",
         },
         {
           id: "ifeval-json-preamble",
+          question: "Jak założyć profil zaufany?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "przez internet"], active: false },
+            { id: "req-wniosek", variants: ["wniosek"], active: false },
+            { id: "req-potwierdzenie", variants: ["potwierdzenie"], active: false },
+            { id: "req-urzad-miasta", variants: ["urząd miasta"], active: false },
+            { id: "req-zus", variants: ["ZUS"], active: false },
+            { id: "req-urzad-skarbowy", variants: ["urząd skarbowy"], active: false },
+            { id: "req-bezplatnie", variants: ["bez opłat", "bezpłatnie"], active: false },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["bankowość elektroniczna", "e-dowód", "mObywatel"], active: false },
+            { id: "forb-14-dni", variants: ["14 dni", "czternaście dni"], active: false },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: false },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: false },
+          ],
           constraints: {
-            requiredWord: { active: false, word: "" },
-            forbiddenWord: { active: false, word: "" },
             maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
             noComma: { active: false },
             validJson: { active: true },
             exactEnding: { active: false, phrase: "" },
           },
-          answer: "Oto odpowiedź:\n{\"miasto\": \"Warszawa\", \"kraj\": \"Polska\"}",
+          answer: "Oto odpowiedź:\n{\"temat\": \"profil zaufany\", \"sposob\": \"online\"}",
         },
       ],
       en: [
         {
           id: "ifeval-all",
+          question: "How to set up a trusted profile (profil zaufany)?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "via the internet"], active: true },
+            { id: "req-wniosek", variants: ["application"], active: true },
+            { id: "req-potwierdzenie", variants: ["confirmation"], active: true },
+            { id: "req-urzad-miasta", variants: ["city hall"], active: true },
+            { id: "req-zus", variants: ["ZUS"], active: true },
+            { id: "req-urzad-skarbowy", variants: ["tax office"], active: true },
+            { id: "req-bezplatnie", variants: ["free of charge"], active: true },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["electronic banking", "e-ID", "mObywatel"], active: true },
+            { id: "forb-14-dni", variants: ["14 days", "fourteen days"], active: true },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: true },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: true },
+          ],
           constraints: {
-            requiredWord: { active: true, word: "activity" },
-            forbiddenWord: { active: false, word: "" },
-            maxWords: { active: true, max: 40 },
+            maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
-            noComma: { active: true },
+            noComma: { active: false },
             validJson: { active: false },
             exactEnding: { active: false, phrase: "" },
           },
           answer:
-            "Regular physical activity improves heart health and strengthens muscles and bones. " +
-            "Short daily walks already bring measurable health benefits for the whole body.",
+            "You can set up a trusted profile online, without leaving home. First submit an application through the government portal, " +
+            "then confirm your identity at a chosen point - this can be a city hall, a ZUS branch, or a tax office. " +
+            "The whole process is free of charge. After verification you will receive a confirmation that the profile has been created. " +
+            "Full requirements are listed in documents bip-146-1 and ustawy-928-1.",
         },
         {
           id: "ifeval-skip-one",
+          question: "How to set up a trusted profile (profil zaufany)?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "via the internet"], active: true },
+            { id: "req-wniosek", variants: ["application"], active: true },
+            { id: "req-potwierdzenie", variants: ["confirmation"], active: true },
+            { id: "req-urzad-miasta", variants: ["city hall"], active: true },
+            { id: "req-zus", variants: ["ZUS"], active: true },
+            { id: "req-urzad-skarbowy", variants: ["tax office"], active: true },
+            { id: "req-bezplatnie", variants: ["free of charge"], active: true },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["electronic banking", "e-ID", "mObywatel"], active: true },
+            { id: "forb-14-dni", variants: ["14 days", "fourteen days"], active: true },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: true },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: true },
+          ],
           constraints: {
-            requiredWord: { active: true, word: "activity" },
-            forbiddenWord: { active: false, word: "" },
-            maxWords: { active: true, max: 40 },
+            maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
-            noComma: { active: true },
+            noComma: { active: false },
             validJson: { active: false },
             exactEnding: { active: false, phrase: "" },
           },
-          answer: "Regular physical activity improves heart health, strengthens muscles, and boosts energy levels.",
+          answer:
+            "You can set up a trusted profile online, without leaving home, for example through the mObywatel app. " +
+            "First submit an application through the government portal, then confirm your identity at a chosen point - " +
+            "this can be a city hall, a ZUS branch, or a tax office. The whole process is free of charge. " +
+            "After verification you will receive a confirmation that the profile has been created. " +
+            "Full requirements are listed in documents bip-146-1 and ustawy-928-1.",
         },
         {
           id: "ifeval-json-preamble",
+          question: "How to set up a trusted profile (profil zaufany)?",
+          requiredGroups: [
+            { id: "req-online", variants: ["online", "via the internet"], active: false },
+            { id: "req-wniosek", variants: ["application"], active: false },
+            { id: "req-potwierdzenie", variants: ["confirmation"], active: false },
+            { id: "req-urzad-miasta", variants: ["city hall"], active: false },
+            { id: "req-zus", variants: ["ZUS"], active: false },
+            { id: "req-urzad-skarbowy", variants: ["tax office"], active: false },
+            { id: "req-bezplatnie", variants: ["free of charge"], active: false },
+          ],
+          forbiddenGroups: [
+            { id: "forb-mobywatel", variants: ["electronic banking", "e-ID", "mObywatel"], active: false },
+            { id: "forb-14-dni", variants: ["14 days", "fourteen days"], active: false },
+          ],
+          citations: [
+            { id: "cite-bip-146-1", value: "bip-146-1", active: false },
+            { id: "cite-ustawy-928-1", value: "ustawy-928-1", active: false },
+          ],
           constraints: {
-            requiredWord: { active: false, word: "" },
-            forbiddenWord: { active: false, word: "" },
             maxWords: { active: false, max: 40 },
             exactItems: { active: false, n: 3 },
             noComma: { active: false },
             validJson: { active: true },
             exactEnding: { active: false, phrase: "" },
           },
-          answer: "Here is the answer:\n{\"city\": \"Warsaw\", \"country\": \"Poland\"}",
+          answer: "Here is the answer:\n{\"topic\": \"trusted profile\", \"method\": \"online\"}",
         },
       ],
     },
@@ -1709,20 +1852,22 @@ function computeRagasFixtureId(inputs, lang) {
 }
 
 /**
- * IFEval tokenizer: split on whitespace, lowercase, strip edge punctuation
- * (leading/trailing non letter/number characters) from each token. Used by
- * VALIDATORS.requiredWord/forbiddenWord for whole-word matching. Never eval.
- * @param {string} r
- * @returns {string[]}
+ * IFEval phrase matcher: case-insensitive match of `phrase` inside `text`,
+ * with word boundaries enforced only at the two edges of the phrase (not
+ * between its own characters) - letters, digits and hyphens all count as
+ * "word" characters, via Unicode-aware lookaround (\p{L}\p{N}, "u" flag,
+ * never \b which is ASCII-only). This is what keeps `bip-146-1` from
+ * matching inside `bip-146-12`, and `14 dni` from matching inside `114 dni`,
+ * while still matching Polish diacritics correctly. Never eval.
+ * @param {string} text
+ * @param {string} phrase
+ * @returns {boolean}
  */
-function words(r) {
-  if (!r) return [];
-  return r
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w.toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
-    .filter(Boolean);
+function phrasePresent(text, phrase) {
+  if (!text || !phrase) return false;
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp("(?<![\\p{L}\\p{N}-])" + escaped + "(?![\\p{L}\\p{N}-])", "iu");
+  return re.test(text);
 }
 
 /** Remove markdown emphasis markers ("*"). @param {string} s @returns {string} */
@@ -1841,24 +1986,66 @@ function buildIfevalParams(def, instance) {
 }
 
 /**
- * The active constraints from state.inputs.ifeval, in MODEL.ifeval.constraints
- * order, resolved into the shape ifevalEval() expects.
- * @param {{constraints: Object}} inputs
+ * The active constraints from state.inputs.ifeval, resolved into the shape
+ * ifevalEval() expects: every active required-term group and forbidden-term
+ * group (one row each, id = the group's own id, e.g. "req-online"), every
+ * active citation ("cite-…"), then the fixed MODEL.ifeval.constraints types
+ * (maxWords, exactItems, noComma, validJson, exactEnding) in their fixed
+ * order - this is also the order used everywhere else (toggles, prompt
+ * preview, result rows).
+ * @param {{requiredGroups: Object[], forbiddenGroups: Object[], citations: Object[], constraints: Object}} inputs
  * @returns {{id: string, validator: string, params: Object}[]}
  */
 function activeIfevalConstraints(inputs) {
-  return MODEL.ifeval.constraints
+  const groups = (inputs.requiredGroups || [])
+    .filter((g) => g.active)
+    .map((g) => ({ id: g.id, validator: "requiredTerms", params: { variants: g.variants } }));
+  const forbidden = (inputs.forbiddenGroups || [])
+    .filter((g) => g.active)
+    .map((g) => ({ id: g.id, validator: "forbiddenTerms", params: { variants: g.variants } }));
+  const citations = (inputs.citations || [])
+    .filter((c) => c.active)
+    .map((c) => ({ id: c.id, validator: "requiredCitation", params: { id: c.value } }));
+  const fixed = MODEL.ifeval.constraints
     .filter((def) => inputs.constraints[def.id].active)
     .map((def) => ({ id: def.id, validator: def.validator, params: buildIfevalParams(def, inputs.constraints[def.id]) }));
+  return [...groups, ...forbidden, ...citations, ...fixed];
 }
 
 /** @param {string} paramKey @returns {string} T() key for a constraint's parameter field label */
 function ifevalParamLabelKey(paramKey) {
-  if (paramKey === "word") return "ifevalParamWord";
   if (paramKey === "max") return "ifevalParamMax";
   if (paramKey === "n") return "ifevalParamN";
   if (paramKey === "phrase") return "ifevalParamPhrase";
   return "";
+}
+
+/**
+ * Short identifying text for one active constraint, for use in the result
+ * rows: a group's own variants (joined "|"), a citation's identifier, or
+ * (for the fixed non-group types) the same T() toggle label used on the
+ * left side.
+ * @param {{id: string, validator: string, params: Object}} c
+ * @returns {string}
+ */
+function ifevalConstraintDisplayText(c) {
+  if (c.validator === "requiredTerms" || c.validator === "forbiddenTerms") return c.params.variants.join(" | ");
+  if (c.validator === "requiredCitation") return c.params.id;
+  return t("ifevalToggle_" + c.id);
+}
+
+/**
+ * Full sentence for one active constraint's bullet line in the prompt
+ * preview / AI request text.
+ * @param {{id: string, validator: string, params: Object}} c
+ * @returns {string}
+ */
+function ifevalConstraintPromptLine(c) {
+  if (c.validator === "requiredTerms") return t("ifevalConstraintText_requiredTerms", { variants: c.params.variants.join(" / ") });
+  if (c.validator === "forbiddenTerms") return t("ifevalConstraintText_forbiddenTerms", { variants: c.params.variants.join(" / ") });
+  if (c.validator === "requiredCitation") return t("ifevalConstraintText_requiredCitation", { id: c.params.id });
+  const vars = c.id === "exactItems" ? { ...c.params, noun: ifevalItemNoun(Number(c.params.n) || 0) } : c.params;
+  return t("ifevalConstraintText_" + c.id, vars);
 }
 
 /**
@@ -1885,15 +2072,21 @@ function ifevalItemNoun(n) {
   return t(form === "one" ? "ifevalItemNounOne" : form === "few" ? "ifevalItemNounFew" : "ifevalItemNounMany");
 }
 
-/** Readable composed prompt for the currently active IFEval constraints. @param {{constraints: Object}} inputs @returns {string} */
+/**
+ * Assembled prompt preview: the question/task followed by the active
+ * constraints as a bulleted list - this is also the exact text sent to the
+ * model by "Wygeneruj odpowiedź modelu" (runIfevalAiGenerate), unchanged.
+ * @param {{question: string}} inputs
+ * @returns {string}
+ */
 function buildIfevalPromptText(inputs) {
   const active = activeIfevalConstraints(inputs);
-  if (active.length === 0) return t("ifevalPromptEmpty");
-  const parts = active.map((c) => {
-    const vars = c.id === "exactItems" ? { ...c.params, noun: ifevalItemNoun(Number(c.params.n) || 0) } : c.params;
-    return t("ifevalConstraintText_" + c.id, vars);
-  });
-  return t("ifevalPromptIntro") + " " + parts.join("; ") + ".";
+  const question = (inputs.question || "").trim();
+  if (active.length === 0) {
+    return question ? question + "\n\n" + t("ifevalPromptEmpty") : t("ifevalPromptEmpty");
+  }
+  const bullets = active.map((c) => "- " + ifevalConstraintPromptLine(c));
+  return (question ? question + "\n\n" : "") + t("ifevalPromptIntro") + "\n" + bullets.join("\n");
 }
 
 /**
@@ -1922,9 +2115,27 @@ function cloneIfevalConstraints(constraints) {
   return out;
 }
 
+/** Deep-enough copy of a fixture's group list (requiredGroups/forbiddenGroups): new array, new objects, new variants arrays. @param {Object[]} groups @returns {Object[]} */
+function cloneIfevalGroups(groups) {
+  return (groups || []).map((g) => ({ id: g.id, variants: [...g.variants], active: g.active }));
+}
+
+/** Deep-enough copy of a fixture's citation list. @param {Object[]} citations @returns {Object[]} */
+function cloneIfevalCitations(citations) {
+  return (citations || []).map((c) => ({ id: c.id, value: c.value, active: c.active }));
+}
+
 /** Deep-enough copy of a fixture into the shape stored at state.inputs.ifeval. */
 function cloneIfevalInputs(fixture) {
-  return { constraints: cloneIfevalConstraints(fixture.constraints), answer: fixture.answer, fixtureId: fixture.id };
+  return {
+    question: fixture.question || "",
+    requiredGroups: cloneIfevalGroups(fixture.requiredGroups),
+    forbiddenGroups: cloneIfevalGroups(fixture.forbiddenGroups),
+    citations: cloneIfevalCitations(fixture.citations),
+    constraints: cloneIfevalConstraints(fixture.constraints),
+    answer: fixture.answer,
+    fixtureId: fixture.id,
+  };
 }
 
 /** Whether `a` and `b` (constraint-instance maps) are equal on active + param value, for every known constraint type. */
@@ -1937,17 +2148,35 @@ function ifevalConstraintsEqual(a, b) {
   });
 }
 
+/** Whether two group lists (requiredGroups/forbiddenGroups/citations shape) are equal on id, active and variants/value. @param {Object[]} a @param {Object[]} b @param {"variants"|"value"} valueKey */
+function ifevalGroupListsEqual(a, b, valueKey) {
+  if (a.length !== b.length) return false;
+  return a.every((item, i) => {
+    const other = b[i];
+    if (!other || item.id !== other.id || item.active !== other.active) return false;
+    if (valueKey === "variants") return item.variants.length === other.variants.length && item.variants.every((v, j) => v === other.variants[j]);
+    return item[valueKey] === other[valueKey];
+  });
+}
+
 /**
  * Whether the current inputs still exactly match one of the known presets
  * (a "custom" edit, per the DOM contract, is anything that no longer does).
- * @param {{constraints: Object, answer: string}} inputs
+ * @param {{question: string, requiredGroups: Object[], forbiddenGroups: Object[], citations: Object[], constraints: Object, answer: string}} inputs
  * @param {"pl"|"en"} lang
  * @returns {string} an IFEVAL_FIXTURE_IDS entry, or "custom"
  */
 function computeIfevalFixtureId(inputs, lang) {
   for (const id of IFEVAL_FIXTURE_IDS) {
     const fx = findIfevalFixture(id, lang);
-    if (fx.answer === inputs.answer && ifevalConstraintsEqual(fx.constraints, inputs.constraints)) {
+    if (
+      fx.answer === inputs.answer &&
+      (fx.question || "") === (inputs.question || "") &&
+      ifevalConstraintsEqual(fx.constraints, inputs.constraints) &&
+      ifevalGroupListsEqual(fx.requiredGroups, inputs.requiredGroups, "variants") &&
+      ifevalGroupListsEqual(fx.forbiddenGroups, inputs.forbiddenGroups, "variants") &&
+      ifevalGroupListsEqual(fx.citations, inputs.citations, "value")
+    ) {
       return id;
     }
   }
@@ -2279,16 +2508,17 @@ function qaTest5() {
   // IFEval: the "skip one" fixture violates exactly one of several active
   // constraints, so strict prompt-level accuracy must be 0.
   const fixture = findIfevalFixture("ifeval-skip-one", "pl");
-  const constraints = activeIfevalConstraints({ constraints: fixture.constraints });
+  const constraints = activeIfevalConstraints(fixture);
   const result = ifevalEval(constraints, fixture.answer);
-  return constraints.length >= 2 && result.strictPrompt === 0;
+  const failing = result.constraints.filter((c) => !c.strictPass);
+  return constraints.length >= 2 && result.strictPrompt === 0 && failing.length === 1 && failing[0].id === "forb-mobywatel";
 }
 
 function qaTest6() {
   // IFEval: a preamble before a valid JSON body fails strict validJson but
   // passes loose validJson (drop-first-line variant).
   const fixture = findIfevalFixture("ifeval-json-preamble", "pl");
-  const constraints = activeIfevalConstraints({ constraints: fixture.constraints });
+  const constraints = activeIfevalConstraints(fixture);
   const result = ifevalEval(constraints, fixture.answer);
   const jsonResult = result.constraints.find((c) => c.id === "validJson");
   return !!jsonResult && jsonResult.strictPass === false && jsonResult.loosePass === true;
@@ -3523,7 +3753,8 @@ function buildAresFormulaSection(result) {
  */
 function renderIfevalPanel(section) {
   const inputs = state.inputs.ifeval;
-  const result = ifevalEval(activeIfevalConstraints(inputs), inputs.answer);
+  const active = activeIfevalConstraints(inputs);
+  const result = ifevalEval(active, inputs.answer);
   state.results.ifeval = result;
 
   section.setAttribute("data-primary-score", String(Math.round(result.strictPrompt * 100)));
@@ -3561,7 +3792,7 @@ function renderIfevalPanel(section) {
   rightHeading.className = "edu-h3";
   rightHeading.textContent = t("ifevalResultHeading");
   right.appendChild(rightHeading);
-  right.appendChild(buildIfevalConstraintResults(result));
+  right.appendChild(buildIfevalConstraintResults(result, active));
   right.appendChild(buildIfevalScoreBars(result));
   right.appendChild(buildIfevalDiffView(result, inputs));
   const warning = document.createElement("p");
@@ -3581,6 +3812,11 @@ function renderIfevalPanel(section) {
 function buildIfevalConstraintToggles(inputs) {
   const wrap = document.createElement("div");
   wrap.className = "field-group";
+  wrap.appendChild(buildIfevalQuestionField(inputs));
+  wrap.appendChild(buildIfevalGroupSection(inputs, "requiredGroups", "ifevalGroupsRequiredHeading", "ifevalAddRequiredGroupButton", "req"));
+  wrap.appendChild(buildIfevalGroupSection(inputs, "forbiddenGroups", "ifevalGroupsForbiddenHeading", "ifevalAddForbiddenGroupButton", "forb"));
+  wrap.appendChild(buildIfevalCitationSection(inputs));
+
   const heading = document.createElement("h4");
   heading.className = "edu-h4";
   heading.textContent = t("ifevalConstraintsHeading");
@@ -3589,6 +3825,176 @@ function buildIfevalConstraintToggles(inputs) {
     wrap.appendChild(buildIfevalConstraintRow(def, inputs.constraints[def.id]));
   });
   return wrap;
+}
+
+/** Editable "Pytanie / zadanie" text field. @param {{question: string}} inputs */
+function buildIfevalQuestionField(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const label = document.createElement("label");
+  label.className = "field-label";
+  label.setAttribute("for", "ifevalQuestionField");
+  label.textContent = t("ifevalQuestionLabel");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "ifevalQuestionField";
+  input.value = inputs.question || "";
+  input.addEventListener("input", () => updateIfevalQuestion(input.value));
+  wrap.appendChild(label);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+/**
+ * One editable group list (requiredGroups or forbiddenGroups): heading, a
+ * "variants separated by |" hint, one row per group, and an "add" button.
+ * @param {{requiredGroups: Object[], forbiddenGroups: Object[]}} inputs
+ * @param {"requiredGroups"|"forbiddenGroups"} listKey
+ * @param {string} headingKey @param {string} addBtnKey @param {string} idPrefix "req"|"forb"
+ */
+function buildIfevalGroupSection(inputs, listKey, headingKey, addBtnKey, idPrefix) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t(headingKey);
+  wrap.appendChild(heading);
+  const hint = document.createElement("p");
+  hint.className = "edu-caption";
+  hint.textContent = t("ifevalGroupVariantsHint");
+  wrap.appendChild(hint);
+
+  inputs[listKey].forEach((group, i) => {
+    wrap.appendChild(buildIfevalGroupRow(listKey, group, i));
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "btn btn-ghost btn-xs";
+  addBtn.textContent = t(addBtnKey);
+  addBtn.addEventListener("click", () => addIfevalGroup(listKey, idPrefix));
+  wrap.appendChild(addBtn);
+  return wrap;
+}
+
+/** One requiredGroups/forbiddenGroups row: active checkbox, "|"-joined variants text field, remove button. */
+function buildIfevalGroupRow(listKey, group, index) {
+  const row = document.createElement("div");
+  row.className = "constraint-row";
+  row.setAttribute("data-active", String(group.active));
+  row.setAttribute("data-constraint-id", group.id);
+
+  const head = document.createElement("div");
+  head.className = "constraint-row-head";
+  const checkboxId = "ifevalGroupToggle_" + listKey + "_" + group.id;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = checkboxId;
+  checkbox.checked = group.active;
+  checkbox.addEventListener("change", () => updateIfevalGroupActive(listKey, group.id, checkbox.checked));
+  const label = document.createElement("label");
+  label.setAttribute("for", checkboxId);
+  label.textContent = t("ifevalGroupItemLabel", { n: index + 1 });
+  head.appendChild(checkbox);
+  head.appendChild(label);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-ghost btn-xs group-remove-btn";
+  removeBtn.textContent = t("ifevalRemoveButton");
+  removeBtn.addEventListener("click", () => removeIfevalGroup(listKey, group.id));
+  head.appendChild(removeBtn);
+  row.appendChild(head);
+
+  const paramWrap = document.createElement("div");
+  paramWrap.className = "constraint-param";
+  const inputId = "ifevalGroupVariants_" + listKey + "_" + group.id;
+  const paramLabel = document.createElement("label");
+  paramLabel.className = "sr-only";
+  paramLabel.setAttribute("for", inputId);
+  paramLabel.textContent = t("ifevalGroupVariantsHint");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = inputId;
+  input.value = group.variants.join(" | ");
+  input.addEventListener("input", () => updateIfevalGroupVariants(listKey, group.id, input.value));
+  paramWrap.appendChild(paramLabel);
+  paramWrap.appendChild(input);
+  row.appendChild(paramWrap);
+  return row;
+}
+
+/** Editable citations list: heading, hint, one row per citation, "add" button. */
+function buildIfevalCitationSection(inputs) {
+  const wrap = document.createElement("div");
+  wrap.className = "field-group";
+  const heading = document.createElement("h4");
+  heading.className = "edu-h4";
+  heading.textContent = t("ifevalCitationsHeading");
+  wrap.appendChild(heading);
+  const hint = document.createElement("p");
+  hint.className = "edu-caption";
+  hint.textContent = t("ifevalCitationIdHint");
+  wrap.appendChild(hint);
+
+  inputs.citations.forEach((citation, i) => {
+    wrap.appendChild(buildIfevalCitationRow(citation, i));
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "btn btn-ghost btn-xs";
+  addBtn.textContent = t("ifevalAddCitationButton");
+  addBtn.addEventListener("click", () => addIfevalCitation());
+  wrap.appendChild(addBtn);
+  return wrap;
+}
+
+/** One citation row: active checkbox, exact-identifier text field, remove button. */
+function buildIfevalCitationRow(citation, index) {
+  const row = document.createElement("div");
+  row.className = "constraint-row";
+  row.setAttribute("data-active", String(citation.active));
+  row.setAttribute("data-constraint-id", citation.id);
+
+  const head = document.createElement("div");
+  head.className = "constraint-row-head";
+  const checkboxId = "ifevalCitationToggle_" + citation.id;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = checkboxId;
+  checkbox.checked = citation.active;
+  checkbox.addEventListener("change", () => updateIfevalCitationActive(citation.id, checkbox.checked));
+  const label = document.createElement("label");
+  label.setAttribute("for", checkboxId);
+  label.textContent = t("ifevalCitationItemLabel", { n: index + 1 });
+  head.appendChild(checkbox);
+  head.appendChild(label);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-ghost btn-xs group-remove-btn";
+  removeBtn.textContent = t("ifevalRemoveButton");
+  removeBtn.addEventListener("click", () => removeIfevalCitation(citation.id));
+  head.appendChild(removeBtn);
+  row.appendChild(head);
+
+  const paramWrap = document.createElement("div");
+  paramWrap.className = "constraint-param";
+  const inputId = "ifevalCitationValue_" + citation.id;
+  const paramLabel = document.createElement("label");
+  paramLabel.className = "sr-only";
+  paramLabel.setAttribute("for", inputId);
+  paramLabel.textContent = t("ifevalCitationIdHint");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = inputId;
+  input.value = citation.value;
+  input.addEventListener("input", () => updateIfevalCitationValue(citation.id, input.value));
+  paramWrap.appendChild(paramLabel);
+  paramWrap.appendChild(input);
+  row.appendChild(paramWrap);
+  return row;
 }
 
 function buildIfevalConstraintRow(def, instance) {
@@ -3706,7 +4112,8 @@ function buildIfevalButtonRow() {
   return row;
 }
 
-function buildIfevalConstraintResults(result) {
+function buildIfevalConstraintResults(result, active) {
+  const byId = new Map(active.map((c) => [c.id, c]));
   const wrap = document.createElement("div");
   wrap.className = "field-group";
   const heading = document.createElement("h4");
@@ -3731,7 +4138,8 @@ function buildIfevalConstraintResults(result) {
 
     const text = document.createElement("span");
     text.className = "edu-small";
-    text.textContent = t("ifevalToggle_" + c.id);
+    const activeC = byId.get(c.id);
+    text.textContent = activeC ? ifevalConstraintDisplayText(activeC) : c.id;
     row.appendChild(text);
 
     const pills = document.createElement("span");
@@ -4683,6 +5091,78 @@ function updateIfevalAnswer(value) {
   state.inputs.ifeval.answer = value;
   state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
   rerenderIfevalPreservingFocus();
+}
+
+function updateIfevalQuestion(value) {
+  state.inputs.ifeval.question = value;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+/** Split a "|"-separated variants text field back into a trimmed, non-empty variants array (falls back to [""] if the field was emptied, so the group never silently becomes a no-op match-anything). */
+function parseIfevalVariants(text) {
+  const parts = text.split("|").map((v) => v.trim()).filter(Boolean);
+  return parts.length ? parts : [""];
+}
+
+function updateIfevalGroupActive(listKey, groupId, active) {
+  const group = state.inputs.ifeval[listKey].find((g) => g.id === groupId);
+  if (group) group.active = active;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function updateIfevalGroupVariants(listKey, groupId, text) {
+  const group = state.inputs.ifeval[listKey].find((g) => g.id === groupId);
+  if (group) group.variants = parseIfevalVariants(text);
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+let ifevalCustomIdCounter = 0;
+
+function addIfevalGroup(listKey, idPrefix) {
+  ifevalCustomIdCounter += 1;
+  state.inputs.ifeval[listKey].push({ id: idPrefix + "-custom-" + ifevalCustomIdCounter, variants: [""], active: true });
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function removeIfevalGroup(listKey, groupId) {
+  state.inputs.ifeval[listKey] = state.inputs.ifeval[listKey].filter((g) => g.id !== groupId);
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function updateIfevalCitationActive(citationId, active) {
+  const citation = state.inputs.ifeval.citations.find((c) => c.id === citationId);
+  if (citation) citation.active = active;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function updateIfevalCitationValue(citationId, value) {
+  const citation = state.inputs.ifeval.citations.find((c) => c.id === citationId);
+  if (citation) citation.value = value;
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  rerenderIfevalPreservingFocus();
+}
+
+function addIfevalCitation() {
+  ifevalCustomIdCounter += 1;
+  state.inputs.ifeval.citations.push({ id: "cite-custom-" + ifevalCustomIdCounter, value: "", active: true });
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  render();
+  announce(t("ariaResultUpdated"));
+}
+
+function removeIfevalCitation(citationId) {
+  state.inputs.ifeval.citations = state.inputs.ifeval.citations.filter((c) => c.id !== citationId);
+  state.inputs.ifeval.fixtureId = computeIfevalFixtureId(state.inputs.ifeval, state.lang);
+  render();
+  announce(t("ariaResultUpdated"));
 }
 
 function applyIfevalPreset(id) {
